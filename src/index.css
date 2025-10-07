@@ -10,9 +10,9 @@
   --border-thickness: 2px;
   /* --text-color: #05140d; // slightly darker */
   --text-color: #06180f; 
-  --text-color-alt: #071218;
+  --text-color-alt: #3a6b35; /* plant green */
   --background-color: #f9f6ee;
-  --background-color-alt: #a3805c;
+  /* --background-color-alt: #a3805c; */
   --accent-primary: #6fb8e6;
   --accent-secondary: #d97a2b;
 
@@ -31,10 +31,10 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --text-color: #f9f6ee;
-    --text-color-alt: #a3805c;
+    --text-color-alt: #b0b3b8; /* ashy grey */
     /* --background-color: #05140d; // slightly darker */
     --background-color: #06180f;
-    --background-color-alt: #071218;
+    /* --background-color-alt: #071218; */
     --accent-primary: #82cbff;
     --accent-secondary: #ffb166;
   }
@@ -486,10 +486,11 @@ label input {
 }
 
 blockquote {
-  border-left: calc(var(--border-thickness) * 2) solid var(--accent-secondary);
+  border-left: calc(var(--border-thickness) * 2) solid var(--text-color-alt);
   padding-left: 2ch;
   margin: calc(var(--line-height) * 2) 0;
-  background: color-mix(in srgb, var(--accent-secondary) 12%, transparent);
+  /* background: color-mix(in srgb, var(--accent-secondary) 12%, transparent); */
+  color: var(--text-color-alt);
 }
 
 blockquote > *:first-child {

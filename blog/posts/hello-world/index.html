@@ -26,7 +26,6 @@
     <td class="width-min"><a href="https://www.linkedin.com/in/hunterpaulson">linkedin</a></td>
   </tr>
 </table>
-<label class="debug-toggle-label"><input type="checkbox" class="debug-toggle" /> Debug mode</label>
 <h2 id="introduction">Introduction</h2>
 <p>Monospace fonts are dear to many of us. Some find them more readable, consistent, and beautiful, than their proportional alternatives. Maybe we’re just brainwashed from spending years in terminals? Or are we hopelessly nostalgic? I’m not sure. But I like them, and that’s why I started experimenting with all-monospace Web.</p>
 <p>On this page, I use a monospace grid to align text and draw diagrams. It’s generated from a simple Markdown document (using Pandoc), and the CSS and a tiny bit of Javascript renders it on the grid. The page is responsive, shrinking in character-sized steps. Standard elements should <em>just work</em>, at least that’s the goal. It’s semantic HTML, rendered as if we were back in the 70s.</p>
@@ -252,7 +251,8 @@ Example: Message passing.
 <p>Finally, a massive shout-out to <a href="https://x.com/usgraphics">U.S. Graphics Company</a> for all the inspiration.</p>
 <hr />
 <footer class="site-footer">
-built with <a href="https://owickstrom.github.io/the-monospace-web/">the monospace web</a>
+  <span>built with <a href="https://owickstrom.github.io/the-monospace-web/">the monospace web</a></span>
+  <label class="debug-toggle-label"><input type="checkbox" class="debug-toggle" /> Debug mode</label>
 </footer>
   <div class="debug-grid"></div>
   <script src="/src/index.js"></script>

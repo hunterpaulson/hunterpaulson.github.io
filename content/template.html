@@ -47,7 +47,6 @@ $endfor$
     <td class="width-min"><a href="https://www.linkedin.com/in/hunterpaulson">linkedin</a></td>
   </tr>
 </table>
-<label class="debug-toggle-label"><input type="checkbox" class="debug-toggle" /> Debug mode</label>
 $if(abstract)$
 <div class="abstract">
 <div class="abstract-title">$abstract-title$</div>
@@ -68,7 +67,8 @@ $include-after$
 $endfor$
 <hr />
 <footer class="site-footer">
-built with <a href="https://owickstrom.github.io/the-monospace-web/">the monospace web</a>
+  <span>built with <a href="https://owickstrom.github.io/the-monospace-web/">the monospace web</a></span>
+  <label class="debug-toggle-label"><input type="checkbox" class="debug-toggle" /> Debug mode</label>
 </footer>
   <div class="debug-grid"></div>
   <script src="/src/index.js"></script>

@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+
+this project uses the monospace web which converts markdown to html and displays it in a monospace grid
+never change the styles of the monospace web unless explicitly told to do so

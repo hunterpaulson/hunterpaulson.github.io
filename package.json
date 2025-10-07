@@ -1,0 +1,17 @@
+{
+  "name": "hunterpaulson.github.io",
+  "version": "0.1.0",
+  "description": "Hunter Paulson's personal website",
+  "main": "src/index.css",
+  "scripts": {
+    "dev": "vite",
+    "build": "make",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hunter Paulson",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.4.2"
+  }
+}

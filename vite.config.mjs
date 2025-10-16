@@ -5,9 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const WATCH_PATHS = [
+  // Watch content recursively to catch nested blog posts and sections
   path.join(ROOT, 'content'),
   path.join(ROOT, 'src'),
   path.join(ROOT, 'Makefile'),
+  path.join(ROOT, 'blackhole.c'),
 ];
 
 function shouldTrigger(filePath) {
@@ -17,6 +19,10 @@ function shouldTrigger(filePath) {
   }
 
   if (relative === 'Makefile') {
+    return true;
+  }
+
+  if (relative === 'blackhole.c') {
     return true;
   }
 

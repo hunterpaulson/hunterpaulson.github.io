@@ -6,18 +6,35 @@ TEMPLATE=$(CONTENT_DIR)/template.html
 CSS_FILES=/src/reset.css /src/index.css
 CSS_ARGS=$(foreach css,$(CSS_FILES),--css $(css))
 
-PAGES=$(wildcard $(CONTENT_DIR)/*.md)
-SECTION_PAGES=$(wildcard $(CONTENT_DIR)/*/index.md)
-POSTS=$(wildcard $(CONTENT_DIR)/blog/*/index.md)
+HOME=$(wildcard $(CONTENT_DIR)/*.md)
+SECTIONS=$(wildcard $(CONTENT_DIR)/*/index.md)
+BLOGS=$(wildcard $(CONTENT_DIR)/blog/*/index.md)
 
-HTML_PAGES=$(patsubst $(CONTENT_DIR)/%.md,%.html,$(PAGES))
-SECTION_HTML=$(patsubst $(CONTENT_DIR)/%/index.md,%/index.html,$(SECTION_PAGES))
-HTML_POSTS=$(patsubst $(CONTENT_DIR)/blog/%/index.md,blog/%/index.html,$(POSTS))
+HTML_HOME=$(patsubst $(CONTENT_DIR)/%.md,%.html,$(HOME))
+HTML_SECTIONS=$(patsubst $(CONTENT_DIR)/%/index.md,%/index.html,$(SECTIONS))
+HTML_BLOGS=$(patsubst $(CONTENT_DIR)/blog/%/index.md,blog/%/index.html,$(BLOGS))
 
-all: $(HTML_PAGES) $(SECTION_HTML) $(HTML_POSTS)
+BLOG_INDEX_MD=$(CONTENT_DIR)/blog/index.md
+
+.PHONY: all clean assets
+
+all: $(HTML_HOME) $(HTML_SECTIONS) $(HTML_BLOGS) assets
+
+assets: assets/blackhole_frames.txt
+
+assets/blackhole_frames.txt: blackhole.c Makefile
+	@mkdir -p $(dir $@)
+	cc -O3 blackhole.c -lm -o blackhole
+	./blackhole --dump $@ --frames 180
+
+
+# Re-generate blog listing when any blog post changes
+$(BLOG_INDEX_MD): $(BLOGS) scripts/update-blog-index.js
+	@node scripts/update-blog-index.js
+
 
 clean:
-	rm -rf $(HTML_PAGES) $(SECTION_HTML) $(HTML_POSTS)
+	rm -rf $(HTML_HOME) $(HTML_SECTIONS) $(HTML_BLOGS)
 
 %.html: $(CONTENT_DIR)/%.md $(TEMPLATE) Makefile
 	@mkdir -p $(dir $@)
@@ -31,5 +48,3 @@ clean:
 blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) Makefile
 	@mkdir -p $(dir $@)
 	pandoc -s $(CSS_ARGS) -i $< -o $@ --template=$(TEMPLATE)
-
-.PHONY: all clean

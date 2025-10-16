@@ -65,7 +65,7 @@ body {
   width: 100%;
   margin: 0;
   padding: var(--line-height) 2ch;
-  max-width: calc(min(80ch, round(down, 100%, 1ch)));
+  max-width: calc(min(84ch, round(down, 100%, 1ch))); /* 80ch + 2ch padding + 2ch margin */
   line-height: var(--line-height);
   overflow-x: hidden;
 }
@@ -109,10 +109,10 @@ hr:after {
   display: block;
   content: "";
   position: absolute;
-  top: calc(var(--line-height) / 2 - var(--border-thickness));
+  top: calc(var(--line-height) / 2 - (var(--border-thickness) / 2));
   left: 0;
   width: 100%;
-  border-top: calc(var(--border-thickness) * 3) double var(--text-color);
+  border-top: var(--border-thickness) solid var(--text-color);
   height: 0;
 }
 

@@ -8,11 +8,11 @@ CSS_ARGS=$(foreach css,$(CSS_FILES),--css $(css))
 
 PAGES=$(wildcard $(CONTENT_DIR)/*.md)
 SECTION_PAGES=$(wildcard $(CONTENT_DIR)/*/index.md)
-POSTS=$(wildcard $(CONTENT_DIR)/posts/*/index.md)
+POSTS=$(wildcard $(CONTENT_DIR)/blog/*/index.md)
 
 HTML_PAGES=$(patsubst $(CONTENT_DIR)/%.md,%.html,$(PAGES))
 SECTION_HTML=$(patsubst $(CONTENT_DIR)/%/index.md,%/index.html,$(SECTION_PAGES))
-HTML_POSTS=$(patsubst $(CONTENT_DIR)/posts/%/index.md,blog/posts/%/index.html,$(POSTS))
+HTML_POSTS=$(patsubst $(CONTENT_DIR)/blog/%/index.md,blog/%/index.html,$(POSTS))
 
 all: $(HTML_PAGES) $(SECTION_HTML) $(HTML_POSTS)
 
@@ -25,9 +25,10 @@ clean:
 
 %/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) Makefile
 	@mkdir -p $(dir $@)
+	@if [ "$(dir $@)" = "blog/" ]; then node scripts/update-blog-index.js; fi
 	pandoc --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -Vdate=$(DATE) -i $< -o $@ --template=$(TEMPLATE)
 
-blog/posts/%/index.html: $(CONTENT_DIR)/posts/%/index.md $(TEMPLATE) Makefile
+blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) Makefile
 	@mkdir -p $(dir $@)
 	pandoc -s $(CSS_ARGS) -i $< -o $@ --template=$(TEMPLATE)
 

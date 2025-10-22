@@ -4,7 +4,7 @@ subtitle: ml engineer & researcher
 lang: en
 ---
 
-hello explorer, welcome to my light cone.
+hello navigator, welcome to my light cone.
 
 if you have made it here, feel free to take a look around or reach out.
 
@@ -19,7 +19,12 @@ if you have made it here, feel free to take a look around or reach out.
     let i = 0;
     const fps = 30;
     function tick(){ pre.textContent = frames[i]; i=(i+1)%frames.length; }
+    function centerIfOverflow(){
+      const overflow = pre.scrollWidth - pre.clientWidth;
+      if(overflow > 0){ pre.scrollLeft = overflow / 2; }
+    }
     tick();
+    requestAnimationFrame(()=>requestAnimationFrame(centerIfOverflow));
     setInterval(tick, 1000/fps);
   }catch(e){ pre.textContent = 'failed to load animation'; }
 })();

@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const WATCH_PATHS = [
-  // Watch content recursively to catch nested blog posts and sections
   path.join(ROOT, 'content'),
   path.join(ROOT, 'src'),
   path.join(ROOT, 'Makefile'),

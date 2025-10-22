@@ -25,7 +25,7 @@
     <td class="width-min"><a href="https://www.linkedin.com/in/hunterpaulson">linkedin</a></td>
   </tr>
 </table>
-<p>hello explorer, welcome to my light cone.</p>
+<p>hello navigator, welcome to my light cone.</p>
 <p>if you have made it here, feel free to take a look around or reach out.</p>
 <pre id="bh" aria-label="blackhole ascii" style="line-height:1; margin:1rem 0;">loading…</pre>
 <script>
@@ -38,7 +38,12 @@
     let i = 0;
     const fps = 30;
     function tick(){ pre.textContent = frames[i]; i=(i+1)%frames.length; }
+    function centerIfOverflow(){
+      const overflow = pre.scrollWidth - pre.clientWidth;
+      if(overflow > 0){ pre.scrollLeft = overflow / 2; }
+    }
     tick();
+    requestAnimationFrame(()=>requestAnimationFrame(centerIfOverflow));
     setInterval(tick, 1000/fps);
   }catch(e){ pre.textContent = 'failed to load animation'; }
 })();

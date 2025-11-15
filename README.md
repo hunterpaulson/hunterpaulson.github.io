@@ -1,13 +1,5 @@
 # hunter's personal website
 
-## run locally
-
-```
-make clean
-make
-python -m http.server 8000
-```
-
 ### start the dev server
 
 ```

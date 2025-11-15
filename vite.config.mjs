@@ -120,9 +120,11 @@ function createPandocWatcher() {
 
 export default defineConfig({
   appType: 'mpa',
+  root: 'dist',
   server: {
     fs: {
       strict: false,
+      allow: ['..'],
     },
   },
   plugins: [createPandocWatcher()],

@@ -4,7 +4,7 @@ subtitle: ml engineer & researcher
 lang: en
 ---
 
-hello navigator, welcome to my light cone.
+hello guild navigator, welcome to my light cone.
 
 if you have made it here, feel free to take a look around or reach out.
 

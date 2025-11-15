@@ -29,7 +29,15 @@ the stuff I do at work and can share -->
 
 led the creation of PayPal's central agent harness 'Pal'. allowing any team to build MCP servers and create their own agents / workflows in a self-serve manner.
 
-building and maintaining real-time metrics pipelines for _every_ http request and server log across all PayPal brands. the single, structured, source of truth for all site reliability metrics. 
+building and maintaining real-time metrics pipelines for _every_ http request and server log across all PayPal brands. the single, structured, source of truth for all site reliability metrics.
+
+designed algo and pipeline to identify the root cause component of every customer perceived failure in real-time.
+
+wrote compiler from python to bigquery sql.
+
+automated data lineage documentation by parsing and creating graph from every sql query ran in the company daily.
+
+> I will add links when I can share publicly.
 
 ## Boeing - ML Research Assistant
 

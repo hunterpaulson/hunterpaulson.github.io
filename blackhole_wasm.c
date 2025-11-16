@@ -59,7 +59,7 @@ int bh_wasm_init(int width, int height, double inc_deg, double fovx_deg,
   bh_init_scene_params(&ctx.params);
   ctx.params.width = width;
   ctx.params.height = height;
-  if (inc_deg > 0.0 && inc_deg < 89.0) {
+  if (inc_deg > -89.0 && inc_deg < 89.0) {
     ctx.params.inc_deg = inc_deg;
   }
   if (fovx_deg > 5.0 && fovx_deg < 170.0) {

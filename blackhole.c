@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     char *end = NULL;
     double val = strtod(argv[i], &end);
     if (end && *end == '\0') {
-      if (numpos == 0 && val > 0.0 && val < 89.0) {
+      if (numpos == 0 && val > -89.0 && val < 89.0) {
         params.inc_deg = val;
       } else if (numpos == 1 && val > 5.0 && val < 170.0) {
         params.FOVx = val * M_PI / 180.0;

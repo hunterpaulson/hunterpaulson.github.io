@@ -24,8 +24,8 @@ if you have made it here, feel free to take a look around or reach out.
   const trackLen = sliderWidth;
   const defaultFov = 60;
   const sliderDefs = [
-    { key: 'distance', label: 'Distance', min: 20, max: 120, step: 1, unit: '' },
-    { key: 'incline', label: 'Incline', min: 0, max: 80, step: 1, unit: '°' },
+    { key: 'distance', label: 'Distance', min: 11, max: 140, step: 1, unit: '' },
+    { key: 'incline', label: 'Incline', min: -45, max: 45, step: 1, unit: '°' },
   ];
   const sliderState = {
     distance: 39,

@@ -9,6 +9,9 @@ const WATCH_PATHS = [
   path.join(ROOT, 'src'),
   path.join(ROOT, 'Makefile'),
   path.join(ROOT, 'blackhole.c'),
+  path.join(ROOT, 'blackhole_core.c'),
+  path.join(ROOT, 'blackhole_core.h'),
+  path.join(ROOT, 'blackhole_wasm.c'),
 ];
 
 function shouldTrigger(filePath) {
@@ -21,7 +24,12 @@ function shouldTrigger(filePath) {
     return true;
   }
 
-  if (relative === 'blackhole.c') {
+  if (
+    relative === 'blackhole.c' ||
+    relative === 'blackhole_core.c' ||
+    relative === 'blackhole_core.h' ||
+    relative === 'blackhole_wasm.c'
+  ) {
     return true;
   }
 

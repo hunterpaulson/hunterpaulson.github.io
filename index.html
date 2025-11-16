@@ -30,24 +30,270 @@
 <p>if you have made it here, feel free to take a look around or reach
 out.</p>
 <pre id="bh" aria-label="blackhole ascii" style="line-height:1; margin:1rem 0;">loading…</pre>
+<pre id="bh-sliders" aria-label="blackhole controls" style="line-height:1; margin:0 0 1rem;">loading controls…</pre>
 <script>
-(async function(){
+(function(){
   const pre = document.getElementById('bh');
-  try{
-    const res = await fetch('assets/blackhole_frames.txt');
-    const txt = await res.text();
-    const frames = txt.split('\f');
-    let i = 0;
-    const fps = 30;
-    function tick(){ pre.textContent = frames[i]; i=(i+1)%frames.length; }
-    function centerIfOverflow(){
-      const overflow = pre.scrollWidth - pre.clientWidth;
-      if(overflow > 0){ pre.scrollLeft = overflow / 2; }
+  const slidersPre = document.getElementById('bh-sliders');
+  if(!pre || !slidersPre){ return; }
+
+  const width = 80;
+  const height = 52;
+  const fps = 30;
+  const dphase = (2 * Math.PI) / 180;
+  const sliderWidth = width;
+  const trackLen = sliderWidth;
+  const defaultFov = 60;
+  const sliderDefs = [
+    { key: 'distance', label: 'Distance', min: 20, max: 120, step: 1, unit: '' },
+    { key: 'incline', label: 'Incline', min: 0, max: 80, step: 1, unit: '°' },
+  ];
+  const sliderState = {
+    distance: 39,
+    incline: 10,
+  };
+
+  slidersPre.setAttribute('tabindex', '0');
+
+  let modulePromise = null;
+  let Module = null;
+  let initFn = null;
+  let generateFn = null;
+  let destroyFn = null;
+  let animationTimer = null;
+  let phase = 0;
+  let rebuildTimeout = null;
+  let metrics = null;
+
+  function centerIfOverflow(){
+    const overflow = pre.scrollWidth - pre.clientWidth;
+    if(overflow > 0){ pre.scrollLeft = overflow / 2; }
+  }
+
+  function roundToStep(value, step){
+    if(!step){ return value; }
+    return Math.round(value / step) * step;
+  }
+
+  function buildTrack(def){
+    const value = sliderState[def.key];
+    const norm = Math.min(Math.max((value - def.min) / (def.max - def.min), 0), 1);
+    const handlePos = Math.round(norm * (trackLen - 1));
+    const left = '─'.repeat(handlePos);
+    const right = '─'.repeat(trackLen - handlePos - 1);
+    return `${left}█${right}`;
+  }
+
+  function formatValue(def){
+    const decimals = def.step && def.step < 1 ? 1 : 0;
+    const val = sliderState[def.key].toFixed(decimals);
+    return `${val}${def.unit || ''}`;
+  }
+
+  function buildHeader(def){
+    const label = `${def.label}:`;
+    const value = formatValue(def);
+    let spaces = sliderWidth - label.length - value.length;
+    if(spaces < 1){ spaces = 1; }
+    let line = label + ' '.repeat(spaces) + value;
+    if(line.length > sliderWidth){
+      line = line.slice(0, sliderWidth);
+    } else if(line.length < sliderWidth){
+      line = line.padEnd(sliderWidth, ' ');
     }
-    tick();
-    requestAnimationFrame(()=>requestAnimationFrame(centerIfOverflow));
-    setInterval(tick, 1000/fps);
-  }catch(e){ pre.textContent = 'failed to load animation'; }
+    return line;
+  }
+
+  function renderSliders(){
+    const lines = [];
+    sliderDefs.forEach((def) => {
+      lines.push(buildHeader(def));
+      lines.push(buildTrack(def));
+    });
+    slidersPre.textContent = lines.join('\n');
+  }
+
+  function ensureMetrics(){
+    if(metrics){ return metrics; }
+    const probe = document.createElement('span');
+    probe.textContent = '█';
+    probe.style.visibility = 'hidden';
+    probe.style.position = 'absolute';
+    probe.style.whiteSpace = 'pre';
+    slidersPre.appendChild(probe);
+    const rect = probe.getBoundingClientRect();
+    slidersPre.removeChild(probe);
+    metrics = {
+      charWidth: rect.width || 8,
+      lineHeight: rect.height || 16,
+    };
+    return metrics;
+  }
+
+  function sliderInfoFromPointer(evt){
+    const m = ensureMetrics();
+    const rect = slidersPre.getBoundingClientRect();
+    const y = evt.clientY - rect.top;
+    const totalRows = sliderDefs.length * 2;
+    let row = Math.floor(y / m.lineHeight);
+    row = Math.max(0, Math.min(totalRows - 1, row));
+    const sliderIndex = Math.floor(row / 2);
+    const def = sliderDefs[sliderIndex];
+    const x = evt.clientX - rect.left;
+    let col = Math.floor(x / m.charWidth);
+    const trackInnerStart = 0;
+    const trackInnerEnd = trackInnerStart + trackLen - 1;
+    if(col < trackInnerStart) col = trackInnerStart;
+    if(col > trackInnerEnd) col = trackInnerEnd;
+    const handlePos = col - trackInnerStart;
+    return { def, handlePos, row: sliderIndex };
+  }
+
+  function scheduleSceneUpdate(){
+    if(rebuildTimeout){ clearTimeout(rebuildTimeout); }
+    rebuildTimeout = setTimeout(() => {
+      rebuildTimeout = null;
+      rebuildScene().catch((err) => {
+        console.error('blackhole rebuild failed', err);
+        pre.textContent = 'failed to render animation';
+      });
+    }, 150);
+  }
+
+  let lastPointerId = null;
+  slidersPre.addEventListener('pointerdown', (evt) => {
+    evt.preventDefault();
+    lastPointerId = evt.pointerId;
+    slidersPre.setPointerCapture(evt.pointerId);
+    const info = sliderInfoFromPointer(evt);
+    if(!info){ return; }
+    const def = info.def;
+    focusedSlider = info.row;
+    const raw = def.min + (info.handlePos / (trackLen - 1)) * (def.max - def.min);
+    sliderState[def.key] = Math.min(def.max, Math.max(def.min, roundToStep(raw, def.step)));
+    renderSliders();
+    scheduleSceneUpdate();
+  });
+
+  slidersPre.addEventListener('pointermove', (evt) => {
+    if(lastPointerId === null || evt.pointerId !== lastPointerId){ return; }
+    evt.preventDefault();
+    const info = sliderInfoFromPointer(evt);
+    if(!info){ return; }
+    const def = info.def;
+    const raw = def.min + (info.handlePos / (trackLen - 1)) * (def.max - def.min);
+    const stepped = Math.min(def.max, Math.max(def.min, roundToStep(raw, def.step)));
+    if(stepped === sliderState[def.key]){ return; }
+    sliderState[def.key] = stepped;
+    renderSliders();
+    scheduleSceneUpdate();
+  });
+
+  ['pointerup','pointercancel','lostpointercapture'].forEach((type) => {
+    slidersPre.addEventListener(type, (evt) => {
+      if(lastPointerId !== null && evt.pointerId === lastPointerId){
+        if(type !== 'lostpointercapture' && slidersPre.hasPointerCapture(evt.pointerId)){
+          slidersPre.releasePointerCapture(evt.pointerId);
+        }
+        lastPointerId = null;
+      }
+    });
+  });
+
+  let focusedSlider = 0;
+  slidersPre.addEventListener('keydown', (evt) => {
+    if(evt.key === 'ArrowUp' || evt.key === 'ArrowDown'){
+      const dir = evt.key === 'ArrowUp' ? -1 : 1;
+      focusedSlider = Math.max(0, Math.min(sliderDefs.length - 1, focusedSlider + dir));
+      evt.preventDefault();
+      return;
+    }
+    if(evt.key === 'ArrowLeft' || evt.key === 'ArrowRight'){
+      const def = sliderDefs[focusedSlider];
+      const delta = (def.step || 1) * (evt.key === 'ArrowLeft' ? -1 : 1);
+      const next = Math.min(def.max, Math.max(def.min, sliderState[def.key] + delta));
+      if(next !== sliderState[def.key]){
+        sliderState[def.key] = next;
+        renderSliders();
+        scheduleSceneUpdate();
+      }
+      evt.preventDefault();
+    }
+  });
+
+  function loadModule(){
+    if(!modulePromise){
+      modulePromise = import('./assets/blackhole_wasm.js').then((mod) => {
+        const factory = mod.default || mod;
+        return factory();
+      }).then((instance) => {
+        Module = instance;
+        initFn = Module.cwrap('bh_wasm_init', 'number', ['number','number','number','number','number']);
+        generateFn = Module.cwrap('bh_wasm_generate_frame', 'number', ['number']);
+        destroyFn = Module.cwrap('bh_wasm_destroy', 'void', []);
+        window.addEventListener('beforeunload', () => {
+          try{
+            stopAnimation();
+            if(destroyFn){ destroyFn(); }
+          }catch(_){}
+        }, { once: true });
+        return Module;
+      });
+    }
+    return modulePromise;
+  }
+
+  function stopAnimation(){
+    if(animationTimer){
+      clearInterval(animationTimer);
+      animationTimer = null;
+    }
+  }
+
+  function runTick(){
+    const ptr = generateFn(phase);
+    if(!ptr){ throw new Error('bh_wasm_generate_frame returned null'); }
+    pre.textContent = Module.UTF8ToString(ptr);
+    centerIfOverflow();
+    phase += dphase;
+    if(phase > Math.PI * 2){ phase -= Math.PI * 2; }
+  }
+
+  async function rebuildScene(){
+    pre.textContent = 'recomputing…';
+    await loadModule();
+    stopAnimation();
+    if(destroyFn){
+      try{ destroyFn(); }catch(_){}
+    }
+    const status = initFn(
+      width,
+      height,
+      sliderState.incline,
+      defaultFov,
+      sliderState.distance
+    );
+    if(status !== 0){
+      throw new Error(`bh_wasm_init failed (${status})`);
+    }
+    phase = 0;
+    runTick();
+    animationTimer = setInterval(() => {
+      try{
+        runTick();
+      }catch(err){
+        console.error('animation tick failed', err);
+        stopAnimation();
+      }
+    }, 1000 / fps);
+  }
+
+  renderSliders();
+  rebuildScene().catch((err) => {
+    console.error('failed to initialize wasm blackhole', err);
+    pre.textContent = 'failed to load animation';
+    slidersPre.textContent = 'sliders unavailable';
+  });
 })();
 </script>
 <hr />

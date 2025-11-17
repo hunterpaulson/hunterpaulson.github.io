@@ -21,11 +21,13 @@ typedef struct {
   int height;
   double robs;
   double inc_deg;
+  double roll_deg;
   double phi_obs;
   double theta_obs;
   double FOVx;
   double FOVy;
   double gamma_c;
+  double roll_rad;
 } BHSceneParams;
 
 void bh_init_scene_params(BHSceneParams *params);

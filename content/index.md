@@ -20,16 +20,18 @@ if you have made it here, feel free to take a look around or reach out.
   const height = 52;
   const fps = 30;
   const dphase = (2 * Math.PI) / 180;
-  const sliderWidth = width;
-  const trackLen = sliderWidth;
+  let sliderColumns = width;
+  let trackLen = sliderColumns;
   const defaultFov = 60;
   const sliderDefs = [
-    { key: 'distance', label: 'Distance', min: 11, max: 140, step: 1, unit: '' },
+    { key: 'distance', label: 'Distance', min: 11, max: 140, step: 1, unit: '', showValue: false },
     { key: 'incline', label: 'Incline', min: -45, max: 45, step: 1, unit: '°' },
+    { key: 'roll', label: 'Roll', min: -90, max: 90, step: 1, unit: '°' },
   ];
   const sliderState = {
     distance: 39,
     incline: 10,
+    roll: 0,
   };
 
   slidersPre.setAttribute('tabindex', '0');
@@ -71,19 +73,21 @@ if you have made it here, feel free to take a look around or reach out.
 
   function buildHeader(def){
     const label = `${def.label}:`;
-    const value = formatValue(def);
-    let spaces = sliderWidth - label.length - value.length;
+    const showValue = def.showValue !== false;
+    const value = showValue ? formatValue(def) : '';
+    let spaces = sliderColumns - label.length - value.length;
     if(spaces < 1){ spaces = 1; }
     let line = label + ' '.repeat(spaces) + value;
-    if(line.length > sliderWidth){
-      line = line.slice(0, sliderWidth);
-    } else if(line.length < sliderWidth){
-      line = line.padEnd(sliderWidth, ' ');
+    if(line.length > sliderColumns){
+      line = line.slice(0, sliderColumns);
+    } else if(line.length < sliderColumns){
+      line = line.padEnd(sliderColumns, ' ');
     }
     return line;
   }
 
   function renderSliders(){
+    recomputeSliderColumns();
     const lines = [];
     sliderDefs.forEach((def) => {
       lines.push(buildHeader(def));
@@ -107,6 +111,18 @@ if you have made it here, feel free to take a look around or reach out.
       lineHeight: rect.height || 16,
     };
     return metrics;
+  }
+
+  function recomputeSliderColumns(){
+    const m = ensureMetrics();
+    const charWidth = m.charWidth || 8;
+    const availablePx = slidersPre.clientWidth || (width * charWidth);
+    const availableCols = Math.floor(availablePx / charWidth);
+    const cols = Math.max(20, Math.min(width, availableCols || width));
+    if(cols !== sliderColumns){
+      sliderColumns = cols;
+      trackLen = sliderColumns;
+    }
   }
 
   function sliderInfoFromPointer(evt){
@@ -207,7 +223,7 @@ if you have made it here, feel free to take a look around or reach out.
         return factory();
       }).then((instance) => {
         Module = instance;
-        initFn = Module.cwrap('bh_wasm_init', 'number', ['number','number','number','number','number']);
+        initFn = Module.cwrap('bh_wasm_init', 'number', ['number','number','number','number','number','number']);
         generateFn = Module.cwrap('bh_wasm_generate_frame', 'number', ['number']);
         destroyFn = Module.cwrap('bh_wasm_destroy', 'void', []);
         window.addEventListener('beforeunload', () => {
@@ -250,7 +266,8 @@ if you have made it here, feel free to take a look around or reach out.
       height,
       sliderState.incline,
       defaultFov,
-      sliderState.distance
+      sliderState.distance,
+      sliderState.roll
     );
     if(status !== 0){
       throw new Error(`bh_wasm_init failed (${status})`);
@@ -266,6 +283,12 @@ if you have made it here, feel free to take a look around or reach out.
       }
     }, 1000 / fps);
   }
+
+  window.addEventListener('resize', () => {
+    recomputeSliderColumns();
+    renderSliders();
+    centerIfOverflow();
+  });
 
   renderSliders();
   rebuildScene().catch((err) => {

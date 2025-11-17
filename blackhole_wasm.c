@@ -50,7 +50,7 @@ static int bh_wasm_alloc_buffers(void) {
 
 EMSCRIPTEN_KEEPALIVE
 int bh_wasm_init(int width, int height, double inc_deg, double fovx_deg,
-                 double robs) {
+                 double robs, double roll_deg) {
   if (width <= 0 || height <= 0) {
     return -1;
   }
@@ -67,6 +67,9 @@ int bh_wasm_init(int width, int height, double inc_deg, double fovx_deg,
   }
   if (robs > 10.0 && robs < 2000.0) {
     ctx.params.robs = robs;
+  }
+  if (roll_deg >= -90.0 && roll_deg <= 90.0) {
+    ctx.params.roll_deg = roll_deg;
   }
   bh_update_derived(&ctx.params);
 

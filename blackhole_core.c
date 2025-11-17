@@ -30,6 +30,7 @@ void bh_init_scene_params(BHSceneParams *params) {
   params->height = 52;
   params->robs = 39.0;
   params->inc_deg = 10.0;
+  params->roll_deg = 0.0;
   params->phi_obs = 0.0;
   params->FOVx = 60.0 * M_PI / 180.0;
   params->gamma_c = 0.30;
@@ -50,6 +51,7 @@ void bh_update_derived(BHSceneParams *params) {
       M_PI / 2.0 - (params->inc_deg * M_PI / 180.0); // inclination
   params->FOVy =
       params->FOVx * ((double)params->height / (double)params->width);
+  params->roll_rad = params->roll_deg * M_PI / 180.0;
 }
 
 size_t bh_pixel_count(const BHSceneParams *params) {
@@ -179,6 +181,14 @@ static void pix_ray(const BHSceneParams *params, int px, int py, double x0[4],
   double ax = u * params->FOVx;
   double ay = v * params->FOVy;
   double nr = -1.0, nth = tan(ay), nph = tan(ax);
+  if (params->roll_rad != 0.0) {
+    double c = cos(params->roll_rad);
+    double s = sin(params->roll_rad);
+    double nth_rot = nth * c - nph * s;
+    double nph_rot = nth * s + nph * c;
+    nth = nth_rot;
+    nph = nph_rot;
+  }
   double norm = sqrt(nr * nr + nth * nth + nph * nph);
   nr /= norm;
   nth /= norm;
@@ -256,7 +266,13 @@ static Hit trace_pixel(const BHSceneParams *params, int px, int py) {
         double ut = 1.0 / denom;
         double uphi = sqrt(Mbh / (rhit * rhit * rhit)) / denom;
         double Eem = -(pmu[0] * ut + pmu[3] * uphi);
-        double g = (Eobs / (Eem > 1e-15 ? Eem : 1e-15));
+        double Eobs_clamped = fmax(fmin(Eobs, 1e6), -1e6);
+        double Eem_clamped =
+            (fabs(Eem) < 1e-12) ? (Eem >= 0.0 ? 1e-12 : -1e-12) : Eem;
+        double g = (Eobs_clamped / Eem_clamped);
+        if (!isfinite(g)) {
+          g = 0.0;
+        }
         H.hit = 1;
         H.bg_type = 0;
         H.r = rhit;

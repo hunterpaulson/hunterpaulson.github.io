@@ -44,6 +44,8 @@ int main(int argc, char **argv) {
         params.FOVx = val * M_PI / 180.0;
       } else if (numpos == 2 && val > 10.0 && val < 2000.0) {
         params.robs = val;
+      } else if (numpos == 3 && val >= -90.0 && val <= 90.0) {
+        params.roll_deg = val;
       }
       numpos++;
     }

@@ -23,7 +23,7 @@ the eval was a weekend project. the infra to find the shortest path between two 
 
 the stuff I do at work and can share -->
 
-# resume 
+# work experience 
 
 ## PayPal - Machine Learning Engineer
 
@@ -45,7 +45,7 @@ trained computer vision models and built data labeling pipelines for assemply li
 
 ## NASA JPL - Flight Software Engineer Intern
 
-worked on the [flight software framework](https://github.com/nasa/fprime) that supported the [Mars Helicopter Ingenuity](https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/). 
+contributed to the open source [flight software framework](https://github.com/nasa/fprime) that supported the [Mars Helicopter Ingenuity](https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/). 
 
 fun fact: I was the [intern who ran the autoformatter](https://github.com/nasa/fprime/pull/184) meme.
 

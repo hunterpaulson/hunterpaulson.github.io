@@ -24,9 +24,9 @@ if you have made it here, feel free to take a look around or reach out.
   let trackLen = sliderColumns;
   const defaultFov = 60;
   const sliderDefs = [
-    { key: 'distance', label: 'Distance', min: 11, max: 140, step: 1, unit: '', showValue: false },
-    { key: 'incline', label: 'Incline', min: -45, max: 45, step: 1, unit: '°' },
-    { key: 'roll', label: 'Roll', min: -90, max: 90, step: 1, unit: '°' },
+    { key: 'distance', label: 'distance', min: 11, max: 140, step: 1, unit: '', showValue: false },
+    { key: 'incline', label: 'incline', min: -45, max: 45, step: 1, unit: '°' },
+    { key: 'roll', label: 'roll', min: -90, max: 90, step: 1, unit: '°' },
   ];
   const sliderState = {
     distance: 39,

@@ -26,10 +26,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Install pandoc
+      - name: Install pandoc & emscripten
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc
+          sudo apt-get install -y pandoc emscripten
           
       - name: Build
         run: npm run build

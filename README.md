@@ -1,5 +1,7 @@
 # hunter's personal website
 
+[hunterpaulson.dev](https://hunterpaulson.dev)
+
 ### start the dev server
 
 ```

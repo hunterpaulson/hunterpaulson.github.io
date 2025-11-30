@@ -91,7 +91,13 @@ function checkOffsets() {
     "TH",
   ]);
   const cell = gridCellDimensions();
+  const unit = cell.height / 2;
+  const tolerance = 0.5;
   const elements = document.querySelectorAll("body :not(.debug-grid, .debug-toggle)");
+  let inspected = 0;
+  let offGridCount = 0;
+  let worstDelta = 0;
+  let worstElement = null;
   for (const element of elements) {
     if (ignoredTagNames.has(element.tagName)) {
       continue;
@@ -100,21 +106,57 @@ function checkOffsets() {
     if (rect.width === 0 && rect.height === 0) {
       continue;
     }
+    inspected += 1;
     const top = rect.top + window.scrollY;
-    const left = rect.left + window.scrollX;
-    const offset = top % (cell.height / 2);
-    if(offset > 0) {
+    const remainder = ((top % unit) + unit) % unit;
+    const delta = Math.min(remainder, unit - remainder);
+    if (delta > tolerance) {
       element.classList.add("off-grid");
-      console.error("Incorrect vertical offset for", element, "with remainder", top % cell.height, "when expecting divisible by", cell.height / 2);
+      offGridCount += 1;
+      if (delta > worstDelta) {
+        worstDelta = delta;
+        worstElement = element;
+      }
     } else {
       element.classList.remove("off-grid");
     }
   }
+  if (offGridCount === 0) {
+    console.info(`[monospace] grid check: ${inspected} elements aligned to ${unit.toFixed(2)}px rhythm.`);
+  } else if (worstElement) {
+    console.warn(
+      `[monospace] grid check: ${offGridCount} elements off-grid (max delta ${worstDelta.toFixed(2)}px).`,
+      worstElement
+    );
+  }
 }
 
 const debugToggle = document.querySelector(".debug-toggle");
+let offsetsMonitoring = false;
+function enableGridDebug() {
+  if (!offsetsMonitoring) {
+    offsetsMonitoring = true;
+    window.addEventListener("resize", checkOffsets);
+  }
+  checkOffsets();
+}
+function disableGridDebug() {
+  if (!offsetsMonitoring) {
+    return;
+  }
+  offsetsMonitoring = false;
+  window.removeEventListener("resize", checkOffsets);
+  const marked = document.querySelectorAll(".off-grid");
+  marked.forEach((element) => element.classList.remove("off-grid"));
+}
 function onDebugToggle() {
-  document.body.classList.toggle("debug", debugToggle.checked);
+  const enabled = debugToggle.checked;
+  document.body.classList.toggle("debug", enabled);
+  if (enabled) {
+    enableGridDebug();
+  } else {
+    disableGridDebug();
+  }
 }
 debugToggle.addEventListener("change", onDebugToggle);
 onDebugToggle();

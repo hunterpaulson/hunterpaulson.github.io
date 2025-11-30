@@ -6,23 +6,36 @@ lang: en
 
 hello guild navigator, welcome to my light cone.
 
-if you have made it here, feel free to take a look around or reach out.
+if you have made it here, feel free to take a look around and reach out.
 
-<pre id="bh" aria-label="blackhole ascii" style="line-height:1; margin:1rem 0;">loading…</pre>
-<pre id="bh-sliders" aria-label="blackhole controls" style="line-height:1; margin:0 0 1rem;">loading controls…</pre>
-<script>
-(function(){
+<pre id="bh" aria-label="blackhole ascii">loading…</pre>
+<pre id="bh-status" aria-label="renderer status" style="text-align:right;margin:0"></pre>
+<pre id="bh-sliders" aria-label="blackhole controls">loading controls…</pre>
+<script type="module">
+/**
+ * Black Hole Renderer - WebGPU with WASM Fallback
+ * 
+ * This script tries WebGPU first for real-time parameter updates,
+ * falling back to WASM for broader browser support.
+ */
+(async function(){
   const pre = document.getElementById('bh');
   const slidersPre = document.getElementById('bh-sliders');
+  const statusPre = document.getElementById('bh-status');
   if(!pre || !slidersPre){ return; }
 
   const width = 80;
   const height = 52;
   const fps = 30;
-  const dphase = (2 * Math.PI) / 180;
+  
+  // Animation speed (radians per second) - TIME-BASED, not frame-based!
+  // One full rotation = 2π radians. At 0.15 rad/sec, full rotation takes ~42 seconds
+  const DISK_ROTATION_SPEED = 1;  // radians per second
+  
   let sliderColumns = width;
   let trackLen = sliderColumns;
   const defaultFov = 60;
+  
   const sliderDefs = [
     { key: 'distance', label: 'distance', min: 11, max: 140, step: 1, unit: '', showValue: false },
     { key: 'incline', label: 'incline', min: -45, max: 45, step: 1, unit: '°' },
@@ -36,15 +49,21 @@ if you have made it here, feel free to take a look around or reach out.
 
   slidersPre.setAttribute('tabindex', '0');
 
-  let modulePromise = null;
-  let Module = null;
-  let initFn = null;
-  let generateFn = null;
-  let destroyFn = null;
+  // Renderer state
+  let renderer = null;  // WebGPU or WASM renderer
+  let useGPU = false;
   let animationTimer = null;
-  let phase = 0;
+  let animationStartTime = performance.now();  // For time-based animation
   let rebuildTimeout = null;
   let metrics = null;
+  let lastSliderState = { ...sliderState };
+  let frameCount = 0;
+  let lastFpsTime = performance.now();
+  let currentFps = 0;
+
+  function updateStatus(msg) {
+    if(statusPre){ statusPre.textContent = msg; }
+  }
 
   function centerIfOverflow(){
     const overflow = pre.scrollWidth - pre.clientWidth;
@@ -144,15 +163,34 @@ if you have made it here, feel free to take a look around or reach out.
     return { def, handlePos, row: sliderIndex };
   }
 
+  function sliderChanged(){
+    return sliderState.distance !== lastSliderState.distance ||
+           sliderState.incline !== lastSliderState.incline ||
+           sliderState.roll !== lastSliderState.roll;
+  }
+
   function scheduleSceneUpdate(){
-    if(rebuildTimeout){ clearTimeout(rebuildTimeout); }
-    rebuildTimeout = setTimeout(() => {
-      rebuildTimeout = null;
-      rebuildScene().catch((err) => {
-        console.error('blackhole rebuild failed', err);
-        pre.textContent = 'failed to render animation';
-      });
-    }, 150);
+    if(useGPU){
+      // With WebGPU, update immediately - it's fast!
+      if(renderer && sliderChanged()){
+        renderer.updateParams({
+          robs: sliderState.distance,
+          inc_deg: sliderState.incline,
+          roll_deg: sliderState.roll,
+        });
+        lastSliderState = { ...sliderState };
+      }
+    } else {
+      // With WASM, debounce to avoid janky rebuilds
+      if(rebuildTimeout){ clearTimeout(rebuildTimeout); }
+      rebuildTimeout = setTimeout(() => {
+        rebuildTimeout = null;
+        rebuildSceneWASM().catch((err) => {
+          console.error('blackhole rebuild failed', err);
+          pre.textContent = 'failed to render animation';
+        });
+      }, 150);
+    }
   }
 
   let lastPointerId = null;
@@ -216,52 +254,111 @@ if you have made it here, feel free to take a look around or reach out.
     }
   });
 
-  function loadModule(){
-    if(!modulePromise){
-      modulePromise = import('./assets/blackhole_wasm.js').then((mod) => {
-        const factory = mod.default || mod;
-        return factory();
-      }).then((instance) => {
-        Module = instance;
-        initFn = Module.cwrap('bh_wasm_init', 'number', ['number','number','number','number','number','number']);
-        generateFn = Module.cwrap('bh_wasm_generate_frame', 'number', ['number']);
-        destroyFn = Module.cwrap('bh_wasm_destroy', 'void', []);
-        window.addEventListener('beforeunload', () => {
-          try{
-            stopAnimation();
-            if(destroyFn){ destroyFn(); }
-          }catch(_){}
-        }, { once: true });
-        return Module;
-      });
+  // ══════════════════════════════════════════════════════════════════════════
+  // WebGPU Renderer
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async function initGPU(){
+    const { BlackHoleGPU, isWebGPUSupported } = await import('./assets/blackhole_gpu.js');
+    
+    if(!isWebGPUSupported()){
+      throw new Error('WebGPU not supported');
     }
-    return modulePromise;
+    
+    const gpu = new BlackHoleGPU();
+    await gpu.init(
+      width, height,
+      sliderState.incline,
+      defaultFov,
+      sliderState.distance,
+      sliderState.roll
+    );
+    
+    return gpu;
   }
 
-  function stopAnimation(){
-    if(animationTimer){
-      clearInterval(animationTimer);
-      animationTimer = null;
+  async function runTickGPU(){
+    try {
+      // Time-based phase: consistent speed regardless of frame rate
+      const elapsed = (performance.now() - animationStartTime) / 1000;  // seconds
+      const phase = (elapsed * DISK_ROTATION_SPEED) % (Math.PI * 2);
+      
+      const frame = await renderer.generateFrame(phase);
+      pre.textContent = frame;
+      centerIfOverflow();
+      
+      // FPS tracking
+      frameCount++;
+      const now = performance.now();
+      if(now - lastFpsTime >= 1000){
+        currentFps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+        frameCount = 0;
+        lastFpsTime = now;
+        updateStatus(`[webgpu] ${currentFps} fps`);
+      }
+    } catch(err) {
+      console.error('GPU frame failed', err);
+      stopAnimation();
     }
   }
 
-  function runTick(){
-    const ptr = generateFn(phase);
+  // ══════════════════════════════════════════════════════════════════════════
+  // WASM Fallback Renderer
+  // ══════════════════════════════════════════════════════════════════════════
+
+  let wasmModule = null;
+  let wasmInit = null;
+  let wasmGenerate = null;
+  let wasmDestroy = null;
+  let wasmLoaded = false;
+
+  async function loadWASM(){
+    // Only load once - subsequent calls reuse the module
+    if(wasmLoaded){ return wasmModule; }
+    
+    const mod = await import('./assets/blackhole_wasm.js');
+    const factory = mod.default || mod;
+    const instance = await factory();
+    wasmModule = instance;
+    wasmInit = wasmModule.cwrap('bh_wasm_init', 'number', ['number','number','number','number','number','number']);
+    wasmGenerate = wasmModule.cwrap('bh_wasm_generate_frame', 'number', ['number']);
+    wasmDestroy = wasmModule.cwrap('bh_wasm_destroy', 'void', []);
+    wasmLoaded = true;
+    return wasmModule;
+  }
+
+  function runTickWASM(){
+    // Time-based phase: consistent speed regardless of frame rate
+    const elapsed = (performance.now() - animationStartTime) / 1000;  // seconds
+    const phase = (elapsed * DISK_ROTATION_SPEED) % (Math.PI * 2);
+    
+    const ptr = wasmGenerate(phase);
     if(!ptr){ throw new Error('bh_wasm_generate_frame returned null'); }
-    pre.textContent = Module.UTF8ToString(ptr);
+    pre.textContent = wasmModule.UTF8ToString(ptr);
     centerIfOverflow();
-    phase += dphase;
-    if(phase > Math.PI * 2){ phase -= Math.PI * 2; }
+    
+    // FPS tracking
+    frameCount++;
+    const now = performance.now();
+    if(now - lastFpsTime >= 1000){
+      currentFps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+      frameCount = 0;
+      lastFpsTime = now;
+      updateStatus(`[wasm] ${currentFps} fps`);
+    }
   }
 
-  async function rebuildScene(){
-    pre.textContent = 'recomputing…';
-    await loadModule();
+  async function rebuildSceneWASM(){
+    // Save scroll position before any DOM changes
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
+    
+    await loadWASM();
     stopAnimation();
-    if(destroyFn){
-      try{ destroyFn(); }catch(_){}
+    if(wasmDestroy){
+      try{ wasmDestroy(); }catch(_){}
     }
-    const status = initFn(
+    const status = wasmInit(
       width,
       height,
       sliderState.incline,
@@ -272,16 +369,32 @@ if you have made it here, feel free to take a look around or reach out.
     if(status !== 0){
       throw new Error(`bh_wasm_init failed (${status})`);
     }
-    phase = 0;
-    runTick();
+    lastSliderState = { ...sliderState };
+    animationStartTime = performance.now();  // Reset animation
+    runTickWASM();
+    
+    // Restore scroll position after first frame renders
+    window.scrollTo(scrollX, scrollY);
+    
     animationTimer = setInterval(() => {
       try{
-        runTick();
+        runTickWASM();
       }catch(err){
         console.error('animation tick failed', err);
         stopAnimation();
       }
     }, 1000 / fps);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Main Initialization
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function stopAnimation(){
+    if(animationTimer){
+      clearInterval(animationTimer);
+      animationTimer = null;
+    }
   }
 
   window.addEventListener('resize', () => {
@@ -290,11 +403,49 @@ if you have made it here, feel free to take a look around or reach out.
     centerIfOverflow();
   });
 
+  window.addEventListener('beforeunload', () => {
+    try{
+      stopAnimation();
+      if(useGPU && renderer){ renderer.destroy(); }
+      if(wasmDestroy){ wasmDestroy(); }
+    }catch(_){}
+  }, { once: true });
+
   renderSliders();
-  rebuildScene().catch((err) => {
-    console.error('failed to initialize wasm blackhole', err);
-    pre.textContent = 'failed to load animation';
-    slidersPre.textContent = 'sliders unavailable';
-  });
+
+  // Try WebGPU first, fall back to WASM
+  try {
+    pre.textContent = 'initializing gpu…';
+    updateStatus('[webgpu] initializing...');
+    renderer = await initGPU();
+    useGPU = true;
+    lastSliderState = { ...sliderState };
+    
+    // GPU animation loop using requestAnimationFrame for smoothness
+    let running = true;
+    async function gpuLoop(){
+      if(!running) return;
+      await runTickGPU();
+      requestAnimationFrame(gpuLoop);
+    }
+    gpuLoop();
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => { running = false; });
+    
+  } catch(err) {
+    console.warn('WebGPU not available, falling back to WASM:', err.message);
+    updateStatus('[wasm] gpu unavailable, using cpu');
+    useGPU = false;
+    
+    try {
+      await rebuildSceneWASM();
+    } catch(wasmErr) {
+      console.error('failed to initialize wasm blackhole', wasmErr);
+      pre.textContent = 'failed to load animation';
+      slidersPre.textContent = 'sliders unavailable';
+      updateStatus('error: ' + wasmErr.message);
+    }
+  }
 })();
 </script>

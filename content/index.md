@@ -25,7 +25,7 @@ if you have made it here, feel free to take a look around and reach out.
   if(!pre || !slidersPre){ return; }
 
   const width = 80;
-  const height = 52;
+  const height = 40;
   const fps = 30;
   
   // Animation speed (radians per second) - TIME-BASED, not frame-based!

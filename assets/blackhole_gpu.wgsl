@@ -569,7 +569,10 @@ fn render_ascii(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let val = base * hotspots_mul(hit.r, hit.phi, params.phase);
         
         // Normalize and apply gamma
-        let v = clamp(val * 2.0, 0.0, 1.0);  // normalization factor
+        // NOTE: This is a heuristic normalization; we scale up the raw value so that
+        // the brightest pixels can reach the top of the ASCII ramp. The CPU path
+        // uses a proper norm_scale computed from the traced map; here we approximate.
+        let v = clamp(val * 9.0, 0.0, 1.0);  // normalization factor (increased from 2.0)
         let q = pow(v, params.gamma_c);
         let idx_ramp = u32(q * f32(ramp_len - 1u));
         

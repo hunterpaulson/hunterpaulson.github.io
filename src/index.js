@@ -81,6 +81,24 @@ adjustMediaPadding();
 window.addEventListener("load", adjustMediaPadding);
 window.addEventListener("resize", adjustMediaPadding);
 
+function outlineCodeBlocks() {
+  const codeBlocks = document.querySelectorAll("pre > code");
+  for (const code of codeBlocks) {
+    if (code.dataset.outlined === "true") {
+      continue;
+    }
+    const lines = code.textContent.trimEnd().split("\n");
+    const maxWidth = lines.reduce((max, line) => Math.max(max, line.length), 0);
+    const top = `╭${"─".repeat(maxWidth + 2)}╮`;
+    const bottom = `╰${"─".repeat(maxWidth + 2)}╯`;
+    const wrapped = lines.map((line) => `│ ${line.padEnd(maxWidth, " ")} │`);
+    code.textContent = [top, ...wrapped, bottom].join("\n");
+    code.dataset.outlined = "true";
+  }
+}
+
+outlineCodeBlocks();
+
 function checkOffsets() {
   const ignoredTagNames = new Set([
     "THEAD",
@@ -173,6 +191,9 @@ function disableGridDebug() {
   marked.forEach((element) => element.classList.remove("off-grid"));
 }
 function onDebugToggle() {
+  if (!debugToggle) {
+    return;
+  }
   const enabled = debugToggle.checked;
   document.body.classList.toggle("debug", enabled);
   if (enabled) {
@@ -186,5 +207,7 @@ applyTheme(loadThemePreference());
 if (themeToggle) {
   themeToggle.addEventListener("change", onThemeToggle);
 }
-debugToggle.addEventListener("change", onDebugToggle);
-onDebugToggle();
+if (debugToggle) {
+  debugToggle.addEventListener("change", onDebugToggle);
+  onDebugToggle();
+}

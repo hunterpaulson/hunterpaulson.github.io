@@ -135,8 +135,9 @@ if you have made it here, feel free to take a look around and reach out.
   function recomputeSliderColumns(){
     const m = ensureMetrics();
     const charWidth = m.charWidth || 8;
-    const availablePx = slidersPre.clientWidth || (width * charWidth);
-    const availableCols = Math.floor(availablePx / charWidth);
+    const rectWidth = slidersPre.getBoundingClientRect().width;
+    const availablePx = rectWidth || slidersPre.clientWidth || (width * charWidth);
+    const availableCols = Math.round(availablePx / charWidth);
     const cols = Math.max(20, Math.min(width, availableCols || width));
     if(cols !== sliderColumns){
       sliderColumns = cols;

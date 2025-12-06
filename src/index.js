@@ -81,6 +81,24 @@ adjustMediaPadding();
 window.addEventListener("load", adjustMediaPadding);
 window.addEventListener("resize", adjustMediaPadding);
 
+function outlineCodeBlocks() {
+  const codeBlocks = document.querySelectorAll("pre > code");
+  for (const code of codeBlocks) {
+    if (code.dataset.outlined === "true") {
+      continue;
+    }
+    const lines = code.textContent.trimEnd().split("\n");
+    const maxWidth = lines.reduce((max, line) => Math.max(max, line.length), 0);
+    const top = `╭${"─".repeat(maxWidth + 2)}╮`;
+    const bottom = `╰${"─".repeat(maxWidth + 2)}╯`;
+    const wrapped = lines.map((line) => `│ ${line.padEnd(maxWidth, " ")} │`);
+    code.textContent = [top, ...wrapped, bottom].join("\n");
+    code.dataset.outlined = "true";
+  }
+}
+
+outlineCodeBlocks();
+
 function checkOffsets() {
   const ignoredTagNames = new Set([
     "THEAD",
@@ -93,7 +111,7 @@ function checkOffsets() {
   const cell = gridCellDimensions();
   const unit = cell.height / 2;
   const tolerance = 0.5;
-  const elements = document.querySelectorAll("body :not(.debug-grid, .debug-toggle)");
+  const elements = document.querySelectorAll("body :not(.debug-grid, .debug-toggle, .theme-toggle)");
   let inspected = 0;
   let offGridCount = 0;
   let worstDelta = 0;
@@ -131,8 +149,31 @@ function checkOffsets() {
   }
 }
 
+const themeToggle = document.querySelector(".theme-toggle");
 const debugToggle = document.querySelector(".debug-toggle");
+const themeStorageKey = "theme";
+const root = document.documentElement;
 let offsetsMonitoring = false;
+
+function applyTheme(theme) {
+  if (!themeToggle) {
+    return;
+  }
+  const isDark = theme === "dark";
+  root.classList.toggle("theme-light", !isDark);
+  themeToggle.checked = isDark;
+  localStorage.setItem(themeStorageKey, theme);
+}
+
+function loadThemePreference() {
+  const saved = localStorage.getItem(themeStorageKey);
+  return saved === "light" ? "light" : "dark";
+}
+
+function onThemeToggle() {
+  applyTheme(themeToggle.checked ? "dark" : "light");
+}
+
 function enableGridDebug() {
   if (!offsetsMonitoring) {
     offsetsMonitoring = true;
@@ -150,6 +191,9 @@ function disableGridDebug() {
   marked.forEach((element) => element.classList.remove("off-grid"));
 }
 function onDebugToggle() {
+  if (!debugToggle) {
+    return;
+  }
   const enabled = debugToggle.checked;
   document.body.classList.toggle("debug", enabled);
   if (enabled) {
@@ -158,5 +202,12 @@ function onDebugToggle() {
     disableGridDebug();
   }
 }
-debugToggle.addEventListener("change", onDebugToggle);
-onDebugToggle();
+
+applyTheme(loadThemePreference());
+if (themeToggle) {
+  themeToggle.addEventListener("change", onThemeToggle);
+}
+if (debugToggle) {
+  debugToggle.addEventListener("change", onDebugToggle);
+  onDebugToggle();
+}

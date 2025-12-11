@@ -33,7 +33,7 @@ building and maintaining real-time metrics pipelines for _every_ http response a
 
 designed algo and pipeline to identify the root cause component of every customer perceived failure in real-time.
 
-wrote compiler from python to bigquery sql.
+wrote transpiler from python to bigquery sql.
 
 automated data lineage documentation by parsing and creating graph from every sql query ran in the company daily.
 

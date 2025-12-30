@@ -1,6 +1,5 @@
 ---
 title: donut.c
-subtitle: NOT by hunter paulson
 date: 2025-10-15
 ---
 

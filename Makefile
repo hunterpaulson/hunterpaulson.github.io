@@ -56,15 +56,18 @@ $(BLOG_INDEX_MD): $(BLOGS) scripts/update-blog-index.js
 clean:
 	rm -rf $(DIST_DIR)
 
-$(DIST_DIR)/%.html: $(CONTENT_DIR)/%.md $(TEMPLATE) Makefile
+# Home page (content/index.md -> dist/index.html)
+$(HTML_HOME): $(DIST_DIR)/%.html: $(CONTENT_DIR)/%.md $(TEMPLATE) Makefile
 	@mkdir -p $(dir $@)
-	pandoc --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -Vdate=$(DATE) -i $< -o $@ --template=$(TEMPLATE)
+	pandoc --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i $< -o $@ --template=$(TEMPLATE)
 
-$(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) Makefile
+# Section index pages (blog/index.md, projects/index.md -> dist/*/index.html)
+$(HTML_SECTIONS): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) Makefile
 	@mkdir -p $(dir $@)
 	@if [ "$(dir $@)" = "$(DIST_DIR)/blog/" ]; then node scripts/update-blog-index.js; fi
-	pandoc --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -Vdate=$(DATE) -i $< -o $@ --template=$(TEMPLATE)
+	pandoc --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i $< -o $@ --template=$(TEMPLATE)
 
-$(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) Makefile
+# Blog posts - use date from frontmatter
+$(HTML_BLOGS): $(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) Makefile
 	@mkdir -p $(dir $@)
 	pandoc -s $(CSS_ARGS) -i $< -o $@ --template=$(TEMPLATE)

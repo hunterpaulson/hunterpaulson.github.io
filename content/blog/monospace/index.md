@@ -1,6 +1,5 @@
 ---
 title: The Monospace Web
-subtitle: A minimalist design exploration
 date: 2025-10-06
 lang: en
 toc-title: Contents

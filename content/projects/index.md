@@ -1,6 +1,5 @@
 ---
-title: hunter paulson
-subtitle: projects
+title: projects
 author: Hunter Paulson
 lang: en
 ---

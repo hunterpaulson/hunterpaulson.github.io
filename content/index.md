@@ -1,6 +1,5 @@
 ---
-title: hunter paulson
-subtitle: ml engineer & researcher
+title: computer scientist
 lang: en
 ---
 

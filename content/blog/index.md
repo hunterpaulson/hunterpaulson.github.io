@@ -1,6 +1,5 @@
 ---
-title: hunter paulson
-subtitle: blog
+title: blog
 ---
 
 # latest posts

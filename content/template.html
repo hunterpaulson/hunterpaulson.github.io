@@ -17,7 +17,7 @@ $endif$
 $if(description-meta)$
   <meta name="description" content="$description-meta$" />
 $endif$
-  <title>$if(title-prefix)$$title-prefix$ – $endif$$pagetitle$</title>
+  <title>$if(date)$$pagetitle$ | hunter paulson$else$hunter paulson | $pagetitle$$endif$</title>
 $for(css)$
   <link rel="stylesheet" href="$css$" />
 $endfor$

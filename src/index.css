@@ -205,6 +205,34 @@ th {
   text-align: left;
 } */
 
+/* Site title link - no underline, but keep hover effect */
+.site-title {
+  text-decoration: none !important;
+}
+.site-title:hover,
+.site-title:focus {
+  color: color-mix(in srgb, var(--text-color) 60%, var(--background-color) 40%);
+}
+
+/* Blog post header row with title and date */
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 0;
+}
+
+.post-title {
+  margin-top: 0;
+}
+
+.post-date {
+  width: 10ch;
+  text-align: right;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
 p {
   word-break: break-word;
   word-wrap: break-word;

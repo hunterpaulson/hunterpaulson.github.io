@@ -9,6 +9,10 @@ if you have made it here, feel free to take a look around and reach out.
 
 <pre id="bh" aria-label="blackhole ascii">loading…</pre>
 <pre id="bh-status" aria-label="renderer status" style="text-align:right;margin:0"></pre>
+<label id="bh-vsync-label" style="display:block;margin:0.5em 0"><input type="checkbox" id="bh-vsync" checked /> vsync</label>
+<!-- TODO: Uncomment for testing WASM
+<label id="bh-webgpu-label" style="display:block;margin:0.5em 0"><input type="checkbox" id="bh-webgpu" checked /> webgpu</label>
+-->
 <pre id="bh-sliders" aria-label="blackhole controls">loading controls…</pre>
 <script type="module">
 /**
@@ -59,6 +63,19 @@ if you have made it here, feel free to take a look around and reach out.
   let frameCount = 0;
   let lastFpsTime = performance.now();
   let currentFps = 0;
+
+  // Rolling 5-second window for min/max FPS
+  const FPS_WINDOW_SIZE = 5;
+  let fpsHistory = [];  // Circular buffer of last 5 FPS samples
+
+  // Vsync state
+  let vsyncEnabled = true;
+  let isDragging = false;
+  const vsyncCheckbox = document.getElementById('bh-vsync');
+
+  // Renderer toggle (for testing - TODO: uncomment for testing WASM)
+  // const webgpuCheckbox = document.getElementById('bh-webgpu');
+  let gpuRunning = false;  // Track if GPU loop is running
 
   function updateStatus(msg) {
     if(statusPre){ statusPre.textContent = msg; }
@@ -197,6 +214,7 @@ if you have made it here, feel free to take a look around and reach out.
   slidersPre.addEventListener('pointerdown', (evt) => {
     evt.preventDefault();
     lastPointerId = evt.pointerId;
+    isDragging = true;
     slidersPre.setPointerCapture(evt.pointerId);
     const info = sliderInfoFromPointer(evt);
     if(!info){ return; }
@@ -229,6 +247,11 @@ if you have made it here, feel free to take a look around and reach out.
           slidersPre.releasePointerCapture(evt.pointerId);
         }
         lastPointerId = null;
+        isDragging = false;
+        // If WASM and uncapped mode, restart loop to switch from vsync back to uncapped
+        if(!useGPU && !vsyncEnabled){
+          startWASMLoop();
+        }
       }
     });
   });
@@ -287,18 +310,38 @@ if you have made it here, feel free to take a look around and reach out.
       pre.textContent = frame;
       centerIfOverflow();
       
-      // FPS tracking
+      // FPS tracking with rolling 5-second min/max
       frameCount++;
       const now = performance.now();
       if(now - lastFpsTime >= 1000){
         currentFps = Math.round(frameCount * 1000 / (now - lastFpsTime));
         frameCount = 0;
         lastFpsTime = now;
-        updateStatus(`[webgpu] ${currentFps} fps`);
+
+        // Update rolling window
+        fpsHistory.push(currentFps);
+        if(fpsHistory.length > FPS_WINDOW_SIZE){
+          fpsHistory.shift();
+        }
+
+        // Calculate min/max from window
+        const minFps = Math.min(...fpsHistory);
+        const maxFps = Math.max(...fpsHistory);
+        updateStatus(`[webgpu] fps: ${currentFps} (↓${minFps} ↑${maxFps})`);
       }
     } catch(err) {
       console.error('GPU frame failed', err);
       stopAnimation();
+    }
+  }
+
+  // Schedule next frame based on vsync mode and drag state
+  function scheduleNextFrame(loopFn){
+    // Use vsync (rAF) when: vsync enabled OR user is dragging sliders
+    if(vsyncEnabled || isDragging){
+      requestAnimationFrame(loopFn);
+    } else {
+      setTimeout(loopFn, 0);
     }
   }
 
@@ -331,20 +374,30 @@ if you have made it here, feel free to take a look around and reach out.
     // Time-based phase: consistent speed regardless of frame rate
     const elapsed = (performance.now() - animationStartTime) / 1000;  // seconds
     const phase = (elapsed * DISK_ROTATION_SPEED) % (Math.PI * 2);
-    
+
     const ptr = wasmGenerate(phase);
     if(!ptr){ throw new Error('bh_wasm_generate_frame returned null'); }
     pre.textContent = wasmModule.UTF8ToString(ptr);
     centerIfOverflow();
-    
-    // FPS tracking
+
+    // FPS tracking with rolling 5-second min/max
     frameCount++;
     const now = performance.now();
     if(now - lastFpsTime >= 1000){
       currentFps = Math.round(frameCount * 1000 / (now - lastFpsTime));
       frameCount = 0;
       lastFpsTime = now;
-      updateStatus(`[wasm] ${currentFps} fps`);
+
+      // Update rolling window
+      fpsHistory.push(currentFps);
+      if(fpsHistory.length > FPS_WINDOW_SIZE){
+        fpsHistory.shift();
+      }
+
+      // Calculate min/max from window
+      const minFps = Math.min(...fpsHistory);
+      const maxFps = Math.max(...fpsHistory);
+      updateStatus(`[wasm] fps: ${currentFps} (↓${minFps} ↑${maxFps})`);
     }
   }
 
@@ -371,19 +424,53 @@ if you have made it here, feel free to take a look around and reach out.
     }
     lastSliderState = { ...sliderState };
     animationStartTime = performance.now();  // Reset animation
+
+    // DON'T reset FPS counter - let rebuild time show as low FPS
+    // This accurately reflects the stall during recomputation
+
     runTickWASM();
-    
+
     // Restore scroll position after first frame renders
     window.scrollTo(scrollX, scrollY);
-    
-    animationTimer = setInterval(() => {
-      try{
-        runTickWASM();
-      }catch(err){
-        console.error('animation tick failed', err);
-        stopAnimation();
+
+    startWASMLoop();
+  }
+
+  function startWASMLoop(){
+    stopAnimation();
+
+    if(vsyncEnabled || isDragging){
+      // Vsync mode: fixed interval at target fps
+      animationTimer = setInterval(() => {
+        try{
+          runTickWASM();
+        }catch(err){
+          console.error('animation tick failed', err);
+          stopAnimation();
+        }
+      }, 1000 / fps);
+    } else {
+      // Uncapped mode: recursive setTimeout(0)
+      let running = true;
+      animationTimer = { stop: () => { running = false; } };
+
+      function wasmLoop(){
+        if(!running) return;
+        try{
+          runTickWASM();
+          // Check if we should switch back to vsync mid-loop
+          if(vsyncEnabled || isDragging){
+            startWASMLoop();  // Restart with interval
+            return;
+          }
+          setTimeout(wasmLoop, 0);
+        }catch(err){
+          console.error('animation tick failed', err);
+          running = false;
+        }
       }
-    }, 1000 / fps);
+      wasmLoop();
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -392,7 +479,11 @@ if you have made it here, feel free to take a look around and reach out.
 
   function stopAnimation(){
     if(animationTimer){
-      clearInterval(animationTimer);
+      if(typeof animationTimer.stop === 'function'){
+        animationTimer.stop();  // Custom stop for setTimeout loop
+      } else {
+        clearInterval(animationTimer);
+      }
       animationTimer = null;
     }
   }
@@ -403,49 +494,97 @@ if you have made it here, feel free to take a look around and reach out.
     centerIfOverflow();
   });
 
-  window.addEventListener('beforeunload', () => {
-    try{
-      stopAnimation();
-      if(useGPU && renderer){ renderer.destroy(); }
-      if(wasmDestroy){ wasmDestroy(); }
-    }catch(_){}
-  }, { once: true });
-
   renderSliders();
 
-  // Try WebGPU first, fall back to WASM
-  try {
-    pre.textContent = 'initializing gpu…';
-    updateStatus('[webgpu] initializing...');
-    renderer = await initGPU();
-    useGPU = true;
-    lastSliderState = { ...sliderState };
-    
-    // GPU animation loop using requestAnimationFrame for smoothness
-    let running = true;
-    async function gpuLoop(){
-      if(!running) return;
-      await runTickGPU();
-      requestAnimationFrame(gpuLoop);
+  // Vsync toggle handler (shared)
+  vsyncCheckbox.addEventListener('change', () => {
+    vsyncEnabled = vsyncCheckbox.checked;
+    fpsHistory = [];
+    // If WASM mode, restart the loop
+    if(!useGPU){
+      startWASMLoop();
     }
-    gpuLoop();
-    
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => { running = false; });
-    
-  } catch(err) {
-    console.warn('WebGPU not available, falling back to WASM:', err.message);
-    updateStatus('[wasm] gpu unavailable, using cpu');
-    useGPU = false;
-    
+  });
+
+  // Start GPU renderer
+  async function startGPU(){
     try {
+      pre.textContent = 'initializing gpu…';
+      updateStatus('[webgpu] initializing...');
+      renderer = await initGPU();
+      useGPU = true;
+      gpuRunning = true;
+      lastSliderState = { ...sliderState };
+      fpsHistory = [];
+
+      async function gpuLoop(){
+        if(!gpuRunning) return;
+        await runTickGPU();
+        scheduleNextFrame(gpuLoop);
+      }
+      gpuLoop();
+      return true;
+    } catch(err) {
+      console.warn('WebGPU not available:', err.message);
+      return false;
+    }
+  }
+
+  // Start WASM renderer
+  async function startWASM(){
+    try {
+      updateStatus('[wasm] initializing...');
+      useGPU = false;
+      gpuRunning = false;
+      fpsHistory = [];
       await rebuildSceneWASM();
+      return true;
     } catch(wasmErr) {
       console.error('failed to initialize wasm blackhole', wasmErr);
       pre.textContent = 'failed to load animation';
       slidersPre.textContent = 'sliders unavailable';
       updateStatus('error: ' + wasmErr.message);
+      return false;
     }
   }
+
+  // Stop current renderer
+  function stopCurrentRenderer(){
+    gpuRunning = false;
+    stopAnimation();
+    if(renderer){
+      try{ renderer.destroy(); }catch(_){}
+      renderer = null;
+    }
+    if(wasmDestroy){
+      try{ wasmDestroy(); }catch(_){}
+    }
+  }
+
+  // WebGPU/WASM toggle handler (for testing - TODO: uncomment for testing WASM)
+  // webgpuCheckbox.addEventListener('change', async () => {
+  //   stopCurrentRenderer();
+  //   if(webgpuCheckbox.checked){
+  //     const success = await startGPU();
+  //     if(!success){
+  //       webgpuCheckbox.checked = false;
+  //       await startWASM();
+  //     }
+  //   } else {
+  //     await startWASM();
+  //   }
+  // });
+
+  // Initial startup - try WebGPU first
+  const gpuSuccess = await startGPU();
+  if(!gpuSuccess){
+    // webgpuCheckbox.checked = false;  // TODO: uncomment for testing WASM
+    await startWASM();
+  }
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    stopCurrentRenderer();
+  }, { once: true });
 })();
 </script>

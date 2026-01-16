@@ -6,7 +6,7 @@ date: 2025-11-24
 
 # do it badly
 
-allegedly "you _can_ just do things" \[[citation needed](https://en.wikipedia.org/wiki/Wikipedia:Citation_needed)\]. but in order to avoid enacting the [politician's syllogism](https://en.wikipedia.org/wiki/Politician%27s_syllogism), you must focus on doing things that are worth doing. and [if a thing is worth doing, it is worth doing badly](https://www.chesterton.org/a-thing-worth-doing/).
+allegedly "[you _can_ just do things](https://jasmi.news/p/dictionary)". but in order to avoid enacting the [politician's syllogism](https://en.wikipedia.org/wiki/Politician%27s_syllogism), you must focus on doing things that are worth doing. and [if a thing is worth doing, it is worth doing badly](https://www.chesterton.org/a-thing-worth-doing/).
 
 your first attempt at anything should be your worst. not your worst effort, but the worst result you produce from then on. this allows you to mark your height on the wall. have something tangible that marks the start of your journey, a benchmark to measure progress against. a reminder of how far you have come when you get discouraged or lose focus. it is cathartic to look back and laugh at another you. they are, after all, [the only person you should compare yourself to](https://x.com/karpathy/status/1325154823856033793). and the version of you who did it badly is better off than the version of yourself who hadn't done anything yet.
 

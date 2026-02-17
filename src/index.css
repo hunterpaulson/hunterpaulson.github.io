@@ -283,6 +283,13 @@ pre {
   margin: var(--line-height) 0;
   overflow-y: hidden;
 }
+
+#farming-field {
+  overflow: hidden;
+  white-space: pre;
+  user-select: none;
+}
+
 figure pre {
   margin: 0;
 }

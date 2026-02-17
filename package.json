@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "make",
     "preview": "vite preview",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/*.test.mjs",
+    "generate:farming-corpus": "node scripts/generate-farming-corpus.mjs"
   },
   "author": "Hunter Paulson",
   "license": "MIT",

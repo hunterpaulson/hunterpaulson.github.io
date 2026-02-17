@@ -1,0 +1,1207 @@
+   1|#include <math.h>
+   2|#include <stdio.h>
+   3|#include <stdlib.h>
+   4|#include <string.h>
+   5|#include <unistd.h>
+   6|#include "blackhole_core.h"
+   7|#ifndef M_PI
+   8|#define M_PI 3.14159265358979323846
+   9|#endif
+  10|static const char *dump_path = NULL;
+  11|static int dump_frames = 0;
+  12|static void write_frame(FILE *out, const BHSceneParams *params,
+  13|                        const char *frame_chars) {
+  14|  for (int y = 0; y < params->height; y++) {
+  15|    fwrite(frame_chars + (size_t)y * params->width, 1, params->width, out);
+  16|    fputc('\n', out);
+  17|  }
+  18|}
+  19|int main(int argc, char **argv) {
+  20|  BHSceneParams params;
+  21|  bh_init_scene_params(&params);
+  22|  int numpos = 0;
+  23|  for (int i = 1; i < argc; i++) {
+  24|    if (strcmp(argv[i], "--dump") == 0 && i + 1 < argc) {
+  25|      dump_path = argv[++i];
+  26|      continue;
+  27|    }
+  28|    if (strcmp(argv[i], "--frames") == 0 && i + 1 < argc) {
+  29|      dump_frames = atoi(argv[++i]);
+  30|      continue;
+  31|    }
+  32|    char *end = NULL;
+  33|    double val = strtod(argv[i], &end);
+  34|    if (end && *end == '\0') {
+  35|      if (numpos == 0 && val > -89.0 && val < 89.0) {
+  36|        params.inc_deg = val;
+  37|      } else if (numpos == 1 && val > 5.0 && val < 170.0) {
+  38|        params.FOVx = val * M_PI / 180.0;
+  39|      } else if (numpos == 2 && val > 10.0 && val < 2000.0) {
+  40|        params.robs = val;
+  41|      } else if (numpos == 3 && val >= -90.0 && val <= 90.0) {
+  42|        params.roll_deg = val;
+  43|      }
+  44|      numpos++;
+  45|    }
+  46|  }
+  47|  bh_update_derived(&params);
+  48|  size_t pixel_count = bh_pixel_count(&params);
+  49|  if (pixel_count == 0) {
+  50|    fprintf(stderr, "invalid dimensions\n");
+  51|    return 1;
+  52|  }
+  53|  Hit *map = (Hit *)malloc(sizeof(Hit) * pixel_count);
+  54|  if (!map) {
+  55|    fprintf(stderr, "failed to allocate map (%zu bytes)\n",
+  56|            sizeof(Hit) * pixel_count);
+  57|    return 1;
+  58|  }
+  59|  bh_trace_map(&params, map);
+  60|  double norm_scale = bh_compute_norm_scale(&params, map);
+  61|  char *frame_chars = (char *)malloc(pixel_count);
+  62|  if (!frame_chars) {
+  63|    fprintf(stderr, "failed to allocate frame buffer (%zu bytes)\n",
+  64|            pixel_count);
+  65|    free(map);
+  66|    return 1;
+  67|  }
+  68|  double phase = 0.0;
+  69|  const double dphase = 2 * M_PI / 180.0;
+  70|  if (dump_path && dump_frames > 0) {
+  71|    FILE *f = fopen(dump_path, "wb");
+  72|    if (!f) {
+  73|      perror("fopen dump");
+  74|      free(frame_chars);
+  75|      free(map);
+  76|      return 1;
+  77|    }
+  78|    for (int frame = 0; frame < dump_frames; ++frame) {
+  79|      bh_generate_ascii_frame(&params, map, phase, norm_scale, frame_chars);
+  80|      write_frame(f, &params, frame_chars);
+  81|      if (frame != dump_frames - 1) {
+  82|        fputc('\f', f);
+  83|      }
+  84|      phase += dphase;
+  85|      if (phase > 2 * M_PI) {
+  86|        phase -= 2 * M_PI;
+  87|      }
+  88|    }
+  89|    fclose(f);
+  90|    fprintf(stderr, "dumped %d frames to %s (size %dx%d)\n", dump_frames,
+  91|            dump_path, params.width, params.height);
+  92|    free(frame_chars);
+  93|    free(map);
+  94|    return 0;
+  95|  }
+  96|  printf("\x1b[2J");
+  97|  for (;;) {
+  98|    printf("\x1b[H");
+  99|    bh_generate_ascii_frame(&params, map, phase, norm_scale, frame_chars);
+ 100|    write_frame(stdout, &params, frame_chars);
+ 101|    fflush(stdout);
+ 102|    usleep(40000);
+ 103|    phase += dphase;
+ 104|    if (phase > 2 * M_PI) {
+ 105|      phase -= 2 * M_PI;
+ 106|    }
+ 107|  }
+ 108|  free(frame_chars);
+ 109|  free(map);
+ 110|  return 0;
+ 111|}
+ 112|#include "blackhole_core.h"
+ 113|#include <math.h>
+ 114|#include <stddef.h>
+ 115|#include <stdint.h>
+ 116|#include <string.h>
+ 117|#ifndef M_PI
+ 118|#define M_PI 3.14159265358979323846
+ 119|#endif
+ 120|static const double Mbh = 1.0;
+ 121|static inline double A(double r) { return 1.0 - 2.0 * Mbh / r; }
+ 122|static const double rin = 6.0;
+ 123|static const double rout = 40.0;
+ 124|static const double emiss_p = 2.0;
+ 125|static const char RAMP[] = " `,-:'_;~/\\^\"<>!=()?{}|[]#%$&@";
+ 126|static inline size_t bh_index(const BHSceneParams *params, int x, int y) {
+ 127|  return (size_t)y * (size_t)params->width + (size_t)x;
+ 128|}
+ 129|void bh_init_scene_params(BHSceneParams *params) {
+ 130|  if (!params) {
+ 131|    return;
+ 132|  }
+ 133|  params->width = 80;
+ 134|  params->height = 52;
+ 135|  params->robs = 39.0;
+ 136|  params->inc_deg = 10.0;
+ 137|  params->roll_deg = 0.0;
+ 138|  params->phi_obs = 0.0;
+ 139|  params->FOVx = 60.0 * M_PI / 180.0;
+ 140|  params->gamma_c = 0.30;
+ 141|  bh_update_derived(params);
+ 142|}
+ 143|void bh_update_derived(BHSceneParams *params) {
+ 144|  if (!params) {
+ 145|    return;
+ 146|  }
+ 147|  if (params->width < 1) {
+ 148|    params->width = 1;
+ 149|  }
+ 150|  if (params->height < 1) {
+ 151|    params->height = 1;
+ 152|  }
+ 153|  params->theta_obs =
+ 154|      M_PI / 2.0 - (params->inc_deg * M_PI / 180.0); // inclination
+ 155|  params->FOVy =
+ 156|      params->FOVx * ((double)params->height / (double)params->width);
+ 157|  params->roll_rad = params->roll_deg * M_PI / 180.0;
+ 158|}
+ 159|size_t bh_pixel_count(const BHSceneParams *params) {
+ 160|  if (!params) {
+ 161|    return 0;
+ 162|  }
+ 163|  return (size_t)params->width * (size_t)params->height;
+ 164|}
+ 165|static inline double ring_mul(double r) {
+ 166|  double clamped = r;
+ 167|  if (clamped < rin) {
+ 168|    clamped = rin;
+ 169|  }
+ 170|  if (clamped > rout) {
+ 171|    clamped = rout;
+ 172|  }
+ 173|  double s = (clamped - rin) / (rout - rin);
+ 174|  const double Nbands = 8.0;
+ 175|  const double fill_frac = 0.30;
+ 176|  const double edge_soft = 0.02;
+ 177|  const double band_floor = 0.12;
+ 178|  const double peak = 1.45;
+ 179|  double pos = Nbands * s;
+ 180|  double f = pos - floor(pos);
+ 181|  double w = edge_soft + 1e-6;
+ 182|  double t = 0.5 + 0.5 * tanh((fill_frac - f) / w);
+ 183|  return band_floor + (peak - band_floor) * t;
+ 184|}
+ 185|static inline double hotspots_mul(double r, double phi, double phase) {
+ 186|  const int N = 1;
+ 187|  const double amp = 3.0;
+ 188|  const double rc = 0.5 * rout;
+ 189|  const double Rh = 0.5 * rout;
+ 190|  const double edge = 0.1 * rout;
+ 191|  double x = r * cos(phi), y = r * sin(phi);
+ 192|  double m = 1.0;
+ 193|  for (int k = 0; k < N; k++) {
+ 194|    double ang = -phase + 2.0 * M_PI * (double)k / (double)N;
+ 195|    double cx = rc * cos(ang);
+ 196|    double cy = rc * sin(ang);
+ 197|    double dx = x - cx, dy = y - cy;
+ 198|    double d = sqrt(dx * dx + dy * dy);
+ 199|    double t = 0.5 + 0.5 * tanh((Rh - d) / (edge + 1e-9));
+ 200|    m += amp * t;
+ 201|  }
+ 202|  return m;
+ 203|}
+ 204|static void metric(double r, double th, double g[4][4]) {
+ 205|  double Ar = A(r), s = sin(th), s2 = s * s;
+ 206|  memset(g, 0, sizeof(double) * 16);
+ 207|  g[0][0] = -Ar;
+ 208|  g[1][1] = 1.0 / Ar;
+ 209|  g[2][2] = r * r;
+ 210|  g[3][3] = r * r * s2;
+ 211|}
+ 212|static void accel(double x[4], double v[4], double a[4]) {
+ 213|  double r = x[1], th = x[2], s = sin(th), c = cos(th), Ar = A(r);
+ 214|  (void)Ar;
+ 215|  double Gttr = Mbh / (r * (r - 2.0 * Mbh));
+ 216|  double Grtt = Ar * Mbh / (r * r);
+ 217|  double Grrr = -Mbh / (r * (r - 2.0 * Mbh));
+ 218|  double Grthth = -(r - 2.0 * Mbh);
+ 219|  double Grphph = -(r - 2.0 * Mbh) * s * s;
+ 220|  double Gthrth = 1.0 / r;
+ 221|  double Gthphph = -s * c;
+ 222|  double Gphrph = 1.0 / r;
+ 223|  double Gphthph = (c / (s + 1e-12));
+ 224|  double vt = v[0], vr = v[1], vth = v[2], vph = v[3];
+ 225|  a[0] = -2.0 * Gttr * vt * vr;
+ 226|  a[1] = -(Grtt * vt * vt + Grrr * vr * vr + Grthth * vth * vth +
+ 227|           Grphph * vph * vph);
+ 228|  a[2] = -(2.0 * Gthrth * vr * vth + Gthphph * vph * vph);
+ 229|  a[3] = -(2.0 * Gphrph * vr * vph + 2.0 * Gphthph * vth * vph);
+ 230|}
+ 231|static void rk4(double x[4], double v[4], double h) {
+ 232|  double k1x[4], k2x[4], k3x[4], k4x[4];
+ 233|  double k1v[4], k2v[4], k3v[4], k4v[4];
+ 234|  double a[4], xt[4], vt[4];
+ 235|  accel(x, v, a);
+ 236|  for (int i = 0; i < 4; i++) {
+ 237|    k1x[i] = h * v[i];
+ 238|    k1v[i] = h * a[i];
+ 239|    xt[i] = x[i] + 0.5 * k1x[i];
+ 240|    vt[i] = v[i] + 0.5 * k1v[i];
+ 241|  }
+ 242|  accel(xt, vt, a);
+ 243|  for (int i = 0; i < 4; i++) {
+ 244|    k2x[i] = h * vt[i];
+ 245|    k2v[i] = h * a[i];
+ 246|    xt[i] = x[i] + 0.5 * k2x[i];
+ 247|    vt[i] = v[i] + 0.5 * k2v[i];
+ 248|  }
+ 249|  accel(xt, vt, a);
+ 250|  for (int i = 0; i < 4; i++) {
+ 251|    k3x[i] = h * vt[i];
+ 252|    k3v[i] = h * a[i];
+ 253|    xt[i] = x[i] + k3x[i];
+ 254|    vt[i] = v[i] + k3v[i];
+ 255|  }
+ 256|  accel(xt, vt, a);
+ 257|  for (int i = 0; i < 4; i++) {
+ 258|    k4x[i] = h * vt[i];
+ 259|    k4v[i] = h * a[i];
+ 260|  }
+ 261|  for (int i = 0; i < 4; i++) {
+ 262|    x[i] += (k1x[i] + 2 * k2x[i] + 2 * k3x[i] + k4x[i]) / 6.0;
+ 263|    v[i] += (k1v[i] + 2 * k2v[i] + 2 * k3v[i] + k4v[i]) / 6.0;
+ 264|  }
+ 265|  if (x[2] < 1e-6) {
+ 266|    x[2] = 1e-6;
+ 267|  }
+ 268|  if (x[2] > M_PI - 1e-6) {
+ 269|    x[2] = M_PI - 1e-6;
+ 270|  }
+ 271|}
+ 272|static void pix_ray(const BHSceneParams *params, int px, int py, double x0[4],
+ 273|                    double v0[4]) {
+ 274|  double u = (px + 0.5) / (double)params->width - 0.5;
+ 275|  double v = (py + 0.5) / (double)params->height - 0.5;
+ 276|  double ax = u * params->FOVx;
+ 277|  double ay = v * params->FOVy;
+ 278|  double nr = -1.0, nth = tan(ay), nph = tan(ax);
+ 279|  if (params->roll_rad != 0.0) {
+ 280|    double c = cos(params->roll_rad);
+ 281|    double s = sin(params->roll_rad);
+ 282|    double nth_rot = nth * c - nph * s;
+ 283|    double nph_rot = nth * s + nph * c;
+ 284|    nth = nth_rot;
+ 285|    nph = nph_rot;
+ 286|  }
+ 287|  double norm = sqrt(nr * nr + nth * nth + nph * nph);
+ 288|  nr /= norm;
+ 289|  nth /= norm;
+ 290|  nph /= norm;
+ 291|  double Ar = A(params->robs), s = sin(params->theta_obs);
+ 292|  x0[0] = 0.0;
+ 293|  x0[1] = params->robs;
+ 294|  x0[2] = params->theta_obs;
+ 295|  x0[3] = params->phi_obs;
+ 296|  v0[0] = 1.0 / sqrt(Ar);
+ 297|  v0[1] = nr * sqrt(Ar);
+ 298|  v0[2] = nth / params->robs;
+ 299|  v0[3] = nph / (params->robs * (s > 1e-12 ? s : 1e-12));
+ 300|}
+ 301|static Hit trace_pixel(const BHSceneParams *params, int px, int py) {
+ 302|  Hit H;
+ 303|  H.hit = 0;
+ 304|  H.bg_type = 0;
+ 305|  double x[4], v[4];
+ 306|  pix_ray(params, px, py, x, v);
+ 307|  double th_prev = x[2], x_prev[4], v_prev[4];
+ 308|  for (int i = 0; i < 4; i++) {
+ 309|    x_prev[i] = x[i];
+ 310|    v_prev[i] = v[i];
+ 311|  }
+ 312|  const double h0 = 0.5, rh = 2.0 * Mbh;
+ 313|  double rmin = x[1];
+ 314|  for (int step = 0; step < 5000; ++step) {
+ 315|    double h = h0;
+ 316|    if (x[1] < 10.0) {
+ 317|      h = 0.25 * h0;
+ 318|    }
+ 319|    if (x[1] < 6.0) {
+ 320|      h = 0.125 * h0;
+ 321|    }
+ 322|    rk4(x, v, h);
+ 323|    if (x[1] < rmin) {
+ 324|      rmin = x[1];
+ 325|    }
+ 326|    if (x[1] <= 1.001 * rh) {
+ 327|      H.bg_type = 2;
+ 328|      return H;
+ 329|    }
+ 330|    if (x[1] > 1.2 * params->robs && step > 10) {
+ 331|      if (rmin < 3.0 * Mbh) {
+ 332|        H.bg_type = 2;
+ 333|      } else if (rmin < rin) {
+ 334|        H.bg_type = 3;
+ 335|      } else {
+ 336|        H.bg_type = 1;
+ 337|      }
+ 338|      return H;
+ 339|    }
+ 340|    if ((th_prev - M_PI / 2.0) * (x[2] - M_PI / 2.0) <= 0.0) {
+ 341|      double f = (M_PI / 2.0 - th_prev) / (x[2] - th_prev + 1e-15);
+ 342|      double rhit = x_prev[1] + f * (x[1] - x_prev[1]);
+ 343|      double phit = x_prev[3] + f * (x[3] - x_prev[3]);
+ 344|      if (rhit >= rin && rhit <= rout) {
+ 345|        double vh[4];
+ 346|        for (int i = 0; i < 4; i++) {
+ 347|          vh[i] = v_prev[i] + f * (v[i] - v_prev[i]);
+ 348|        }
+ 349|        double gmn[4][4];
+ 350|        metric(rhit, M_PI / 2.0, gmn);
+ 351|        double pmu[4] = {0};
+ 352|        for (int a = 0; a < 4; a++) {
+ 353|          for (int b = 0; b < 4; b++) {
+ 354|            pmu[a] += gmn[a][b] * vh[b];
+ 355|          }
+ 356|        }
+ 357|        double ut_obs = 1.0 / sqrt(A(params->robs));
+ 358|        double Eobs = -(pmu[0] * ut_obs);
+ 359|        double denom = sqrt(1.0 - 3.0 * Mbh / rhit);
+ 360|        double ut = 1.0 / denom;
+ 361|        double uphi = sqrt(Mbh / (rhit * rhit * rhit)) / denom;
+ 362|        double Eem = -(pmu[0] * ut + pmu[3] * uphi);
+ 363|        double Eobs_clamped = fmax(fmin(Eobs, 1e6), -1e6);
+ 364|        double Eem_clamped =
+ 365|            (fabs(Eem) < 1e-12) ? (Eem >= 0.0 ? 1e-12 : -1e-12) : Eem;
+ 366|        double g = (Eobs_clamped / Eem_clamped);
+ 367|        if (!isfinite(g)) {
+ 368|          g = 0.0;
+ 369|        }
+ 370|        H.hit = 1;
+ 371|        H.bg_type = 0;
+ 372|        H.r = rhit;
+ 373|        H.phi = fmod(phit + 1000.0 * M_PI * 2, 2 * M_PI);
+ 374|        H.g = g > 0 ? g : 0;
+ 375|        H.emiss = pow(rhit, -emiss_p);
+ 376|        return H;
+ 377|      }
+ 378|    }
+ 379|    th_prev = x[2];
+ 380|    for (int i = 0; i < 4; i++) {
+ 381|      x_prev[i] = x[i];
+ 382|      v_prev[i] = v[i];
+ 383|    }
+ 384|  }
+ 385|  if (rmin < 3.0 * Mbh) {
+ 386|    H.bg_type = 2;
+ 387|  } else if (rmin < rin) {
+ 388|    H.bg_type = 3;
+ 389|  } else {
+ 390|    H.bg_type = 1;
+ 391|  }
+ 392|  return H;
+ 393|}
+ 394|void bh_trace_map(const BHSceneParams *params, Hit *map_out) {
+ 395|  if (!params || !map_out) {
+ 396|    return;
+ 397|  }
+ 398|  for (int y = 0; y < params->height; y++) {
+ 399|    for (int x = 0; x < params->width; x++) {
+ 400|      map_out[bh_index(params, x, y)] = trace_pixel(params, x, y);
+ 401|    }
+ 402|  }
+ 403|}
+ 404|static inline double base_disk_value(const Hit *hit) {
+ 405|  double g3 = pow(hit->g, 3.0);
+ 406|  return hit->emiss * g3 * ring_mul(hit->r);
+ 407|}
+ 408|static inline double disk_value_with_hotspots(const Hit *hit, double phase) {
+ 409|  return base_disk_value(hit) * hotspots_mul(hit->r, hit->phi, phase);
+ 410|}
+ 411|double bh_compute_norm_scale(const BHSceneParams *params, const Hit *map) {
+ 412|  (void)params;
+ 413|  if (!map) {
+ 414|    return 1.0;
+ 415|  }
+ 416|  double norm_scale = 1e-12;
+ 417|  const size_t count = bh_pixel_count(params);
+ 418|  for (size_t i = 0; i < count; i++) {
+ 419|    if (map[i].hit) {
+ 420|      double base = base_disk_value(&map[i]);
+ 421|      if (base > norm_scale) {
+ 422|        norm_scale = base;
+ 423|      }
+ 424|    }
+ 425|  }
+ 426|  return norm_scale;
+ 427|}
+ 428|static inline char sky_char(int x, int y, double phase) {
+ 429|  unsigned int h = (unsigned int)(1469598103u);
+ 430|  h ^= (unsigned int)(x * 374761393u + y * 668265263u);
+ 431|  h *= 16777619u;
+ 432|  unsigned int r = h & 0xffffu;
+ 433|  if (r < 12000u) {
+ 434|    return '.';
+ 435|  }
+ 436|  if (r < 16000u) {
+ 437|    double tw = sin(phase * 0.60 +
+ 438|                    ((h >> 8) & 1023u) * (2.0 * M_PI / 1024.0));
+ 439|    return (tw > 0.92) ? '*' : '+';
+ 440|  }
+ 441|  if (r < 16800u) {
+ 442|    double tw =
+ 443|        sin(phase * 0.75 + (h & 1023u) * (2.0 * M_PI / 1024.0));
+ 444|    return (tw > 0.10) ? '*' : '+';
+ 445|  }
+ 446|  return ' ';
+ 447|}
+ 448|void bh_generate_ascii_frame(const BHSceneParams *params, const Hit *map,
+ 449|                             double phase, double norm_scale,
+ 450|                             char *out_chars) {
+ 451|  if (!params || !map || !out_chars) {
+ 452|    return;
+ 453|  }
+ 454|  if (norm_scale <= 0.0) {
+ 455|    norm_scale = 1.0;
+ 456|  }
+ 457|  int ramp_len = (int)sizeof(RAMP) - 1;
+ 458|  if (ramp_len < 1) {
+ 459|    ramp_len = 1;
+ 460|  }
+ 461|  for (int y = 0; y < params->height; y++) {
+ 462|    for (int x = 0; x < params->width; x++) {
+ 463|      size_t idx = bh_index(params, x, y);
+ 464|      const Hit *hit = &map[idx];
+ 465|      char ch = ' ';
+ 466|      if (hit->hit) {
+ 467|        double val = disk_value_with_hotspots(hit, phase);
+ 468|        double v = val / norm_scale;
+ 469|        if (v < 0.0) {
+ 470|          v = 0.0;
+ 471|        }
+ 472|        if (v > 1.0) {
+ 473|          v = 1.0;
+ 474|        }
+ 475|        double q = pow(v, params->gamma_c);
+ 476|        int idx_base = (int)(q * (ramp_len - 1));
+ 477|        if (idx_base < 0) {
+ 478|          idx_base = 0;
+ 479|        }
+ 480|        if (idx_base > ramp_len - 1) {
+ 481|          idx_base = ramp_len - 1;
+ 482|        }
+ 483|        ch = RAMP[idx_base];
+ 484|      } else if (hit->bg_type == 2) {
+ 485|        ch = ' ';
+ 486|      } else if (hit->bg_type == 3) {
+ 487|        ch = ' ';
+ 488|      } else {
+ 489|        ch = sky_char(x, y, phase);
+ 490|      }
+ 491|      out_chars[idx] = ch;
+ 492|    }
+ 493|  }
+ 494|}
+ 495|#ifndef BLACKHOLE_CORE_H
+ 496|#define BLACKHOLE_CORE_H
+ 497|#include <stddef.h>
+ 498|#ifdef __cplusplus
+ 499|extern "C" {
+ 500|#endif
+ 501|typedef struct {
+ 502|  double r;
+ 503|  double phi;
+ 504|  double g;
+ 505|  double emiss;
+ 506|  int hit;
+ 507|  int bg_type;
+ 508|} Hit;
+ 509|typedef struct {
+ 510|  int width;
+ 511|  int height;
+ 512|  double robs;
+ 513|  double inc_deg;
+ 514|  double roll_deg;
+ 515|  double phi_obs;
+ 516|  double theta_obs;
+ 517|  double FOVx;
+ 518|  double FOVy;
+ 519|  double gamma_c;
+ 520|  double roll_rad;
+ 521|} BHSceneParams;
+ 522|void bh_init_scene_params(BHSceneParams *params);
+ 523|void bh_update_derived(BHSceneParams *params);
+ 524|size_t bh_pixel_count(const BHSceneParams *params);
+ 525|void bh_trace_map(const BHSceneParams *params, Hit *map_out);
+ 526|double bh_compute_norm_scale(const BHSceneParams *params, const Hit *map);
+ 527|void bh_generate_ascii_frame(const BHSceneParams *params, const Hit *map,
+ 528|                             double phase, double norm_scale, char *out_chars);
+ 529|#ifdef __cplusplus
+ 530|}
+ 531|#endif
+ 532|#endif // BLACKHOLE_CORE_H
+ 533|#include <math.h>
+ 534|#include <stddef.h>
+ 535|#include <stdint.h>
+ 536|#include <stdlib.h>
+ 537|#include <string.h>
+ 538|#include <emscripten/emscripten.h>
+ 539|#include "blackhole_core.h"
+ 540|#ifndef M_PI
+ 541|#define M_PI 3.14159265358979323846
+ 542|#endif
+ 543|typedef struct {
+ 544|  BHSceneParams params;
+ 545|  Hit *map;
+ 546|  char *raw_pixels;
+ 547|  char *frame_chars;
+ 548|  size_t pixel_count;
+ 549|  size_t frame_bytes;
+ 550|  double norm_scale;
+ 551|} BHContext;
+ 552|static BHContext ctx = {0};
+ 553|static void bh_wasm_clear(void) {
+ 554|  free(ctx.map);
+ 555|  free(ctx.raw_pixels);
+ 556|  free(ctx.frame_chars);
+ 557|  memset(&ctx, 0, sizeof(ctx));
+ 558|}
+ 559|static int bh_wasm_alloc_buffers(void) {
+ 560|  ctx.pixel_count = bh_pixel_count(&ctx.params);
+ 561|  if (ctx.pixel_count == 0) {
+ 562|    return -1;
+ 563|  }
+ 564|  ctx.map = (Hit *)malloc(sizeof(Hit) * ctx.pixel_count);
+ 565|  ctx.raw_pixels = (char *)malloc(ctx.pixel_count);
+ 566|  ctx.frame_bytes =
+ 567|      ctx.pixel_count + (size_t)ctx.params.height + 1; // newline per row + NUL
+ 568|  ctx.frame_chars = (char *)malloc(ctx.frame_bytes);
+ 569|  if (!ctx.map || !ctx.raw_pixels || !ctx.frame_chars) {
+ 570|    bh_wasm_clear();
+ 571|    return -2;
+ 572|  }
+ 573|  return 0;
+ 574|}
+ 575|EMSCRIPTEN_KEEPALIVE
+ 576|int bh_wasm_init(int width, int height, double inc_deg, double fovx_deg,
+ 577|                 double robs, double roll_deg) {
+ 578|  if (width <= 0 || height <= 0) {
+ 579|    return -1;
+ 580|  }
+ 581|  bh_wasm_clear();
+ 582|  bh_init_scene_params(&ctx.params);
+ 583|  ctx.params.width = width;
+ 584|  ctx.params.height = height;
+ 585|  if (inc_deg > -89.0 && inc_deg < 89.0) {
+ 586|    ctx.params.inc_deg = inc_deg;
+ 587|  }
+ 588|  if (fovx_deg > 5.0 && fovx_deg < 170.0) {
+ 589|    ctx.params.FOVx = fovx_deg * M_PI / 180.0;
+ 590|  }
+ 591|  if (robs > 10.0 && robs < 2000.0) {
+ 592|    ctx.params.robs = robs;
+ 593|  }
+ 594|  if (roll_deg >= -90.0 && roll_deg <= 90.0) {
+ 595|    ctx.params.roll_deg = roll_deg;
+ 596|  }
+ 597|  bh_update_derived(&ctx.params);
+ 598|  int alloc_status = bh_wasm_alloc_buffers();
+ 599|  if (alloc_status != 0) {
+ 600|    return alloc_status;
+ 601|  }
+ 602|  bh_trace_map(&ctx.params, ctx.map);
+ 603|  ctx.norm_scale = bh_compute_norm_scale(&ctx.params, ctx.map);
+ 604|  return 0;
+ 605|}
+ 606|EMSCRIPTEN_KEEPALIVE
+ 607|void bh_wasm_destroy(void) { bh_wasm_clear(); }
+ 608|EMSCRIPTEN_KEEPALIVE
+ 609|int bh_wasm_width(void) { return ctx.params.width; }
+ 610|EMSCRIPTEN_KEEPALIVE
+ 611|int bh_wasm_height(void) { return ctx.params.height; }
+ 612|EMSCRIPTEN_KEEPALIVE
+ 613|size_t bh_wasm_frame_len(void) { return ctx.frame_bytes; }
+ 614|EMSCRIPTEN_KEEPALIVE
+ 615|const char *bh_wasm_generate_frame(double phase) {
+ 616|  if (!ctx.map || !ctx.raw_pixels || !ctx.frame_chars) {
+ 617|    return NULL;
+ 618|  }
+ 619|  bh_generate_ascii_frame(&ctx.params, ctx.map, phase, ctx.norm_scale,
+ 620|                          ctx.raw_pixels);
+ 621|  const char *src = ctx.raw_pixels;
+ 622|  char *dst = ctx.frame_chars;
+ 623|  int width = ctx.params.width;
+ 624|  int height = ctx.params.height;
+ 625|  for (int y = 0; y < height; y++) {
+ 626|    memcpy(dst, src, width);
+ 627|    dst += width;
+ 628|    src += width;
+ 629|    *dst++ = '\n';
+ 630|  }
+ 631|  *dst = '\0';
+ 632|  return ctx.frame_chars;
+ 633|}
+ 634|export function isWebGPUSupported() {
+ 635|  return typeof navigator !== 'undefined' && 'gpu' in navigator;
+ 636|}
+ 637|export class BlackHoleGPU {
+ 638|  constructor() {
+ 639|    this.device = null;
+ 640|    this.adapter = null;
+ 641|    this.tracePipeline = null;
+ 642|    this.renderPipeline = null;
+ 643|    this.paramsBuffer = null;
+ 644|    this.hitMapBuffer = null;
+ 645|    this.outputBuffer = null;
+ 646|    this.readbackBuffer = null;
+ 647|    this.bindGroup = null;
+ 648|    this.width = 80;
+ 649|    this.height = 52;
+ 650|    this.needsRetrace = true;
+ 651|    this.params = {
+ 652|      robs: 39.0,
+ 653|      inc_deg: 10.0,
+ 654|      roll_deg: 0.0,
+ 655|      phi_obs: 0.0,
+ 656|      FOVx_deg: 60.0,
+ 657|      gamma_c: 0.30,
+ 658|      phase: 0.0,
+ 659|    };
+ 660|  }
+ 661|  async init(width, height, inc_deg, fovx_deg, robs, roll_deg) {
+ 662|    if (!isWebGPUSupported()) {
+ 663|      throw new Error('WebGPU is not supported in this browser');
+ 664|    }
+ 665|    this.width = width;
+ 666|    this.height = height;
+ 667|    this.params.inc_deg = inc_deg;
+ 668|    this.params.FOVx_deg = fovx_deg;
+ 669|    this.params.robs = robs;
+ 670|    this.params.roll_deg = roll_deg;
+ 671|    this.adapter = await navigator.gpu.requestAdapter({
+ 672|      powerPreference: 'high-performance'  // Request discrete GPU if available
+ 673|    });
+ 674|    if (!this.adapter) {
+ 675|      throw new Error('Failed to get GPU adapter');
+ 676|    }
+ 677|    this.device = await this.adapter.requestDevice({
+ 678|      requiredLimits: {
+ 679|        maxComputeWorkgroupSizeX: 16,
+ 680|        maxComputeWorkgroupSizeY: 16,
+ 681|      }
+ 682|    });
+ 683|    this.device.lost.then((info) => {
+ 684|      console.error('WebGPU device was lost:', info.message);
+ 685|    });
+ 686|    const shaderUrl = new URL('./blackhole_gpu.wgsl', import.meta.url);
+ 687|    const shaderCode = await fetch(shaderUrl).then(r => r.text());
+ 688|    const shaderModule = this.device.createShaderModule({
+ 689|      label: 'Black Hole Raytracer',
+ 690|      code: shaderCode,
+ 691|    });
+ 692|    const compilationInfo = await shaderModule.getCompilationInfo();
+ 693|    for (const message of compilationInfo.messages) {
+ 694|      if (message.type === 'error') {
+ 695|        throw new Error(`Shader compilation error: ${message.message}`);
+ 696|      }
+ 697|      console.warn('Shader warning:', message.message);
+ 698|    }
+ 699|    this.tracePipeline = this.device.createComputePipeline({
+ 700|      label: 'Trace Rays Pipeline',
+ 701|      layout: 'auto',
+ 702|      compute: {
+ 703|        module: shaderModule,
+ 704|        entryPoint: 'trace_rays',
+ 705|      },
+ 706|    });
+ 707|    this.renderPipeline = this.device.createComputePipeline({
+ 708|      label: 'Render ASCII Pipeline',
+ 709|      layout: 'auto',
+ 710|      compute: {
+ 711|        module: shaderModule,
+ 712|        entryPoint: 'render_ascii',
+ 713|      },
+ 714|    });
+ 715|    await this._createBuffers();
+ 716|    this.needsRetrace = true;
+ 717|    return 0;  // Success
+ 718|  }
+ 719|  async _createBuffers() {
+ 720|    const pixelCount = this.width * this.height;
+ 721|    this.paramsBuffer = this.device.createBuffer({
+ 722|      label: 'Scene Parameters',
+ 723|      size: 48,
+ 724|      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+ 725|    });
+ 726|    this.hitMapBuffer = this.device.createBuffer({
+ 727|      label: 'Hit Map',
+ 728|      size: pixelCount * 32,
+ 729|      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+ 730|    });
+ 731|    this.outputBuffer = this.device.createBuffer({
+ 732|      label: 'ASCII Output',
+ 733|      size: pixelCount * 4,
+ 734|      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+ 735|    });
+ 736|    this.readbackBuffer = this.device.createBuffer({
+ 737|      label: 'Readback Buffer',
+ 738|      size: pixelCount * 4,
+ 739|      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+ 740|    });
+ 741|    this.traceBindGroup = this.device.createBindGroup({
+ 742|      label: 'Trace Bind Group',
+ 743|      layout: this.tracePipeline.getBindGroupLayout(0),
+ 744|      entries: [
+ 745|        { binding: 0, resource: { buffer: this.paramsBuffer } },
+ 746|        { binding: 1, resource: { buffer: this.hitMapBuffer } },
+ 747|      ],
+ 748|    });
+ 749|    this.renderBindGroup = this.device.createBindGroup({
+ 750|      label: 'Render Bind Group',
+ 751|      layout: this.renderPipeline.getBindGroupLayout(0),
+ 752|      entries: [
+ 753|        { binding: 0, resource: { buffer: this.paramsBuffer } },
+ 754|        { binding: 1, resource: { buffer: this.hitMapBuffer } },
+ 755|        { binding: 2, resource: { buffer: this.outputBuffer } },
+ 756|      ],
+ 757|    });
+ 758|  }
+ 759|  updateParams(overrides = {}) {
+ 760|    Object.assign(this.params, overrides);
+ 761|    if ('robs' in overrides || 'inc_deg' in overrides || 
+ 762|        'roll_deg' in overrides || 'FOVx_deg' in overrides) {
+ 763|      this.needsRetrace = true;
+ 764|    }
+ 765|    const theta_obs = Math.PI / 2.0 - (this.params.inc_deg * Math.PI / 180.0);
+ 766|    const FOVx = this.params.FOVx_deg * Math.PI / 180.0;
+ 767|    const FOVy = FOVx * (this.height / this.width);
+ 768|    const roll_rad = this.params.roll_deg * Math.PI / 180.0;
+ 769|    const data = new ArrayBuffer(48);
+ 770|    const view = new DataView(data);
+ 771|    view.setUint32(0, this.width, true);          // width
+ 772|    view.setUint32(4, this.height, true);         // height
+ 773|    view.setFloat32(8, this.params.robs, true);   // robs
+ 774|    view.setFloat32(12, theta_obs, true);         // theta_obs
+ 775|    view.setFloat32(16, this.params.phi_obs, true); // phi_obs
+ 776|    view.setFloat32(20, FOVx, true);              // FOVx
+ 777|    view.setFloat32(24, FOVy, true);              // FOVy
+ 778|    view.setFloat32(28, roll_rad, true);          // roll_rad
+ 779|    view.setFloat32(32, this.params.phase, true); // phase
+ 780|    view.setFloat32(36, this.params.gamma_c, true); // gamma_c
+ 781|    this.device.queue.writeBuffer(this.paramsBuffer, 0, data);
+ 782|  }
+ 783|  async traceRays() {
+ 784|    const encoder = this.device.createCommandEncoder({
+ 785|      label: 'Trace Command Encoder',
+ 786|    });
+ 787|    const pass = encoder.beginComputePass({
+ 788|      label: 'Trace Compute Pass',
+ 789|    });
+ 790|    pass.setPipeline(this.tracePipeline);
+ 791|    pass.setBindGroup(0, this.traceBindGroup);
+ 792|    const workgroupsX = Math.ceil(this.width / 16);
+ 793|    const workgroupsY = Math.ceil(this.height / 16);
+ 794|    pass.dispatchWorkgroups(workgroupsX, workgroupsY, 1);
+ 795|    pass.end();
+ 796|    this.device.queue.submit([encoder.finish()]);
+ 797|    await this.device.queue.onSubmittedWorkDone();
+ 798|    this.needsRetrace = false;
+ 799|  }
+ 800|  async renderASCII() {
+ 801|    const encoder = this.device.createCommandEncoder({
+ 802|      label: 'Render Command Encoder',
+ 803|    });
+ 804|    const pass = encoder.beginComputePass({
+ 805|      label: 'Render Compute Pass',
+ 806|    });
+ 807|    pass.setPipeline(this.renderPipeline);
+ 808|    pass.setBindGroup(0, this.renderBindGroup);
+ 809|    const workgroupsX = Math.ceil(this.width / 16);
+ 810|    const workgroupsY = Math.ceil(this.height / 16);
+ 811|    pass.dispatchWorkgroups(workgroupsX, workgroupsY, 1);
+ 812|    pass.end();
+ 813|    encoder.copyBufferToBuffer(
+ 814|      this.outputBuffer, 0,
+ 815|      this.readbackBuffer, 0,
+ 816|      this.width * this.height * 4
+ 817|    );
+ 818|    this.device.queue.submit([encoder.finish()]);
+ 819|  }
+ 820|  async readFrame() {
+ 821|    await this.device.queue.onSubmittedWorkDone();
+ 822|    await this.readbackBuffer.mapAsync(GPUMapMode.READ);
+ 823|    const data = new Uint32Array(this.readbackBuffer.getMappedRange());
+ 824|    let output = '';
+ 825|    for (let y = 0; y < this.height; y++) {
+ 826|      for (let x = 0; x < this.width; x++) {
+ 827|        const charCode = data[y * this.width + x];
+ 828|        output += String.fromCharCode(charCode);
+ 829|      }
+ 830|      if (y < this.height - 1) {
+ 831|        output += '\n';
+ 832|      }
+ 833|    }
+ 834|    this.readbackBuffer.unmap();
+ 835|    return output;
+ 836|  }
+ 837|  async generateFrame(phase) {
+ 838|    this.updateParams({ phase });
+ 839|    if (this.needsRetrace) {
+ 840|      await this.traceRays();
+ 841|    }
+ 842|    await this.renderASCII();
+ 843|    return await this.readFrame();
+ 844|  }
+ 845|  async updateScene(inc_deg, robs, roll_deg) {
+ 846|    this.updateParams({ inc_deg, robs, roll_deg });
+ 847|  }
+ 848|  destroy() {
+ 849|    if (this.paramsBuffer) this.paramsBuffer.destroy();
+ 850|    if (this.hitMapBuffer) this.hitMapBuffer.destroy();
+ 851|    if (this.outputBuffer) this.outputBuffer.destroy();
+ 852|    if (this.readbackBuffer) this.readbackBuffer.destroy();
+ 853|    this.device = null;
+ 854|    this.adapter = null;
+ 855|  }
+ 856|  getWidth() { return this.width; }
+ 857|  getHeight() { return this.height; }
+ 858|}
+ 859|export async function createBlackHoleGPU(width, height, inc_deg, fovx_deg, robs, roll_deg) {
+ 860|  const bh = new BlackHoleGPU();
+ 861|  await bh.init(width, height, inc_deg, fovx_deg, robs, roll_deg);
+ 862|  return bh;
+ 863|}
+ 864|export default { isWebGPUSupported, BlackHoleGPU, createBlackHoleGPU };
+ 865|const PI: f32 = 3.14159265358979323846;
+ 866|const Mbh: f32 = 1.0;  // Black hole mass (geometric units: G = c = 1)
+ 867|const rin: f32 = 6.0;   // Inner edge of accretion disk (ISCO for Schwarzschild)
+ 868|const rout: f32 = 40.0; // Outer edge of accretion disk
+ 869|const emiss_p: f32 = 2.0; // Emission power law exponent
+ 870|struct SceneParams {
+ 871|    width: u32,
+ 872|    height: u32,
+ 873|    robs: f32,        // Observer distance from black hole
+ 874|    theta_obs: f32,   // Observer inclination (from pole)
+ 875|    phi_obs: f32,     // Observer azimuthal angle
+ 876|    FOVx: f32,        // Horizontal field of view
+ 877|    FOVy: f32,        // Vertical field of view
+ 878|    roll_rad: f32,    // Camera roll
+ 879|    phase: f32,       // Animation phase for disk rotation
+ 880|    gamma_c: f32,     // Gamma correction
+ 881|    _padding: vec2<f32>,
+ 882|}
+ 883|struct Hit {
+ 884|    r: f32,           // Radius where disk was hit
+ 885|    phi: f32,         // Azimuthal angle where disk was hit  
+ 886|    g: f32,           // Relativistic Doppler factor (redshift/blueshift)
+ 887|    emiss: f32,       // Emissivity at hit point
+ 888|    hit: i32,         // 1 if hit disk, 0 otherwise
+ 889|    bg_type: i32,     // 0=disk, 1=sky, 2=event_horizon, 3=inner_region
+ 890|    theta_final: f32, // Final ray direction θ (for star field)
+ 891|    phi_final: f32,   // Final ray direction φ (for star field)
+ 892|}
+ 893|@group(0) @binding(0) var<uniform> params: SceneParams;
+ 894|@group(0) @binding(1) var<storage, read_write> hit_map: array<Hit>;
+ 895|@group(0) @binding(2) var<storage, read_write> output_chars: array<u32>;
+ 896|fn A(r: f32) -> f32 {
+ 897|    return 1.0 - 2.0 * Mbh / r;
+ 898|}
+ 899|fn compute_acceleration(x: vec4<f32>, v: vec4<f32>) -> vec4<f32> {
+ 900|    let r = x[1];
+ 901|    let th = x[2];
+ 902|    let s = sin(th);
+ 903|    let c = cos(th);
+ 904|    let Ar = A(r);
+ 905|    let Gttr = Mbh / (r * (r - 2.0 * Mbh));
+ 906|    let Grtt = Ar * Mbh / (r * r);
+ 907|    let Grrr = -Mbh / (r * (r - 2.0 * Mbh));
+ 908|    let Grthth = -(r - 2.0 * Mbh);
+ 909|    let Grphph = -(r - 2.0 * Mbh) * s * s;
+ 910|    let Gthrth = 1.0 / r;
+ 911|    let Gthphph = -s * c;
+ 912|    let Gphrph = 1.0 / r;
+ 913|    let Gphthph = c / (s + 1e-12);
+ 914|    let vt = v[0];
+ 915|    let vr = v[1];
+ 916|    let vth = v[2];
+ 917|    let vph = v[3];
+ 918|    var a: vec4<f32>;
+ 919|    a[0] = -2.0 * Gttr * vt * vr;
+ 920|    a[1] = -(Grtt * vt * vt + Grrr * vr * vr + Grthth * vth * vth + Grphph * vph * vph);
+ 921|    a[2] = -(2.0 * Gthrth * vr * vth + Gthphph * vph * vph);
+ 922|    a[3] = -(2.0 * Gphrph * vr * vph + 2.0 * Gphthph * vth * vph);
+ 923|    return a;
+ 924|}
+ 925|fn rk4_step(x_in: vec4<f32>, v_in: vec4<f32>, h: f32) -> array<vec4<f32>, 2> {
+ 926|    var x = x_in;
+ 927|    var v = v_in;
+ 928|    var a = compute_acceleration(x, v);
+ 929|    let k1x = h * v;
+ 930|    let k1v = h * a;
+ 931|    var xt = x + 0.5 * k1x;
+ 932|    var vt = v + 0.5 * k1v;
+ 933|    a = compute_acceleration(xt, vt);
+ 934|    let k2x = h * vt;
+ 935|    let k2v = h * a;
+ 936|    xt = x + 0.5 * k2x;
+ 937|    vt = v + 0.5 * k2v;
+ 938|    a = compute_acceleration(xt, vt);
+ 939|    let k3x = h * vt;
+ 940|    let k3v = h * a;
+ 941|    xt = x + k3x;
+ 942|    vt = v + k3v;
+ 943|    a = compute_acceleration(xt, vt);
+ 944|    let k4x = h * vt;
+ 945|    let k4v = h * a;
+ 946|    x = x + (k1x + 2.0 * k2x + 2.0 * k3x + k4x) / 6.0;
+ 947|    v = v + (k1v + 2.0 * k2v + 2.0 * k3v + k4v) / 6.0;
+ 948|    x[2] = clamp(x[2], 1e-6, PI - 1e-6);
+ 949|    return array<vec4<f32>, 2>(x, v);
+ 950|}
+ 951|fn init_ray_with_sky(px: u32, py: u32) -> array<vec4<f32>, 4> {
+ 952|    let u = (f32(px) + 0.5) / f32(params.width) - 0.5;
+ 953|    let v = (f32(py) + 0.5) / f32(params.height) - 0.5;
+ 954|    let ax = u * params.FOVx;
+ 955|    let ay = v * params.FOVy;
+ 956|    var nr = -1.0;
+ 957|    var nth = tan(ay);
+ 958|    var nph = tan(ax);
+ 959|    if (params.roll_rad != 0.0) {
+ 960|        let cr = cos(params.roll_rad);
+ 961|        let sr = sin(params.roll_rad);
+ 962|        let nth_rot = nth * cr - nph * sr;
+ 963|        let nph_rot = nth * sr + nph * cr;
+ 964|        nth = nth_rot;
+ 965|        nph = nph_rot;
+ 966|    }
+ 967|    let view_theta_offset = atan(nth);  // Angular offset from straight ahead
+ 968|    let view_phi_offset = atan(nph);
+ 969|    var sky_theta = PI - params.theta_obs + view_theta_offset;
+ 970|    var sky_phi = params.phi_obs + PI + view_phi_offset / max(sin(params.theta_obs), 0.1);
+ 971|    sky_theta = clamp(sky_theta, 0.001, PI - 0.001);
+ 972|    sky_phi = (sky_phi + 100.0 * PI * 2.0) % (2.0 * PI);
+ 973|    let norm = sqrt(nr * nr + nth * nth + nph * nph);
+ 974|    nr /= norm;
+ 975|    nth /= norm;
+ 976|    nph /= norm;
+ 977|    let Ar = A(params.robs);
+ 978|    let s = sin(params.theta_obs);
+ 979|    var x0: vec4<f32>;
+ 980|    x0[0] = 0.0;                // t
+ 981|    x0[1] = params.robs;        // r
+ 982|    x0[2] = params.theta_obs;   // θ
+ 983|    x0[3] = params.phi_obs;     // φ
+ 984|    var v0: vec4<f32>;
+ 985|    v0[0] = 1.0 / sqrt(Ar);                          // dt/dλ
+ 986|    v0[1] = nr * sqrt(Ar);                           // dr/dλ
+ 987|    v0[2] = nth / params.robs;                       // dθ/dλ
+ 988|    v0[3] = nph / (params.robs * max(s, 1e-12));     // dφ/dλ
+ 989|    var sky: vec4<f32>;
+ 990|    sky[0] = sky_theta;
+ 991|    sky[1] = sky_phi;
+ 992|    sky[2] = 0.0;
+ 993|    sky[3] = 0.0;
+ 994|    return array<vec4<f32>, 4>(x0, v0, sky, sky);  // Return 4 vec4s (last one is padding)
+ 995|}
+ 996|fn init_ray(px: u32, py: u32) -> array<vec4<f32>, 2> {
+ 997|    let result = init_ray_with_sky(px, py);
+ 998|    return array<vec4<f32>, 2>(result[0], result[1]);
+ 999|}
+1000|fn ring_mul(r: f32) -> f32 {
+1001|    let clamped = clamp(r, rin, rout);
+1002|    let s = (clamped - rin) / (rout - rin);
+1003|    let Nbands = 8.0;
+1004|    let fill_frac = 0.30;
+1005|    let edge_soft = 0.02;
+1006|    let band_floor = 0.12;
+1007|    let peak = 1.45;
+1008|    let pos = Nbands * s;
+1009|    let f = pos - floor(pos);
+1010|    let w = edge_soft + 1e-6;
+1011|    let t = 0.5 + 0.5 * tanh((fill_frac - f) / w);
+1012|    return band_floor + (peak - band_floor) * t;
+1013|}
+1014|fn hotspots_mul(r: f32, phi: f32, phase: f32) -> f32 {
+1015|    let amp = 3.0;
+1016|    let rc = 0.5 * rout;
+1017|    let Rh = 0.5 * rout;
+1018|    let edge = 0.1 * rout;
+1019|    let x_pos = r * cos(phi);
+1020|    let y_pos = r * sin(phi);
+1021|    let ang = -phase;
+1022|    let cx = rc * cos(ang);
+1023|    let cy = rc * sin(ang);
+1024|    let dx = x_pos - cx;
+1025|    let dy = y_pos - cy;
+1026|    let d = sqrt(dx * dx + dy * dy);
+1027|    let t = 0.5 + 0.5 * tanh((Rh - d) / (edge + 1e-9));
+1028|    return 1.0 + amp * t;
+1029|}
+1030|@compute @workgroup_size(16, 16, 1)
+1031|fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
+1032|    let px = global_id.x;
+1033|    let py = global_id.y;
+1034|    if (px >= params.width || py >= params.height) {
+1035|        return;
+1036|    }
+1037|    let idx = py * params.width + px;
+1038|    let ray_data = init_ray_with_sky(px, py);
+1039|    var x = ray_data[0];
+1040|    var v = ray_data[1];
+1041|    let sky_dir = ray_data[2];  // Pre-computed sky direction for this pixel
+1042|    var th_prev = x[2];
+1043|    var x_prev = x;
+1044|    var v_prev = v;
+1045|    let h0 = 0.5;  // Base step size
+1046|    let rh = 2.0 * Mbh;  // Event horizon radius
+1047|    var rmin = x[1];
+1048|    var H: Hit;
+1049|    H.hit = 0;
+1050|    H.bg_type = 0;
+1051|    H.r = 0.0;
+1052|    H.phi = 0.0;
+1053|    H.g = 0.0;
+1054|    H.emiss = 0.0;
+1055|    H.theta_final = 0.0;
+1056|    H.phi_final = 0.0;
+1057|    for (var step = 0; step < 5000; step++) {
+1058|        var h = h0;
+1059|        if (x[1] < 10.0) { h = 0.25 * h0; }
+1060|        if (x[1] < 6.0) { h = 0.125 * h0; }
+1061|        let result = rk4_step(x, v, h);
+1062|        x = result[0];
+1063|        v = result[1];
+1064|        if (x[1] < rmin) { rmin = x[1]; }
+1065|        if (x[1] <= 1.001 * rh) {
+1066|            H.bg_type = 2;  // Event horizon
+1067|            hit_map[idx] = H;
+1068|            return;
+1069|        }
+1070|        if (x[1] > 1.2 * params.robs && step > 10) {
+1071|            H.theta_final = sky_dir[0];
+1072|            H.phi_final = sky_dir[1];
+1073|            if (rmin < 3.0 * Mbh) {
+1074|                H.bg_type = 2;  // Passed very close - event horizon background
+1075|            } else if (rmin < rin) {
+1076|                H.bg_type = 3;  // Passed through inner region
+1077|            } else {
+1078|                H.bg_type = 1;  // Normal sky
+1079|            }
+1080|            hit_map[idx] = H;
+1081|            return;
+1082|        }
+1083|        if ((th_prev - PI / 2.0) * (x[2] - PI / 2.0) <= 0.0) {
+1084|            let f = (PI / 2.0 - th_prev) / (x[2] - th_prev + 1e-15);
+1085|            let rhit = x_prev[1] + f * (x[1] - x_prev[1]);
+1086|            let phit = x_prev[3] + f * (x[3] - x_prev[3]);
+1087|            if (rhit >= rin && rhit <= rout) {
+1088|                let vh = v_prev + f * (v - v_prev);
+1089|                let Ar_hit = A(rhit);
+1090|                let pmu_t = -Ar_hit * vh[0];
+1091|                let pmu_r = vh[1] / Ar_hit;
+1092|                let pmu_th = rhit * rhit * vh[2];
+1093|                let pmu_ph = rhit * rhit * vh[3];  // sin²(π/2) = 1
+1094|                let ut_obs = 1.0 / sqrt(A(params.robs));
+1095|                let Eobs = -(pmu_t * ut_obs);
+1096|                let denom = sqrt(1.0 - 3.0 * Mbh / rhit);
+1097|                let ut = 1.0 / denom;
+1098|                let uphi = sqrt(Mbh / (rhit * rhit * rhit)) / denom;
+1099|                let Eem = -(pmu_t * ut + pmu_ph * uphi);
+1100|                let Eobs_c = clamp(Eobs, -1e6, 1e6);
+1101|                var Eem_c = Eem;
+1102|                if (abs(Eem) < 1e-12) {
+1103|                    Eem_c = select(-1e-12, 1e-12, Eem >= 0.0);
+1104|                }
+1105|                var g = Eobs_c / Eem_c;
+1106|                if (!is_finite(g)) { g = 0.0; }
+1107|                H.hit = 1;
+1108|                H.bg_type = 0;
+1109|                H.r = rhit;
+1110|                H.phi = (phit + 1000.0 * PI * 2.0) % (2.0 * PI);
+1111|                H.g = max(g, 0.0);
+1112|                H.emiss = pow(rhit, -emiss_p);
+1113|                hit_map[idx] = H;
+1114|                return;
+1115|            }
+1116|        }
+1117|        th_prev = x[2];
+1118|        x_prev = x;
+1119|        v_prev = v;
+1120|    }
+1121|    H.theta_final = sky_dir[0];
+1122|    H.phi_final = sky_dir[1];
+1123|    if (rmin < 3.0 * Mbh) {
+1124|        H.bg_type = 2;
+1125|    } else if (rmin < rin) {
+1126|        H.bg_type = 3;
+1127|    } else {
+1128|        H.bg_type = 1;
+1129|    }
+1130|    hit_map[idx] = H;
+1131|}
+1132|fn hash_sky(theta: f32, phi: f32) -> u32 {
+1133|    let theta_cell = i32(theta * 200.0);  // ~200 cells from pole to pole
+1134|    let phi_cell = i32(phi * 100.0);      // ~628 cells around equator
+1135|    var h = 2166136261u;  // FNV offset basis
+1136|    h ^= u32(theta_cell) * 374761393u;
+1137|    h *= 16777619u;  // FNV prime
+1138|    h ^= u32(phi_cell) * 668265263u;
+1139|    h *= 16777619u;
+1140|    h ^= h >> 16u;
+1141|    h *= 2246822507u;
+1142|    h ^= h >> 13u;
+1143|    h *= 3266489909u;
+1144|    h ^= h >> 16u;
+1145|    return h;
+1146|}
+1147|fn hash(x: i32, y: i32) -> u32 {
+1148|    var h = 1469598103u;
+1149|    h ^= u32(x) * 374761393u + u32(y) * 668265263u;
+1150|    h *= 16777619u;
+1151|    return h;
+1152|}
+1153|@compute @workgroup_size(16, 16, 1)
+1154|fn render_ascii(@builtin(global_invocation_id) global_id: vec3<u32>) {
+1155|    let px = global_id.x;
+1156|    let py = global_id.y;
+1157|    if (px >= params.width || py >= params.height) {
+1158|        return;
+1159|    }
+1160|    let idx = py * params.width + px;
+1161|    let hit = hit_map[idx];
+1162|    let ramp_len = 30u;
+1163|    var char_code: u32 = 32u;  // space
+1164|    if (hit.hit == 1) {
+1165|        let g3 = pow(hit.g, 3.0);
+1166|        let base = hit.emiss * g3 * ring_mul(hit.r);
+1167|        let val = base * hotspots_mul(hit.r, hit.phi, params.phase);
+1168|        let v = clamp(val * 9.0, 0.0, 1.0);  // normalization factor (increased from 2.0)
+1169|        let q = pow(v, params.gamma_c);
+1170|        let idx_ramp = u32(q * f32(ramp_len - 1u));
+1171|        let ramp = array<u32, 30>(
+1172|            32u, 96u, 44u, 45u, 58u, 39u, 95u, 59u, 126u, 47u,
+1173|            92u, 94u, 34u, 60u, 62u, 33u, 61u, 40u, 41u, 63u,
+1174|            123u, 125u, 124u, 91u, 93u, 35u, 37u, 36u, 38u, 64u
+1175|        );
+1176|        char_code = ramp[min(idx_ramp, 29u)];
+1177|    } else if (hit.bg_type == 2 || hit.bg_type == 3) {
+1178|        char_code = 32u;  // space
+1179|    } else {
+1180|        let h = hash_sky(hit.theta_final, hit.phi_final);
+1181|        let r = h & 0xffffu;
+1182|        let h2 = h >> 16u;
+1183|        if (r < 4000u) {
+1184|            char_code = 46u;  // '.'
+1185|        } else if (r < 5500u) {
+1186|            let twinkle_phase = f32(h2 & 1023u) * (2.0 * PI / 1024.0);
+1187|            let tw = sin(params.phase * 0.15 + twinkle_phase);  // Very slow twinkle
+1188|            char_code = select(46u, 43u, tw > 0.5);  // '.' or '+'
+1189|        } else if (r < 6200u) {
+1190|            let twinkle_phase = f32(h2 & 1023u) * (2.0 * PI / 1024.0);
+1191|            let tw = sin(params.phase * 0.20 + twinkle_phase);  // Slow twinkle
+1192|            char_code = select(43u, 42u, tw > 0.3);  // '+' or '*'
+1193|        } else if (r < 6400u) {
+1194|            char_code = 42u;  // '*'
+1195|        } else {
+1196|            char_code = 32u;  // space
+1197|        }
+1198|    }
+1199|    output_chars[idx] = char_code;
+1200|}
+1201|fn is_finite(x: f32) -> bool {
+1202|    return !(x != x) && x < 1e30 && x > -1e30;
+1203|}
+1204|fn tanh(x: f32) -> f32 {
+1205|    let e2x = exp(2.0 * clamp(x, -20.0, 20.0));
+1206|    return (e2x - 1.0) / (e2x + 1.0);
+1207|}

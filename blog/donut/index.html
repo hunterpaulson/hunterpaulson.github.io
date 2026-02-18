@@ -33,18 +33,18 @@
 href="https://www.a1k0n.net/2011/07/20/donut-math.html">aikon’s
 donut.c</a> animation on the web with obfuscated javascript.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>             (()<span class="kw">=&gt;</span>{w<span class="op">=</span><span class="dv">80</span><span class="op">;;</span>h<span class="op">=</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>         <span class="dv">45</span><span class="op">;</span>l<span class="op">=</span><span class="st">&quot;.,-~:;=!*#$@&quot;</span><span class="op">;;</span>A</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>         <span class="dv">45</span><span class="op">;</span>l<span class="op">=</span><span class="st">&quot;.,-~:;=!*#$@&quot;</span><span class="op">;</span>A</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>       <span class="op">=</span>B<span class="op">=</span><span class="dv">0</span><span class="op">;</span><span class="pp">setInterval</span>(_<span class="kw">=&gt;</span>{s <span class="op">=</span>(</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>     <span class="bu">document</span><span class="op">.</span><span class="fu">getElementById</span>(<span class="st">&quot;d&quot;</span>))<span class="op">;</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>   <span class="cf">if</span>(<span class="op">!</span>s)<span class="cf">return</span><span class="op">;</span>z<span class="op">=</span>[]<span class="op">;</span>b<span class="op">=</span>[]<span class="op">;</span>A<span class="op">+=.</span><span class="bn">07</span><span class="op">;</span>B<span class="op">+=</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="bn">03</span><span class="op">;</span>cA<span class="op">=</span><span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(A)<span class="op">;</span>sA<span class="op">=</span><span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(A)<span class="op">;</span>cB<span class="op">=</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(B)<span class="op">;</span>sB<span class="op">=</span><span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(B)<span class="op">;</span><span class="cf">for</span>(j<span class="op">=</span><span class="dv">0</span><span class="op">;</span>j<span class="op">&lt;</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a> <span class="fl">6.28</span><span class="op">;</span>j<span class="op">+=.</span><span class="bn">07</span>){cT<span class="op">=</span><span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(j)<span class="op">;</span>sT<span class="op">=</span><span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>(j)<span class="op">;</span><span class="cf">for</span>(i<span class="op">=</span><span class="dv">0</span><span class="op">;</span>i<span class="op">&lt;</span><span class="fl">6.28</span>      <span class="op">;</span>i<span class="op">+=.</span><span class="bn">02</span>){sP<span class="op">=</span><span class="bu">Math</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>(j)<span class="op">;</span><span class="cf">for</span>(i<span class="op">=</span><span class="dv">0</span><span class="op">;</span>i<span class="op">&lt;</span><span class="fl">6.2</span>       <span class="op">;</span>i<span class="op">+=.</span><span class="bn">02</span>){sP<span class="op">=</span><span class="bu">Math</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">sin</span>(i)<span class="op">;</span>cP<span class="op">=</span><span class="bu">Math</span><span class="op">.</span>         <span class="fu">cos</span>(i)<span class="op">;</span>H<span class="op">=</span>cT<span class="op">+</span><span class="dv">2</span><span class="op">;</span>I</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">=</span><span class="dv">1</span><span class="op">/</span>(sP<span class="op">*</span>H<span class="op">*</span>sA<span class="op">+</span>sT            <span class="op">*</span>cA<span class="op">+</span><span class="dv">5</span>)<span class="op">;</span>t<span class="op">=</span>sP<span class="op">*</span>H<span class="op">*</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>cA<span class="op">-</span>sT<span class="op">*</span>sA<span class="op">;</span>x<span class="op">=</span>w<span class="op">/</span><span class="dv">2</span><span class="op">+</span>          w<span class="op">*.</span><span class="dv">375</span><span class="op">*</span>I<span class="op">*</span>(cP<span class="op">*</span>H<span class="op">*</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a> cB<span class="op">-</span>t<span class="op">*</span>sB)<span class="op">|</span><span class="dv">0</span><span class="op">;</span>y<span class="op">=</span>h<span class="op">/</span>        <span class="dv">2</span><span class="op">+</span>h<span class="op">*.</span><span class="dv">35</span><span class="op">*</span>I<span class="op">*</span>(cP<span class="op">*</span>H</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">=</span><span class="dv">1</span><span class="op">/</span>(sP<span class="op">*</span>H<span class="op">*</span>sA<span class="op">+</span>sT<span class="op">*</span>           cA<span class="op">+</span><span class="dv">5</span>)<span class="op">;;</span>t<span class="op">=</span>sP<span class="op">*</span>H<span class="op">*</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>cA<span class="op">-</span>sT<span class="op">*</span>sA<span class="op">;;</span>x<span class="op">=</span>w<span class="op">/</span><span class="dv">2</span><span class="op">+</span>         w<span class="op">*.</span><span class="dv">375</span><span class="op">*</span>I<span class="op">*</span>(cP<span class="op">*</span>H<span class="op">*</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>cB<span class="op">-</span>t<span class="op">*</span>sB)<span class="op">|</span><span class="dv">0</span><span class="op">;;;;</span>y<span class="op">=</span>h       <span class="op">/</span><span class="dv">2</span><span class="op">+</span>h<span class="op">*.</span><span class="dv">35</span><span class="op">*</span>I<span class="op">*</span>(cP<span class="op">*</span>H</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span>sB<span class="op">+</span>t<span class="op">*</span>cB)<span class="op">|</span><span class="dv">0</span><span class="op">;</span><span class="cf">if</span>(x<span class="op">&gt;=</span><span class="dv">0</span><span class="op">&amp;&amp;</span>x<span class="op">&lt;</span>w<span class="op">&amp;&amp;</span>y<span class="op">&gt;=</span><span class="dv">0</span><span class="op">&amp;&amp;</span>y<span class="op">&lt;</span>h<span class="op">&amp;&amp;</span>I</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a> <span class="op">&gt;</span>(z[o<span class="op">=</span>x<span class="op">+</span>w<span class="op">*</span>y]<span class="op">||</span><span class="dv">0</span>)){N<span class="op">=</span><span class="dv">8</span><span class="op">*</span>((sT<span class="op">*</span>sA<span class="op">-</span>sP<span class="op">*</span>cT<span class="op">*</span>cA</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  )<span class="op">*</span>cB<span class="op">-</span>sP<span class="op">*</span>cT<span class="op">*</span>sA<span class="op">-</span>sT<span class="op">*</span>cA<span class="op">-</span>cP<span class="op">*</span>cT<span class="op">*</span>sB)<span class="op">|</span><span class="dv">0</span><span class="op">;</span>z[o]</span>
@@ -72,18 +72,18 @@ that the above code renders the torus below</p>
 </pre>
 <script>
              (()=>{w=80;;h=
-         45;l=".,-~:;=!*#$@";;A
+         45;l=".,-~:;=!*#$@";A
        =B=0;setInterval(_=>{s =(
      document.getElementById("d"));
    if(!s)return;z=[];b=[];A+=.07;B+=
   .03;cA=Math.cos(A);sA=Math.sin(A);cB=
   Math.cos(B);sB=Math.sin(B);for(j=0;j<
  6.28;j+=.07){cT=Math.cos(j);sT=Math.sin
-(j);for(i=0;i<6.28      ;i+=.02){sP=Math
+(j);for(i=0;i<6.2       ;i+=.02){sP=Math
 .sin(i);cP=Math.         cos(i);H=cT+2;I
-=1/(sP*H*sA+sT            *cA+5);t=sP*H*
-cA-sT*sA;x=w/2+          w*.375*I*(cP*H*
- cB-t*sB)|0;y=h/        2+h*.35*I*(cP*H
+=1/(sP*H*sA+sT*           cA+5);;t=sP*H*
+cA-sT*sA;;x=w/2+         w*.375*I*(cP*H*
+cB-t*sB)|0;;;;y=h       /2+h*.35*I*(cP*H
  *sB+t*cB)|0;if(x>=0&&x<w&&y>=0&&y<h&&I
  >(z[o=x+w*y]||0)){N=8*((sT*sA-sP*cT*cA
   )*cB-sP*cT*sA-sT*cA-cP*cT*sB)|0;z[o]
@@ -92,7 +92,6 @@ cA-sT*sA;x=w/2+          w*.375*I*(cP*H*
        ==w-1&&k<w*h-1&&(o+="\n");
          s.textContent=o},50)})
              ();;;;;;;;;;;;
-
 </script>
 </div>
 <p>try ‘debug mode’ below</p>

@@ -16,10 +16,13 @@ HTML_SECTIONS=$(patsubst $(CONTENT_DIR)/%/index.md,$(DIST_DIR)/%/index.html,$(SE
 HTML_BLOGS=$(patsubst $(CONTENT_DIR)/blog/%/index.md,$(DIST_DIR)/blog/%/index.html,$(BLOGS))
 
 BLOG_INDEX_MD=$(CONTENT_DIR)/blog/index.md
+SITEMAP_FILE=$(DIST_DIR)/sitemap.xml
+ROBOTS_FILE=$(DIST_DIR)/robots.txt
+ROBOT_FRAME=$(wildcard assets/blackhole_frame_robot.txt)
 
 .PHONY: all clean assets copy-assets copy-src
 
-all: $(HTML_HOME) $(HTML_SECTIONS) $(HTML_BLOGS) assets copy-assets copy-src
+all: $(HTML_HOME) $(HTML_SECTIONS) $(HTML_BLOGS) assets copy-assets copy-src $(SITEMAP_FILE) $(ROBOTS_FILE)
 
 assets: assets/blackhole_frames.txt assets/blackhole_wasm.js
 
@@ -51,6 +54,12 @@ copy-src:
 # Re-generate blog listing when any blog post changes
 $(BLOG_INDEX_MD): $(BLOGS) scripts/update-blog-index.js
 	@node scripts/update-blog-index.js
+
+
+# Build sitemap and robots metadata
+$(SITEMAP_FILE) $(ROBOTS_FILE): $(HOME) $(SECTIONS) $(BLOGS) scripts/generate-sitemap.js $(ROBOT_FRAME) Makefile
+	@mkdir -p $(DIST_DIR)
+	@node scripts/generate-sitemap.js
 
 
 clean:

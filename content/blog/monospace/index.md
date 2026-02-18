@@ -1,6 +1,8 @@
 ---
 title: The Monospace Web
 date: 2025-10-06
+listed: false
+noindex: true
 lang: en
 toc-title: Contents
 ---

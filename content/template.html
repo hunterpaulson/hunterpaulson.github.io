@@ -17,6 +17,9 @@ $endif$
 $if(description-meta)$
   <meta name="description" content="$description-meta$" />
 $endif$
+$if(noindex)$
+  <meta name="robots" content="noindex" />
+$endif$
   <title>$if(date)$$pagetitle$ | hunter paulson$else$hunter paulson | $pagetitle$$endif$</title>
 $for(css)$
   <link rel="stylesheet" href="$css$" />

@@ -48,6 +48,22 @@ function parseDateValue(rawDate) {
   return { time: parsed.getTime(), display: iso };
 }
 
+function parseBooleanValue(rawValue, fallback) {
+  if (rawValue === undefined || rawValue === null || rawValue === "") {
+    return fallback;
+  }
+
+  const normalized = String(rawValue).trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
+}
+
 function readPosts() {
   const entries = fs.readdirSync(BLOG_CONTENT_DIR, { withFileTypes: true });
   const posts = [];
@@ -68,8 +84,15 @@ function readPosts() {
 
     const title = frontMatter.title || slug;
     const { time, display } = parseDateValue(frontMatter.date);
+    const listed = parseBooleanValue(frontMatter.listed, true);
 
-    posts.push({ slug, title, time, dateDisplay: display || "????-??-??" });
+    posts.push({
+      slug,
+      title,
+      time,
+      listed,
+      dateDisplay: display || "????-??-??",
+    });
   }
 
   return posts.sort((a, b) => {
@@ -101,7 +124,7 @@ function injectListing(indexContent, listingLines) {
 }
 
 function main() {
-  const posts = readPosts();
+  const posts = readPosts().filter((post) => post.listed);
   const listingLines = posts.map(
     (post) => `- ${post.dateDisplay} — [${post.title}](/blog/${post.slug}/)`
   );
@@ -122,4 +145,3 @@ try {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 }
-

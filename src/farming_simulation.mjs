@@ -142,11 +142,22 @@ export class FarmingSimulation {
     this.fieldOccupancy = Array.from({ length: height }, () => {
       return Array.from({ length: width }, () => false);
     });
+
+    this.initializeField();
   }
 
   randomInt(minimum, maximum) {
     const span = maximum - minimum + 1;
     return Math.floor(this.random() * span) + minimum;
+  }
+
+  initializeField() {
+    for (let rowIndex = 0; rowIndex < this.height; rowIndex += 1) {
+      for (let columnIndex = 0; columnIndex < this.width; columnIndex += 1) {
+        this.fieldChars[rowIndex][columnIndex] = " ";
+        this.fieldOccupancy[rowIndex][columnIndex] = false;
+      }
+    }
   }
 
   calculateOppositeRatio(mode, topRow) {
@@ -209,6 +220,7 @@ export class FarmingSimulation {
     const rowDisjoint = this.isRowDisjoint(topRow);
     const oppositeRatio = this.calculateOppositeRatio(mode, topRow);
     const majorityOpposite = oppositeRatio > 0.5;
+    const modeValid = majorityOpposite;
 
     const spawnAttempt = {
       mode,
@@ -217,12 +229,12 @@ export class FarmingSimulation {
       rowDisjoint,
       oppositeRatio,
       majorityOpposite,
-      modeValid: majorityOpposite,
+      modeValid,
       spawned: false,
       tractorId: null,
     };
 
-    if (!rowDisjoint || !majorityOpposite) {
+    if (!rowDisjoint || !modeValid) {
       return spawnAttempt;
     }
 

@@ -1,5 +1,4 @@
 import { FarmingSimulation, parseCorpusText } from "./farming_simulation.mjs";
-import { resolveFieldDimensions } from "./farming_field_size.mjs";
 
 const FIELD_ELEMENT_ID = "farming-field";
 const CORPUS_URL = "/assets/farming_corpus.txt";
@@ -25,13 +24,15 @@ function measureCharacterCell(referenceElement) {
 function computeFieldSize(fieldElement) {
   const cell = measureCharacterCell(fieldElement);
   const fieldBounds = fieldElement.getBoundingClientRect();
-  const viewportHeightPx = window.visualViewport?.height ?? window.innerHeight;
-  const { columns, rows } = resolveFieldDimensions({
-    fieldWidthPx: fieldBounds.width || fieldElement.clientWidth || 0,
-    viewportHeightPx,
-    cellWidthPx: cell.width,
-    cellHeightPx: cell.height,
-  });
+
+  const availableWidth = fieldBounds.width || fieldElement.clientWidth || 80 * cell.width;
+  const columns = Math.max(20, Math.floor(availableWidth / cell.width));
+
+  const availableHeight = Math.max(
+    cell.height * 12,
+    window.innerHeight - fieldBounds.top - cell.height * 4,
+  );
+  const rows = Math.max(10, Math.floor(availableHeight / cell.height));
 
   return {
     columns,

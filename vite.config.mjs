@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite';
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
+const DIST_ROOT = path.join(ROOT, 'dist');
 const WATCH_PATHS = [
   path.join(ROOT, 'content'),
   path.join(ROOT, 'src'),
@@ -42,6 +44,79 @@ function shouldTrigger(filePath) {
   }
 
   return false;
+}
+
+function decodePathname(requestUrl) {
+  const pathname = requestUrl.split('?')[0].split('#')[0];
+  try {
+    return decodeURIComponent(pathname);
+  } catch {
+    return pathname;
+  }
+}
+
+function isKnownHtmlRoute(requestUrl) {
+  const pathname = decodePathname(requestUrl);
+  const relativePath = pathname.replace(/^\/+/, '');
+
+  let candidates = [];
+  if (relativePath === '') {
+    candidates = ['index.html'];
+  } else {
+    const trimmed = relativePath.replace(/\/+$/, '');
+    if (trimmed.endsWith('.html')) {
+      candidates = [trimmed];
+    } else {
+      candidates = [`${trimmed}.html`, path.join(trimmed, 'index.html')];
+    }
+  }
+
+  return candidates.some((candidate) => {
+    const absolutePath = path.resolve(DIST_ROOT, candidate);
+    if (!absolutePath.startsWith(DIST_ROOT)) {
+      return false;
+    }
+    return fs.existsSync(absolutePath);
+  });
+}
+
+function createNotFoundRedirectPlugin() {
+  return {
+    name: 'dev-404-redirect',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          return next();
+        }
+
+        const requestUrl = req.url || '/';
+        const pathname = decodePathname(requestUrl);
+        const acceptsHtml = (req.headers.accept || '').includes('text/html');
+
+        if (!acceptsHtml) {
+          return next();
+        }
+
+        if (
+          pathname === '/404.html' ||
+          pathname.startsWith('/@') ||
+          pathname.startsWith('/__vite') ||
+          pathname.startsWith('/node_modules/') ||
+          path.extname(pathname) !== ''
+        ) {
+          return next();
+        }
+
+        if (isKnownHtmlRoute(requestUrl)) {
+          return next();
+        }
+
+        res.statusCode = 302;
+        res.setHeader('Location', '/404.html');
+        res.end();
+      });
+    },
+  };
 }
 
 function createPandocWatcher() {
@@ -135,6 +210,5 @@ export default defineConfig({
       allow: ['..'],
     },
   },
-  plugins: [createPandocWatcher()],
+  plugins: [createPandocWatcher(), createNotFoundRedirectPlugin()],
 });
-

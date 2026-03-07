@@ -40,8 +40,8 @@ export class BlackHoleGPU {
     
     // Default parameters
     this.params = {
-      robs: 39.0,
-      inc_deg: 10.0,
+      robs: 80.0,
+      inc_deg: 2.0,
       roll_deg: 0.0,
       phi_obs: 0.0,
       FOVx_deg: 60.0,

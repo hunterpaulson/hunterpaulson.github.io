@@ -28,8 +28,8 @@ void bh_init_scene_params(BHSceneParams *params) {
   }
   params->width = 80;
   params->height = 52;
-  params->robs = 39.0;
-  params->inc_deg = 10.0;
+  params->robs = 80.0;
+  params->inc_deg = 2.0;
   params->roll_deg = 0.0;
   params->phi_obs = 0.0;
   params->FOVx = 60.0 * M_PI / 180.0;
@@ -404,5 +404,3 @@ void bh_generate_ascii_frame(const BHSceneParams *params, const Hit *map,
     }
   }
 }
-
-

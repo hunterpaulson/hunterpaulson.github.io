@@ -29,8 +29,8 @@ export async function initBlackholeSimulation({
   ];
 
   const sliderState = {
-    distance: 39,
-    incline: 10,
+    distance: 80,
+    incline: 2,
     roll: 0,
   };
 

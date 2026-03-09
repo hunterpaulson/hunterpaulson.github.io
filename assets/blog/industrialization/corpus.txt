@@ -132,8 +132,8 @@
  132|  }
  133|  params->width = 80;
  134|  params->height = 52;
- 135|  params->robs = 39.0;
- 136|  params->inc_deg = 10.0;
+ 135|  params->robs = 80.0;
+ 136|  params->inc_deg = 2.0;
  137|  params->roll_deg = 0.0;
  138|  params->phi_obs = 0.0;
  139|  params->FOVx = 60.0 * M_PI / 180.0;
@@ -649,8 +649,8 @@
  649|    this.height = 52;
  650|    this.needsRetrace = true;
  651|    this.params = {
- 652|      robs: 39.0,
- 653|      inc_deg: 10.0,
+ 652|      robs: 80.0,
+ 653|      inc_deg: 2.0,
  654|      roll_deg: 0.0,
  655|      phi_obs: 0.0,
  656|      FOVx_deg: 60.0,

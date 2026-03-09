@@ -1,7 +1,7 @@
-import { FarmingSimulation, parseCorpusText } from "./farming_simulation.mjs";
+import { FarmingSimulation, parseCorpusText } from "./simulation.mjs";
 
 const FIELD_ELEMENT_ID = "farming-field";
-const CORPUS_URL = "/assets/farming_corpus.txt";
+const CORPUS_URL = "/assets/blog/industrialization/corpus.txt";
 const TARGET_FPS = 12;
 const RESIZE_DEBOUNCE_MS = 120;
 const DEFAULT_SEED = "farming-v1";

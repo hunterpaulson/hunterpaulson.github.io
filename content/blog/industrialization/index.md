@@ -1,6 +1,5 @@
 ---
 title: industrialization of software
-subtitle: by hunter paulson
 date: 2026-02-16
 ---
 

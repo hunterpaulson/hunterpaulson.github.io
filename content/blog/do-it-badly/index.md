@@ -1,6 +1,5 @@
 ---
 title: do it badly
-subtitle: by hunter paulson
 date: 2025-11-24
 ---
 

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+  <meta name="dcterms.date" content="2026-03-07" />
+  <meta name="robots" content="noindex" />
+  <title>context window diagram preview | hunter paulson</title>
+  <link rel="stylesheet" href="/src/reset.css" />
+  <link rel="stylesheet" href="/src/index.css" />
+</head>
+<body>
+<table class="header">
+  <tr>
+    <td colspan="5" class="width-auto">
+      <h1 class="title"><a href="/" class="site-title">hunter paulson</a></h1>
+      <div class="post-header">
+        <span class="post-title">context window diagram preview</span>
+        <span class="post-date">2026-03-07</span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td class="width-min"><a href="/blog/">blog</a></td>
+    <td class="width-min"><a href="/projects/">projects</a></td>
+    <td class="width-auto"></td>
+    <td class="width-min"><a href="https://github.com/hunterpaulson">github</a></td>
+    <td class="width-min"><a href="https://www.linkedin.com/in/hunterpaulson">linkedin</a></td>
+  </tr>
+</table>
+<p>These are rebuilt as native page components instead of screenshots.
+The target is the Substack diagram mood: roomy, monospace, schematic,
+and a little like an operating-system whiteboard.</p>
+<p>For this site I still prefer reusable HTML and CSS over manually
+typing every box-drawing character. ASCII is great for one-off sketches,
+but HTML blocks are easier to compose, theme, and reuse across
+essays.</p>
+<div class="diagram-gallery">
+<figure class="diagram" tabindex="0" aria-label="Traditional context graph versus actual context allocator diagram">
+<div class="diagram-canvas">
+<div class="diagram-heading-row">
+<div class="diagram-heading-cell">
+<div class="diagram-heading">
+traditional view
+</div>
+<div class="diagram-rule">
+
+</div>
+</div>
+<div class="diagram-heading-cell">
+<div class="diagram-heading">
+actual architecture
+</div>
+<div class="diagram-rule">
+
+</div>
+</div>
+</div>
+<div class="diagram-compare">
+<div class="diagram-panel">
+<div class="diagram-panel-box">
+<div class="diagram-panel-label">
+Knowledge graph
+</div>
+<div class="diagram-graph">
+<div class="diagram-connection connect-a-b" aria-hidden="true">
+
+</div>
+<div class="diagram-connection connect-a-c" aria-hidden="true">
+
+</div>
+<div class="diagram-node node-a">
+A
+</div>
+<div class="diagram-node node-b">
+B
+</div>
+<div class="diagram-node node-c">
+C
+</div>
+</div>
+</div>
+</div>
+<div class="diagram-arrow-large" aria-hidden="true">
+
+</div>
+<div class="diagram-panel">
+<div class="diagram-panel-box">
+<div class="diagram-panel-label">
+Context allocator
+</div>
+<div class="diagram-allocator">
+<div class="diagram-slot">
+<div class="diagram-slot-title">
+Slot 0: 200K tokens
+</div>
+<div class="diagram-slot-track">
+<div class="diagram-slot-fill w-60">
+
+</div>
+</div>
+<div class="diagram-slot-status">
+60%
+</div>
+</div>
+<div class="diagram-slot">
+<div class="diagram-slot-title">
+Slot 1: 200K tokens
+</div>
+<div class="diagram-slot-track">
+<div class="diagram-slot-fill w-0">
+
+</div>
+</div>
+<div class="diagram-slot-status">
+idle
+</div>
+</div>
+<div class="diagram-panel-meta">
+Cache: warm / cold / evicted
+</div>
+<div class="diagram-panel-meta">
+GC: summarize @ 100%
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</figure>
+<figure class="diagram" tabindex="0" aria-label="Context utilization performance cliff diagram">
+<div class="diagram-canvas">
+<div class="diagram-heading">
+utilization vs performance
+</div>
+<div class="diagram-rule">
+
+</div>
+<div class="diagram-bars">
+<div class="diagram-bar-row">
+<div class="diagram-bar-label">
+0-40%
+</div>
+<div class="diagram-bar-track">
+<div class="diagram-bar-fill w-100">
+
+</div>
+</div>
+<div class="diagram-bar-status">
+Stable
+</div>
+</div>
+<div class="diagram-bar-row">
+<div class="diagram-bar-label">
+40-60%
+</div>
+<div class="diagram-bar-track">
+<div class="diagram-bar-fill w-80">
+
+</div>
+</div>
+<div class="diagram-bar-status">
+Minor degradation
+</div>
+</div>
+<div class="diagram-bar-row">
+<div class="diagram-bar-label">
+60-80%
+</div>
+<div class="diagram-bar-track">
+<div class="diagram-bar-fill w-50">
+
+</div>
+</div>
+<div class="diagram-bar-status">
+Significant decay
+</div>
+</div>
+<div class="diagram-bar-row">
+<div class="diagram-bar-label">
+80-100%
+</div>
+<div class="diagram-bar-track">
+<div class="diagram-bar-fill w-25">
+
+</div>
+</div>
+<div class="diagram-bar-status">
+Thrashing
+</div>
+</div>
+<div class="diagram-bar-row">
+<div class="diagram-bar-label">
+&gt;100%
+</div>
+<div class="diagram-bar-track dashed">
+
+</div>
+<div class="diagram-bar-status">
+Compaction required
+</div>
+</div>
+</div>
+</div>
+</figure>
+<figure class="diagram" tabindex="0" aria-label="Context compaction handoff diagram">
+<div class="diagram-canvas">
+<div class="diagram-heading-row">
+<div class="diagram-heading-cell">
+<div class="diagram-heading">
+window @ 100%
+</div>
+<div class="diagram-rule">
+
+</div>
+</div>
+<div class="diagram-heading-cell">
+<div class="diagram-heading">
+after compaction
+</div>
+<div class="diagram-rule">
+
+</div>
+</div>
+</div>
+<div class="diagram-compare">
+<div class="diagram-panel">
+<div class="diagram-panel-box">
+<div class="diagram-stack-blocks">
+<div class="diagram-fill-block">
+Conversation history
+</div>
+<div class="diagram-fill-block">
+Tool outputs
+</div>
+<div class="diagram-fill-block">
+Retrieved documents
+</div>
+<div class="diagram-fill-block">
+Intermediate thoughts
+</div>
+<div class="diagram-fill-block empty" aria-hidden="true">
+
+</div>
+</div>
+</div>
+<div class="diagram-panel-caption">
+200K full
+</div>
+</div>
+<div class="diagram-arrow-large" aria-hidden="true">
+
+</div>
+<div class="diagram-panel">
+<div class="diagram-panel-box">
+<div class="diagram-stack-blocks">
+<div class="diagram-fill-block">
+Summary<br />30K compressed state
+</div>
+<div class="diagram-dashed-box">
+<p>
+Fresh capacity<br />170K available
+</p>
+</div>
+</div>
+</div>
+<div class="diagram-panel-caption">
+handed off
+</div>
+</div>
+</div>
+</div>
+</figure>
+<figure class="diagram" tabindex="0" aria-label="Multi-agent scheduling diagram">
+<div class="diagram-canvas">
+<div class="diagram-heading">
+work stealing + coordination
+</div>
+<div class="diagram-rule">
+
+</div>
+<div class="diagram-scheduler">
+<div class="diagram-scheduler-top">
+<div class="diagram-orchestrator">
+<div class="diagram-orchestrator-title">
+Orchestrator
+</div>
+<div>
+<code>scheduler + allocator</code>
+</div>
+<div class="diagram-muted">
+assign work, enforce budget, merge outputs
+</div>
+</div>
+<div class="diagram-queue-box">
+<div class="diagram-queue-item">
+<span class="diagram-queue-title">queue[0]</span><br />inspect repo
+state
+</div>
+<div class="diagram-queue-item">
+<span class="diagram-queue-title">queue[1]</span><br />draft
+implementation
+</div>
+<div class="diagram-queue-item">
+<span class="diagram-queue-title">queue[2]</span><br />verify build +
+tests
+</div>
+</div>
+</div>
+<div class="diagram-worker-row">
+<div class="diagram-worker">
+<span class="diagram-worker-title">agent A</span><br /><code>context
+42k</code><br /><span class="diagram-muted">read + plan</span>
+</div>
+<div class="diagram-worker">
+<span class="diagram-worker-title">agent B</span><br /><code>context
+31k</code><br /><span class="diagram-muted">edit + patch</span>
+</div>
+<div class="diagram-worker">
+<span class="diagram-worker-title">agent C</span><br /><code>context
+18k</code><br /><span class="diagram-muted">review + verify</span>
+</div>
+</div>
+<div class="diagram-note-row">
+<p><span>tool calls behave like syscalls</span> <span>shared state still
+needs coherence</span></p>
+</div>
+</div>
+</div>
+</figure>
+<figure class="diagram" tabindex="0" aria-label="Context persistence hierarchy diagram">
+<div class="diagram-canvas">
+<div class="diagram-heading">
+persistence hierarchy
+</div>
+<div class="diagram-rule">
+
+</div>
+<div class="diagram-tier-grid">
+<div class="diagram-tier">
+<div class="diagram-tier-label">
+L1
+</div>
+<div>
+Active context window
+</div>
+<div class="diagram-tier-meta">
+tiny, hot, expensive
+</div>
+</div>
+<div class="diagram-tier-arrow" aria-hidden="true">
+
+</div>
+<div class="diagram-tier">
+<div class="diagram-tier-label">
+L2
+</div>
+<div>
+Summaries + session memory
+</div>
+<div class="diagram-tier-meta">
+compressed, reusable
+</div>
+</div>
+<div class="diagram-tier-arrow" aria-hidden="true">
+
+</div>
+<div class="diagram-tier">
+<div class="diagram-tier-label">
+L3
+</div>
+<div>
+Docs, traces, vector store
+</div>
+<div class="diagram-tier-meta">
+big, cold, slow
+</div>
+</div>
+</div>
+<div class="diagram-note-row">
+<p><span>good retrieval beats exhaustive storage</span> <span>archive is
+not the same as memory</span></p>
+</div>
+</div>
+</figure>
+</div>
+<p>This direction feels strongest here: reusable HTML blocks for
+structure, occasional ASCII for charts, and SVG only when connectors
+need more precision than CSS should be forced to provide.</p>
+<hr />
+<footer class="site-footer">
+  <div class="footer-controls">
+    <label class="debug-toggle-label"><input type="checkbox" class="debug-toggle" /> debug mode</label>
+    <label class="theme-toggle-label"><input type="checkbox" class="theme-toggle" checked /> dark mode</label>
+  </div>
+  <span class="footer-attribution">built with <a href="https://owickstrom.github.io/the-monospace-web/">the monospace web</a></span>
+</footer>
+  <div class="debug-grid"></div>
+  <script src="/src/index.js"></script>
+</body>
+</html>

@@ -282,6 +282,7 @@ export const SCENES = [
   },
   {
     label: "prompt",
+    kind: "prompt",
     meta: "claude code | compile intent",
     prefix: PROMPT_PREFIX,
     typed: PROMPT_TEXT,

@@ -1,10 +1,34 @@
 import { SCENES } from "./data.mjs";
+import {
+  formatCompactPromptScene,
+  shouldUseCompactPromptLayout,
+} from "./prompt.mjs";
 
 const REVERSE_INPUT_ID = "abstraction-reverse";
 const SCREEN_ELEMENT_ID = "abstraction-screen";
 const CURSOR = "█";
 const CUT_DURATION_MS = 180;
 const CURSOR_BLINK_MS = 450;
+
+function measureCharacterCell(referenceElement) {
+  const probe = document.createElement("span");
+  probe.textContent = "M";
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.whiteSpace = "pre";
+  referenceElement.appendChild(probe);
+  const rect = probe.getBoundingClientRect();
+  referenceElement.removeChild(probe);
+  return {
+    width: rect.width || 8,
+  };
+}
+
+function computeAvailableColumns(screenElement) {
+  const characterCell = measureCharacterCell(screenElement);
+  const elementWidth = screenElement.clientWidth || screenElement.getBoundingClientRect().width;
+  return Math.max(16, Math.floor(elementWidth / characterCell.width));
+}
 
 function sceneText(scene, typedLength, cursorVisible) {
   const prefix = scene.prefix ?? "";
@@ -37,6 +61,7 @@ function bootAbstractionAnimation() {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const reversedScenes = [...SCENES].reverse();
   const state = createAnimationState(reducedMotion, SCENES);
+  let availableColumns = computeAvailableColumns(screenElement);
   let frameId = null;
 
   function activeScenes() {
@@ -79,7 +104,17 @@ function bootAbstractionAnimation() {
     }
 
     const typedLength = Math.min(scene.typed.length, Math.floor(state.typedProgress));
-    screenElement.textContent = sceneText(scene, typedLength, state.cursorVisible);
+    if (scene.kind === "prompt" && shouldUseCompactPromptLayout(availableColumns)) {
+      screenElement.textContent = formatCompactPromptScene({
+        typed: scene.typed.slice(0, typedLength),
+        columns: availableColumns,
+        cursorVisible: state.cursorVisible,
+        cursor: CURSOR,
+      });
+      screenElement.scrollLeft = 0;
+    } else {
+      screenElement.textContent = sceneText(scene, typedLength, state.cursorVisible);
+    }
     screenElement.scrollTop = screenElement.scrollHeight;
   }
 
@@ -132,6 +167,13 @@ function bootAbstractionAnimation() {
     });
   }
 
+  const onResize = () => {
+    availableColumns = computeAvailableColumns(screenElement);
+    render();
+  };
+
+  window.addEventListener("resize", onResize);
+
   render();
   frameId = window.requestAnimationFrame(tick);
 
@@ -139,6 +181,7 @@ function bootAbstractionAnimation() {
     if (frameId !== null) {
       window.cancelAnimationFrame(frameId);
     }
+    window.removeEventListener("resize", onResize);
   }, { once: true });
 }
 

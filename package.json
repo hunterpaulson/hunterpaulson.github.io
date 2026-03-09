@@ -8,13 +8,11 @@
     "build": "make",
     "preview": "vite preview",
     "test": "node --test",
-    "generate:farming-corpus": "node scripts/generate-farming-corpus.mjs",
-    "capture:page": "node scripts/capture-page.mjs"
+    "generate:blog:industrialization:corpus": "node scripts/blog/industrialization/generate-corpus.mjs"
   },
   "author": "Hunter Paulson",
   "license": "MIT",
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
     "vite": "^5.4.2"
   }
 }

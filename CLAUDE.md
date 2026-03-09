@@ -13,6 +13,7 @@ this means that we really only have 2 headers. h1 takes up 2 lines, h2 takes up 
 ```bash
 npm run dev      # start vite dev server with auto-rebuild (http://localhost:5173)
 npm run build    # run make to generate dist/
+npm test         # run all tests (node auto-discovers nested test files)
 make clean       # remove dist/ directory
 ```
 
@@ -26,15 +27,29 @@ content/           # markdown source files (edit these)
   ├── template.html # pandoc html template (header, footer, toc)
   └── blog/        # blog posts with yaml frontmatter
 
-src/               # css and client js (copied to dist/src/)
+src/               # client js and css (copied to dist/src/)
   ├── index.css    # monospace web styles + custom theme
-  └── index.js     # grid alignment, theme toggle, debug mode
+  ├── index.js     # grid alignment, theme toggle, debug mode
+  ├── blackhole_simulation.js
+  └── blog/
+      └── {slug}/
+
+tests/             # node tests, mirrored by blog slug when post-specific
+  └── blog/
+
+scripts/           # build and authoring helpers
+  ├── update-blog-index.js
+  ├── generate-sitemap.js
+  └── blog/
+      └── {slug}/
 
 assets/            # pre-compiled assets (copied to dist/assets/)
   ├── blackhole_gpu.js    # webgpu renderer class
   ├── blackhole_gpu.wgsl  # wgsl compute shaders
   ├── blackhole_wasm.*    # emscripten wasm module
-  └── blackhole_frames.txt # pre-rendered ascii frames
+  ├── blackhole_frames.txt # pre-rendered ascii frames
+  └── blog/
+      └── {slug}/
 
 dist/              # generated output - do not edit directly
 ```
@@ -53,6 +68,8 @@ dist/              # generated output - do not edit directly
 | html template | `content/template.html` |
 | gpu shader | `assets/blackhole_gpu.wgsl` |
 | gpu renderer | `assets/blackhole_gpu.js` |
+
+for conent-specific interactive work, mirror the post slug across folders. e.g. for blogs `src/blog/{slug}/`, `tests/blog/{slug}/`, `scripts/blog/{slug}/`, and `assets/blog/{slug}/`. keep only shared site/runtime code at the top level.
 
 ## black hole simulation
 

@@ -10,7 +10,7 @@ const SOURCE_FILES = [
   "assets/blackhole_gpu.wgsl",
 ];
 
-const OUTPUT_PATH = "assets/farming_corpus.txt";
+const OUTPUT_PATH = "assets/blog/industrialization/corpus.txt";
 
 function formatGlobalLineId(lineNumber) {
   return String(((lineNumber - 1) % 9999) + 1).padStart(4, " ");

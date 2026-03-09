@@ -6,7 +6,7 @@ date: 2026-02-16
 
 # industrialization of software
 
-previously we developers tended to our crops, planted them by hand, watched them grow. we knew what soil was fertile and where to plant each seed. we chose when to rotate the fields and when to raze bad crop.
+for decades we tended to our crops, planted them by hand, watched them grow. we knew what soil was fertile and where to plant each seed. we chose when to rotate the fields and when to raze bad crop.
 
 now we just tell the machines what to grow and they handle the rest.
 

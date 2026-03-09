@@ -16,3 +16,16 @@ soon enough higher-level languages, like java and python, took that off our plat
 now even that is handled for us. **coding agents** compile intent into running software. we no longer need to memorize libraries, functions, or syntax.
 
 [the _only_ programming language is natural language](https://x.com/karpathy/status/1617979122625712128). another layer of tooling has arrived and taken over more of the minutiae, giving us more time to think about which problems to solve. 
+
+::: {=html}
+<div aria-label="edit distance abstraction animation" style="margin:calc(var(--line-height) * 2) 0">
+  <pre
+    id="abstraction-screen"
+    aria-live="off"
+    tabindex="0"
+    style="width:calc(round(down, 100%, 1ch)); height:calc(30 * var(--line-height)); margin:0; white-space:pre; overflow-x:auto; overflow-y:hidden; border:var(--border-thickness) solid var(--text-color)"
+  >(loading abstraction...)</pre>
+  <label style="width:auto; margin-top:var(--line-height)"><input type="checkbox" id="abstraction-reverse" /> reverse direction</label>
+</div>
+<script type="module" src="/src/abstraction_animation.mjs"></script>
+:::

@@ -1,4 +1,4 @@
-import { FarmingSimulation, parseCorpusText } from "./farming_simulation.mjs";
+import { FarmingSimulation, parseCorpusText } from "./simulation.mjs";
 
 const FIELD_ELEMENT_ID = "farming-field";
 const CORPUS_URL = "/assets/farming_corpus.txt";

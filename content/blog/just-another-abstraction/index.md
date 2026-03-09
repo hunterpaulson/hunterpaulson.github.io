@@ -27,5 +27,5 @@ now even that is handled for us. **coding agents** compile intent into running s
   >(loading abstraction...)</pre>
   <label style="width:auto; margin-top:var(--line-height)"><input type="checkbox" id="abstraction-reverse" /> reverse direction</label>
 </div>
-<script type="module" src="/src/abstraction_animation.mjs"></script>
+<script type="module" src="/src/blog/just-another-abstraction/animation.mjs"></script>
 :::

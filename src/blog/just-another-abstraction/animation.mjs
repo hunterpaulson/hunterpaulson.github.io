@@ -1,4 +1,4 @@
-import { SCENES } from "./abstraction_layers.mjs";
+import { SCENES } from "./data.mjs";
 
 const REVERSE_INPUT_ID = "abstraction-reverse";
 const SCREEN_ELEMENT_ID = "abstraction-screen";

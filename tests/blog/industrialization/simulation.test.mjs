@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { FarmingSimulation, parseCorpusText } from "../src/farming_simulation.mjs";
+import { FarmingSimulation, parseCorpusText } from "../../../src/blog/industrialization/simulation.mjs";
 
 function buildCorpusLines(count) {
   return Array.from({ length: count }, (_, index) => {

@@ -13,4 +13,4 @@ the industrial age of software has begun...
 
 <pre id="farming-field" aria-label="ascii code farming field">loading field...</pre>
 
-<script type="module" src="/src/farming_animation.mjs"></script>
+<script type="module" src="/src/blog/industrialization/animation.mjs"></script>

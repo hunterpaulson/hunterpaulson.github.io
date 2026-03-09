@@ -10,7 +10,7 @@ import {
   C_SOURCE,
   MACHINE_CODE,
   PYTHON_SOURCE,
-} from "../src/abstraction_layers.mjs";
+} from "../../../src/blog/just-another-abstraction/data.mjs";
 
 const SAMPLE_CASES = [
   ["", "", 0],

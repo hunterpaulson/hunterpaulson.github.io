@@ -156,12 +156,11 @@ const root = document.documentElement;
 let offsetsMonitoring = false;
 
 function applyTheme(theme) {
-  if (!themeToggle) {
-    return;
-  }
   const isDark = theme === "dark";
   root.classList.toggle("theme-light", !isDark);
-  themeToggle.checked = isDark;
+  if (themeToggle) {
+    themeToggle.checked = isDark;
+  }
   localStorage.setItem(themeStorageKey, theme);
 }
 

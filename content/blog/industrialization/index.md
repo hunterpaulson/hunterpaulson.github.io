@@ -14,3 +14,11 @@ the industrial age of software has begun...
 <pre id="farming-field" aria-label="ascii code farming field">loading field...</pre>
 
 <script type="module" src="/src/blog/industrialization/animation.mjs"></script>
+
+---
+
+this is part 1 of _coding agents are like..._
+
+1. industrialization of software = _tractors_
+1. [just another abstraction](/blog/just-another-abstraction/) = _compilers_
+1. [stochastic agentic ascent](/blog/stochastic-agentic-ascent/) = _optimizers_

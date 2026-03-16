@@ -29,3 +29,11 @@ now even that is handled for us. **coding agents** compile intent into running s
 </div>
 <script type="module" src="/src/blog/just-another-abstraction/animation.mjs"></script>
 :::
+
+---
+
+this is part 2 of _coding agents are like..._
+
+1. [industrialization of software](/blog/industrialization/) = _tractors_
+1. just another abstraction = _compilers_
+1. [stochastic agentic ascent](/blog/stochastic-agentic-ascent/) = _optimizers_

@@ -30,38 +30,46 @@
   </tr>
 </table>
 <h1 id="stochastic-agentic-ascent">stochastic agentic ascent</h1>
-<p>building software is starting to feel like training a neural
-network.</p>
+<p>building software today feels like training a neural network.</p>
 <p>modern neural networks have <a
 href="https://huggingface.co/moonshotai/Kimi-K2.5">&gt;1 Trillion</a>
 parameters. meanwhile, the largest neural network we fully understand
 has only <a href="https://distill.pub/2020/circuits/">10,000
 neurons</a>.</p>
-<p>because of this we don’t fully understand how a Large Language Models
-(LLM) predict the next token. but, as long as they do it accurately, we
-don’t really care. instead we care that for any given input it gives us
+<p>because of this we don’t fully understand how Large Language Models
+(LLMs) predict the next token. but, as long as they do it accurately, we
+don’t really care. instead we care that for any given input they give us
 the expected output.</p>
-<p>LLMs are black boxes. we grow them through the process of
-optimization. using a tight optimization loop. software is starting to
-be grown the same way.</p>
+<p>LLMs are <a href="https://en.wikipedia.org/wiki/Black_box">black
+boxes</a>. we grow them through the process of <a
+href="https://en.wikipedia.org/wiki/Gradient_descent">optimization</a>.
+where we define an <a
+href="https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html">objective
+function</a> to measure performance, and then use an optimizer to update
+the weights in an iterative feedback loop.</p>
+<p>software is now being grown in the same way.</p>
 <p><a
 href="https://x.com/karpathy/status/2019137879310836075?lang=en">agentic
-engineering</a> is like training a neural network. the code is the
+engineering</a> mirrors training a neural network. the code is the
 weights, your vibes are the objective function, and your coding agent is
 the optimizer trying to maximize your vibes one update step at a
 time.</p>
-<p>each of your prompt is new feedback telling the optimizer to take
-another step in program space. across a session, updates from previous
-turns accumulate <a
+<p>each prompt is new <a
+href="https://en.wikipedia.org/wiki/Gradient_descent">gradient
+signal</a> telling <a
+href="https://code.claude.com/docs/en/how-claude-code-works">the
+optimizer</a> to take another step in <a
+href="https://en.wikipedia.org/wiki/Parameter_space">parameter
+space</a>. across a session, updates from previous turns accumulate <a
 href="https://arxiv.org/abs/1412.6980">momentum</a>.</p>
-<p>software is quickly becoming a black box too. one that is updated at
+<p>we are starting to produce black box software. one that is updated at
 a speed that we cannot track, at a scale that we can no longer
 comprehend, and written in languages that we don’t understand.</p>
-<p>but for users and CEOs this is nothing new. software has always been
-black box for most of them. as long as the output matches their
-expectations, users don’t care how it’s computed. <a
-href="https://x.com/jack/status/2027129697092731343?lang=en">CEOs</a>
-feel the same way, as long as the system predictably improves on <a
+<p>but for users and CEOs this is nothing new. for them, software has
+always been black box. as long as the output matches their expectations,
+users don’t care how it’s computed. CEOs feel the <a
+href="https://x.com/jack/status/2027129697092731343?lang=en">same
+way</a>, as long as the system predictably improves on <a
 href="https://en.wikipedia.org/wiki/Shareholder_value">their objective
 function</a>.</p>
 <div class="{=html}">

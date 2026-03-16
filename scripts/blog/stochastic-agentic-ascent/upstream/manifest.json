@@ -1,0 +1,76 @@
+{
+  "repository": "siboehm/SGEMM_CUDA",
+  "commit": "5a7dcc513d951ba764d51bc9d587b3163f3a894d",
+  "kernels": [
+    {
+      "kernel": "1",
+      "filename": "1_naive.cuh",
+      "functionName": "sgemm_naive",
+      "sourcePath": "src/kernels/1_naive.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/1_naive.cuh"
+    },
+    {
+      "kernel": "2",
+      "filename": "2_kernel_global_mem_coalesce.cuh",
+      "functionName": "sgemm_global_mem_coalesce",
+      "sourcePath": "src/kernels/2_kernel_global_mem_coalesce.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/2_kernel_global_mem_coalesce.cuh"
+    },
+    {
+      "kernel": "3",
+      "filename": "3_kernel_shared_mem_blocking.cuh",
+      "functionName": "sgemm_shared_mem_block",
+      "sourcePath": "src/kernels/3_kernel_shared_mem_blocking.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/3_kernel_shared_mem_blocking.cuh"
+    },
+    {
+      "kernel": "4",
+      "filename": "4_kernel_1D_blocktiling.cuh",
+      "functionName": "sgemm1DBlocktiling",
+      "sourcePath": "src/kernels/4_kernel_1D_blocktiling.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/4_kernel_1D_blocktiling.cuh"
+    },
+    {
+      "kernel": "5",
+      "filename": "5_kernel_2D_blocktiling.cuh",
+      "functionName": "sgemm2DBlocktiling",
+      "sourcePath": "src/kernels/5_kernel_2D_blocktiling.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/5_kernel_2D_blocktiling.cuh"
+    },
+    {
+      "kernel": "6",
+      "filename": "6_kernel_vectorize.cuh",
+      "functionName": "sgemmVectorize",
+      "sourcePath": "src/kernels/6_kernel_vectorize.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/6_kernel_vectorize.cuh"
+    },
+    {
+      "kernel": "7",
+      "filename": "7_kernel_resolve_bank_conflicts.cuh",
+      "functionName": "sgemmResolveBankConflicts",
+      "sourcePath": "src/kernels/7_kernel_resolve_bank_conflicts.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/7_kernel_resolve_bank_conflicts.cuh"
+    },
+    {
+      "kernel": "8",
+      "filename": "8_kernel_bank_extra_col.cuh",
+      "functionName": "sgemmResolveBankExtraCol",
+      "sourcePath": "src/kernels/8_kernel_bank_extra_col.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/8_kernel_bank_extra_col.cuh"
+    },
+    {
+      "kernel": "9",
+      "filename": "9_kernel_autotuned.cuh",
+      "functionName": "sgemmAutotuned",
+      "sourcePath": "src/kernels/9_kernel_autotuned.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/9_kernel_autotuned.cuh"
+    },
+    {
+      "kernel": "10",
+      "filename": "10_kernel_warptiling.cuh",
+      "functionName": "sgemmWarptiling",
+      "sourcePath": "src/kernels/10_kernel_warptiling.cuh",
+      "sourceUrl": "https://github.com/siboehm/SGEMM_CUDA/blob/5a7dcc513d951ba764d51bc9d587b3163f3a894d/src/kernels/10_kernel_warptiling.cuh"
+    }
+  ]
+}

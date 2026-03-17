@@ -1,4 +1,5 @@
 import { preserveScrollOffset } from "../shared/animated_text_pane.mjs";
+import { attachBfcacheAnimationLifecycle } from "../shared/bfcache_animation_lifecycle.mjs";
 import { KERNEL_STAGES } from "./data.mjs";
 import {
   CODE_LINE_COUNT,
@@ -68,6 +69,23 @@ function bootOptimizerAnimation() {
     computeAvailableColumns(chartScreenElement),
   ));
   let frameId = null;
+
+  function stopAnimationFrame() {
+    if (frameId === null) {
+      return;
+    }
+
+    window.cancelAnimationFrame(frameId);
+    frameId = null;
+  }
+
+  function startAnimationFrame() {
+    if (frameId !== null) {
+      return;
+    }
+
+    frameId = window.requestAnimationFrame(tick);
+  }
 
   function visibleKernelLineCount() {
     if (resolveTransitionProgress(state) > 0 && state.stageIndex < KERNEL_STAGES.length - 1) {
@@ -209,25 +227,21 @@ function bootOptimizerAnimation() {
   if (reducedMotion) {
     state.stageIndex = KERNEL_STAGES.length - 1;
     render();
-    window.addEventListener("beforeunload", () => {
-      window.removeEventListener("resize", onResize);
-      kernelScrollScreenElement.removeEventListener("wheel", onWheel);
-      kernelScrollScreenElement.removeEventListener("keydown", onKeyDown);
-    }, { once: true });
     return;
   }
 
-  render();
-  frameId = window.requestAnimationFrame(tick);
+  attachBfcacheAnimationLifecycle({
+    pause() {
+      stopAnimationFrame();
+    },
+    resume() {
+      state.lastTimestamp = 0;
+      startAnimationFrame();
+    },
+  });
 
-  window.addEventListener("beforeunload", () => {
-    if (frameId !== null) {
-      window.cancelAnimationFrame(frameId);
-    }
-    window.removeEventListener("resize", onResize);
-    kernelScrollScreenElement.removeEventListener("wheel", onWheel);
-    kernelScrollScreenElement.removeEventListener("keydown", onKeyDown);
-  }, { once: true });
+  render();
+  startAnimationFrame();
 }
 
 bootOptimizerAnimation();

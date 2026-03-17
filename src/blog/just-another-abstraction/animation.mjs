@@ -1,4 +1,5 @@
 import { SCENES } from "./data.mjs";
+import { attachBfcacheAnimationLifecycle } from "../shared/bfcache_animation_lifecycle.mjs";
 import {
   formatCompactPromptScene,
   shouldUseCompactPromptLayout,
@@ -63,6 +64,23 @@ function bootAbstractionAnimation() {
   const state = createAnimationState(reducedMotion, SCENES);
   let availableColumns = computeAvailableColumns(screenElement);
   let frameId = null;
+
+  function stopAnimationFrame() {
+    if (frameId === null) {
+      return;
+    }
+
+    window.cancelAnimationFrame(frameId);
+    frameId = null;
+  }
+
+  function startAnimationFrame() {
+    if (frameId !== null) {
+      return;
+    }
+
+    frameId = window.requestAnimationFrame(tick);
+  }
 
   function activeScenes() {
     if (reverseInput && reverseInput.checked) {
@@ -174,15 +192,18 @@ function bootAbstractionAnimation() {
 
   window.addEventListener("resize", onResize);
 
-  render();
-  frameId = window.requestAnimationFrame(tick);
+  attachBfcacheAnimationLifecycle({
+    pause() {
+      stopAnimationFrame();
+    },
+    resume() {
+      state.lastTimestamp = 0;
+      startAnimationFrame();
+    },
+  });
 
-  window.addEventListener("beforeunload", () => {
-    if (frameId !== null) {
-      window.cancelAnimationFrame(frameId);
-    }
-    window.removeEventListener("resize", onResize);
-  }, { once: true });
+  render();
+  startAnimationFrame();
 }
 
 bootAbstractionAnimation();

@@ -1,3 +1,4 @@
+import { attachBfcacheAnimationLifecycle } from "../shared/bfcache_animation_lifecycle.mjs";
 import { FarmingSimulation, parseCorpusText } from "./simulation.mjs";
 
 const FIELD_ELEMENT_ID = "farming-field";
@@ -80,6 +81,15 @@ async function bootFarmingAnimation() {
   let resizeTimerId = null;
   let dimensions = null;
 
+  function clearResizeTimer() {
+    if (resizeTimerId === null) {
+      return;
+    }
+
+    window.clearTimeout(resizeTimerId);
+    resizeTimerId = null;
+  }
+
   function renderFrame() {
     fieldElement.textContent = simulation.renderFrame();
   }
@@ -128,23 +138,25 @@ async function bootFarmingAnimation() {
   createSimulation();
   startTimer();
 
+  attachBfcacheAnimationLifecycle({
+    pause() {
+      stopTimer();
+      clearResizeTimer();
+    },
+    resume() {
+      restartForResizeIfNeeded();
+      renderFrame();
+      startTimer();
+    },
+  });
+
   window.addEventListener("resize", () => {
-    if (resizeTimerId !== null) {
-      window.clearTimeout(resizeTimerId);
-    }
+    clearResizeTimer();
     resizeTimerId = window.setTimeout(() => {
       restartForResizeIfNeeded();
       resizeTimerId = null;
     }, RESIZE_DEBOUNCE_MS);
   });
-
-  window.addEventListener("beforeunload", () => {
-    stopTimer();
-    if (resizeTimerId !== null) {
-      window.clearTimeout(resizeTimerId);
-      resizeTimerId = null;
-    }
-  }, { once: true });
 }
 
 void bootFarmingAnimation();

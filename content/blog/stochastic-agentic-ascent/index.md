@@ -43,6 +43,8 @@ but for users and CEOs this is nothing new. for them, software has always been b
 <script type="module" src="/src/blog/stochastic-agentic-ascent/animation.mjs"></script>
 :::
 
+the [kernels](https://github.com/siboehm/SGEMM_CUDA/tree/master/src/kernels) and performance data in this animation are adapted from Simon Boehm's amazing [worklog on optimizing a cuda matmul](https://siboehm.com/articles/22/CUDA-MMM).
+
 ---
 
 this is part 3 of _coding agents are like..._

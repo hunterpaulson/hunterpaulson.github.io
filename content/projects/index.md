@@ -8,17 +8,13 @@ lang: en
 
 ## [wikiarena.org](https://wikiarena.org)
 
-> a multi-turn tool use evaluation for language models
-
-the eval was a weekend project. the infra to find the shortest path between two wikipedia pages in ~100ms is a passion project.
+this was supposed to be an eval for language models but while building that I got nerd sniped and ended up building what may be **the fastest wikipedia race solver on the internet**.
 
 <!-- ## fmt2fmt
 
 > what gets measured gets fixed
 
 (my PayPal team's version of the classic quote)
-
-# public work projects
 
 the stuff I do at work and can share -->
 
@@ -28,15 +24,13 @@ the stuff I do at work and can share -->
 
 led the creation of PayPal's central agent harness 'Pal'. allowing any team to build MCP servers and create their own agents / workflows in a self-serve manner.
 
-building and maintaining real-time metrics pipelines for _every_ http response and server log across all PayPal brands. the single, structured, source of truth for all site reliability metrics.
+designed the algorithm and built the infrastructure to identify the root-cause component of every customer-perceived failure in real time. data was used to identify and triage issues, reclaiming $40M in revenue. Equivalent to ~1% growth of branded checkout in 2025.
 
-designed algo and pipeline to identify the root cause component of every customer perceived failure in real-time.
+building and maintaining real-time metrics pipelines for _every_ http response and server log across all PayPal brands. the single, structured, source of truth for all site reliability metrics.
 
 wrote transpiler from python to bigquery sql.
 
 automated data lineage documentation by parsing and creating graph from every sql query ran in the company daily.
-
-> I will add links when I can share publicly.
 
 ## Boeing - ML Research Assistant
 

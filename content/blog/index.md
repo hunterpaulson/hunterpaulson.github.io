@@ -18,6 +18,6 @@ title: blog
 
 a series of analogies I have been thinking about.
 
-1. [industrialization of software](/blog/industrialization/) = _tractors_
-1. [just another abstraction](/blog/just-another-abstraction/) = _compilers_
-1. [stochastic agentic ascent](/blog/stochastic-agentic-ascent/) = _optimizers_
+1. _tractors_ = [industrialization of software](/blog/industrialization/)
+1. _compilers_ = [just another abstraction](/blog/just-another-abstraction/)
+1. _optimizers_ = [stochastic agentic ascent](/blog/stochastic-agentic-ascent/)

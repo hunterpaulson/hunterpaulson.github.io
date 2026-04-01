@@ -49,6 +49,6 @@ the [kernels](https://github.com/siboehm/SGEMM_CUDA/tree/master/src/kernels) and
 
 this is part 3 of _coding agents are like..._
 
-1. [industrialization of software](/blog/industrialization/) = _tractors_
-1. [just another abstraction](/blog/just-another-abstraction/) = _compilers_
-1. stochastic agentic ascent = _optimizers_
+1. _tractors_ = [industrialization of software](/blog/industrialization/)
+1. _compilers_ = [just another abstraction](/blog/just-another-abstraction/)
+1. _optimizers_ = [stochastic agentic ascent](/blog/stochastic-agentic-ascent/)

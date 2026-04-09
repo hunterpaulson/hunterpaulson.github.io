@@ -40,7 +40,7 @@ trained computer vision models and built data labeling pipelines for assemply li
 
 contributed to the open source [flight software framework](https://github.com/nasa/fprime) that supported the [Mars Helicopter Ingenuity](https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/). 
 
-fun fact: I was the [intern who ran the autoformatter](https://github.com/nasa/fprime/pull/184) meme.
+fun fact: I [ran the autoformatter](https://github.com/nasa/fprime/pull/184).
 
 ## ASU Cube Satelite Lab
 

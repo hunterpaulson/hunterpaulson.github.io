@@ -6,6 +6,7 @@ title: blog
 
 <!-- BLOG-POSTS:START -->
 
+- 2026-04-30 — [how to build the fastest wikipedia race solver on the internet](/blog/wikipedia-race-solver/)
 - 2026-03-15 — [stochastic agentic ascent](/blog/stochastic-agentic-ascent/)
 - 2026-03-08 — [just another abstraction](/blog/just-another-abstraction/)
 - 2026-02-16 — [industrialization of software](/blog/industrialization/)

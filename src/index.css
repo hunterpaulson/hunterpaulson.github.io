@@ -7,6 +7,8 @@
 :root {
   --font-family: "JetBrains Mono", monospace;
   --line-height: 1.20rem;
+  --measured-ch: 1ch;
+  --measured-row: var(--line-height);
   --border-thickness: 2px;
   --text-color: #f9f6ee;
   --text-color-alt: #b0b3b8; /* ashy grey */
@@ -314,6 +316,170 @@ figcaption {
   margin-top: var(--line-height);
 }
 
+.mono-graph {
+  --mono-graph-cell-width: var(--measured-ch, 1ch);
+  --mono-graph-cell-height: var(--measured-row, var(--line-height));
+  --graph-cols: 24;
+  --graph-rows: 8;
+  --mono-graph-canvas-pad-cols: 2;
+  --mono-graph-canvas-pad-rows: 1;
+  --mono-graph-node-pad-cols: 1.5;
+  --mono-graph-node-pad-rows: 0.5;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-graph-cell-height);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mono-graph::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+
+.mono-graph > figcaption {
+  margin-top: 0;
+  line-height: var(--mono-graph-cell-height);
+}
+
+.mono-graph__canvas {
+  position: relative;
+  width: calc(
+    (var(--graph-cols) * var(--mono-graph-cell-width)) +
+    (var(--mono-graph-canvas-pad-cols) * 2 * var(--mono-graph-cell-width))
+  );
+  height: calc(
+    (var(--graph-rows) * var(--mono-graph-cell-height)) +
+    (var(--mono-graph-canvas-pad-rows) * 2 * var(--mono-graph-cell-height))
+  );
+  margin: 0 auto;
+}
+
+.mono-graph__edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mono-graph__edge-set {
+  display: none;
+}
+
+.mono-graph__edge {
+  display: none;
+}
+
+.mono-graph__edge-path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--border-thickness);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.mono-graph__node {
+  position: absolute;
+  margin: 0;
+  z-index: 1;
+  border: var(--border-thickness) solid currentColor;
+  border-radius: 999px;
+  background: var(--background-color);
+}
+
+.mono-graph__label {
+  position: absolute;
+  display: block;
+  margin: 0;
+  line-height: var(--mono-graph-cell-height);
+  white-space: pre;
+  font-weight: var(--font-weight-medium);
+}
+
+.mono-graph__node--accent,
+.mono-graph__edge--accent {
+  color: var(--accent-primary);
+}
+
+.mono-graph__node--warm,
+.mono-graph__edge--warm {
+  color: var(--accent-secondary);
+}
+
+.mono-graph__node--muted,
+.mono-graph__edge--muted {
+  color: var(--text-color-alt);
+}
+
+.csr-figure {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.csr-diagram {
+  width: max-content;
+  max-width: 100%;
+  padding: var(--line-height) 1ch;
+  border: var(--border-thickness) solid var(--text-color);
+  line-height: var(--line-height);
+  color: var(--text-color);
+}
+
+.mono-graph-animation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--line-height);
+  margin: calc(var(--line-height) * 2) 0;
+}
+
+.mono-graph-animation h3 {
+  display: none;
+}
+
+.mono-graph-animation__viewport {
+  display: grid;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mono-graph-animation__viewport::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+
+.mono-graph-animation__frame {
+  grid-area: 1 / 1;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms linear;
+}
+
+.mono-graph-animation__frame.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mono-graph-animation__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  margin-top: 0;
+}
+
+.mono-graph-animation__status {
+  min-width: 10ch;
+  margin-top: 0;
+  color: var(--text-color-alt);
+}
+
 ul, ol {
   padding: 0;
   margin: 0 0 var(--line-height);
@@ -509,7 +675,8 @@ label input {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: -1;
+  z-index: 10;
+  pointer-events: none;
   background-image:
     repeating-linear-gradient(var(--color) 0 1px, transparent 1px 100%),
     repeating-linear-gradient(90deg, var(--color) 0 1px, transparent 1px 100%);
@@ -522,12 +689,15 @@ label input {
 }
 
 .site-footer {
+  --site-footer-shift-y: 0px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1ch;
   flex-wrap: wrap;
   width: calc(round(down, 100%, 1ch));
+  position: relative;
+  top: var(--site-footer-shift-y);
 }
 .site-footer > * {
   margin-top: 0;
@@ -537,7 +707,7 @@ label input {
 }
 .footer-controls {
   display: grid;
-  gap: calc(var(--line-height) / 2);
+  gap: 0;
   justify-items: start;
   align-items: start;
 }

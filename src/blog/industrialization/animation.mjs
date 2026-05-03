@@ -1,4 +1,5 @@
 import { attachBfcacheAnimationLifecycle } from "../shared/bfcache_animation_lifecycle.mjs";
+import { shouldRecreateFarmingSimulation } from "./resize_policy.mjs";
 import { FarmingSimulation, parseCorpusText } from "./simulation.mjs";
 
 const FIELD_ELEMENT_ID = "farming-field";
@@ -6,6 +7,7 @@ const CORPUS_URL = "/assets/blog/industrialization/corpus.txt";
 const TARGET_FPS = 12;
 const RESIZE_DEBOUNCE_MS = 120;
 const DEFAULT_SEED = "farming-v1";
+const NARROW_VIEWPORT_QUERY = "(max-width: 700px)";
 
 function measureCharacterCell(referenceElement) {
   const probe = document.createElement("span");
@@ -45,6 +47,10 @@ function computeFieldSize(fieldElement) {
 function resolveSeed() {
   const params = new URLSearchParams(window.location.search);
   return params.get("seed") || DEFAULT_SEED;
+}
+
+function isNarrowViewport() {
+  return window.matchMedia(NARROW_VIEWPORT_QUERY).matches;
 }
 
 async function loadCorpusLines() {
@@ -125,11 +131,11 @@ async function bootFarmingAnimation() {
 
   function restartForResizeIfNeeded() {
     const nextDimensions = computeFieldSize(fieldElement);
-    if (
-      dimensions !== null
-      && nextDimensions.columns === dimensions.columns
-      && nextDimensions.rows === dimensions.rows
-    ) {
+    if (!shouldRecreateFarmingSimulation({
+      currentDimensions: dimensions,
+      nextDimensions,
+      narrowViewport: isNarrowViewport(),
+    })) {
       return;
     }
     createSimulation();

@@ -314,6 +314,35 @@ figcaption {
   display: block;
   font-style: italic;
   margin-top: var(--line-height);
+  position: sticky;
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.wiki-page-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--line-height) 2ch;
+  width: min(100%, calc(100vw - 2ch));
+  margin-left: 0;
+  margin-right: 0;
+  overflow: visible;
+}
+
+.wiki-page-pair > * {
+  margin-top: 0;
+}
+
+.wiki-page-pair img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.wiki-page-pair figcaption {
+  grid-column: 1 / -1;
 }
 
 .mono-graph {

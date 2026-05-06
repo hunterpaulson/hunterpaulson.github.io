@@ -110,6 +110,31 @@ function outlineCodeBlocks() {
 
 outlineCodeBlocks();
 
+function centerScrollableDiagrams({ force = false } = {}) {
+  const scrollContainers = document.querySelectorAll("figure, .mono-graph-animation__viewport");
+
+  scrollContainers.forEach((container) => {
+    const overflow = container.scrollWidth - container.clientWidth;
+    if (overflow <= 1) {
+      return;
+    }
+
+    if (!force && container.dataset.scrollCentered === "true") {
+      return;
+    }
+
+    container.scrollLeft = overflow / 2;
+    container.dataset.scrollCentered = "true";
+  });
+}
+
+centerScrollableDiagrams();
+window.addEventListener("load", () => centerScrollableDiagrams({ force: true }));
+window.addEventListener("resize", () => centerScrollableDiagrams({ force: true }));
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => centerScrollableDiagrams({ force: true }));
+}
+
 const monoGraphLayout = globalThis.MonoGraphLayout;
 
 function readNumericCustomProperty(element, propertyName, fallback = 0) {
@@ -169,6 +194,25 @@ function graphNodeEndpoint(bounds, towardPoint, side) {
   }
 
   return graphNodeCenter(bounds);
+}
+
+function createMonoGraphArrowMarker(svgNamespace, markerId, fillColor) {
+  const marker = document.createElementNS(svgNamespace, "marker");
+  marker.setAttribute("id", markerId);
+  marker.setAttribute("viewBox", "0 0 6 6");
+  marker.setAttribute("refX", "5");
+  marker.setAttribute("refY", "3");
+  marker.setAttribute("markerWidth", "4");
+  marker.setAttribute("markerHeight", "4");
+  marker.setAttribute("markerUnits", "strokeWidth");
+  marker.setAttribute("orient", "auto-start-reverse");
+
+  const arrowHead = document.createElementNS(svgNamespace, "path");
+  arrowHead.setAttribute("d", "M 0 0 L 6 3 L 0 6 z");
+  arrowHead.setAttribute("fill", fillColor);
+  marker.appendChild(arrowHead);
+
+  return marker;
 }
 
 function buildGraphPathData(startPoint, viaPoints, endPoint) {
@@ -285,26 +329,10 @@ function layoutMonoGraphs() {
     svg.replaceChildren();
 
     const defs = document.createElementNS(svgNamespace, "defs");
-    const marker = document.createElementNS(svgNamespace, "marker");
-    const markerId = `mono-graph-arrow-${graphIndex}`;
-    marker.setAttribute("id", markerId);
-    marker.setAttribute("viewBox", "0 0 6 6");
-    marker.setAttribute("refX", "5");
-    marker.setAttribute("refY", "3");
-    marker.setAttribute("markerWidth", "4");
-    marker.setAttribute("markerHeight", "4");
-    marker.setAttribute("markerUnits", "strokeWidth");
-    marker.setAttribute("orient", "auto-start-reverse");
-
-    const arrowHead = document.createElementNS(svgNamespace, "path");
-    arrowHead.setAttribute("d", "M 0 0 L 6 3 L 0 6 z");
-    arrowHead.setAttribute("fill", "context-stroke");
-    marker.appendChild(arrowHead);
-    defs.appendChild(marker);
     svg.appendChild(defs);
 
     const edges = canvas.querySelectorAll(".mono-graph__edge[data-from][data-to]");
-    edges.forEach((edge) => {
+    edges.forEach((edge, edgeIndex) => {
       const sourceBounds = nodeBoundsById.get(edge.dataset.from);
       const targetBounds = nodeBoundsById.get(edge.dataset.to);
 
@@ -337,8 +365,13 @@ function layoutMonoGraphs() {
       const modifierClasses = Array.from(edge.classList).filter((className) => className !== "mono-graph__edge");
       path.setAttribute("class", ["mono-graph__edge-path", ...modifierClasses].join(" "));
       path.setAttribute("d", buildGraphPathData(pathPoints[0], pathPoints.slice(1, -1), pathPoints[pathPoints.length - 1]));
-      path.setAttribute("marker-end", `url(#${markerId})`);
       svg.appendChild(path);
+
+      const markerId = `mono-graph-arrow-${graphIndex}-${edgeIndex}`;
+      const pathStyle = window.getComputedStyle(path);
+      const markerColor = pathStyle.stroke && pathStyle.stroke !== "none" ? pathStyle.stroke : pathStyle.color;
+      defs.appendChild(createMonoGraphArrowMarker(svgNamespace, markerId, markerColor));
+      path.setAttribute("marker-end", `url(#${markerId})`);
     });
   });
 }
@@ -354,115 +387,10 @@ if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(alignFooterToGrid);
 }
 
-function initializeGraphAnimations() {
-  const animations = document.querySelectorAll(".mono-graph-animation");
-
-  animations.forEach((animation) => {
-    if (animation.dataset.animationReady === "true") {
-      return;
-    }
-
-    const frames = Array.from(animation.querySelectorAll(".mono-graph-animation__frame"));
-    if (frames.length === 0) {
-      return;
-    }
-
-    animation.dataset.animationReady = "true";
-
-    const viewport = document.createElement("div");
-    viewport.className = "mono-graph-animation__viewport";
-    frames[0].before(viewport);
-    frames.forEach((frame) => viewport.appendChild(frame));
-
-    const controls = document.createElement("div");
-    controls.className = "mono-graph-animation__controls";
-
-    const previousButton = document.createElement("button");
-    previousButton.type = "button";
-    previousButton.textContent = "prev";
-
-    const playButton = document.createElement("button");
-    playButton.type = "button";
-
-    const nextButton = document.createElement("button");
-    nextButton.type = "button";
-    nextButton.textContent = "next";
-
-    const status = document.createElement("span");
-    status.className = "mono-graph-animation__status";
-    status.setAttribute("aria-live", "polite");
-
-    controls.append(previousButton, playButton, nextButton, status);
-    viewport.after(controls);
-
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const intervalMs = Number.parseInt(animation.dataset.interval || "1400", 10);
-    let activeIndex = 0;
-    let isPlaying = !prefersReducedMotion;
-    let timerId = null;
-
-    function render() {
-      frames.forEach((frame, frameIndex) => {
-        const isActive = frameIndex === activeIndex;
-        frame.classList.toggle("is-active", isActive);
-        frame.setAttribute("aria-hidden", isActive ? "false" : "true");
-      });
-      playButton.textContent = isPlaying ? "pause" : "play";
-      status.textContent = `${activeIndex + 1}/${frames.length}`;
-    }
-
-    function stopTimer() {
-      if (timerId !== null) {
-        window.clearInterval(timerId);
-        timerId = null;
-      }
-    }
-
-    function startTimer() {
-      stopTimer();
-      timerId = window.setInterval(() => {
-        activeIndex = (activeIndex + 1) % frames.length;
-        render();
-      }, Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : 1400);
-    }
-
-    function syncTimer() {
-      if (isPlaying) {
-        startTimer();
-      } else {
-        stopTimer();
-      }
-    }
-
-    previousButton.addEventListener("click", () => {
-      activeIndex = (activeIndex - 1 + frames.length) % frames.length;
-      render();
-      syncTimer();
-    });
-
-    playButton.addEventListener("click", () => {
-      isPlaying = !isPlaying;
-      render();
-      syncTimer();
-    });
-
-    nextButton.addEventListener("click", () => {
-      activeIndex = (activeIndex + 1) % frames.length;
-      render();
-      syncTimer();
-    });
-
-    viewport.addEventListener("mouseenter", stopTimer);
-    viewport.addEventListener("mouseleave", syncTimer);
-    viewport.addEventListener("focusin", stopTimer);
-    viewport.addEventListener("focusout", syncTimer);
-
-    render();
-    syncTimer();
-  });
-}
-
-initializeGraphAnimations();
+import("/src/graph_animation.mjs").then(({ initializeGraphAnimations }) => {
+  initializeGraphAnimations();
+  centerScrollableDiagrams({ force: true });
+});
 
 function checkOffsets() {
   const ignoredTagNames = new Set([

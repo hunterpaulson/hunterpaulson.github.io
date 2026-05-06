@@ -33,20 +33,32 @@ solver on the internet</span>
 <h1
 id="how-to-build-the-fastest-wikipedia-race-solver-on-the-internet">how
 to build the fastest wikipedia race solver on the internet</h1>
-<!-- TODO: needs a better title
-TODO: needs a hook here
-- do I claim to be the fastest here? does that hurt the likelihood of my mom and dad understanding it or does that hook even them?
-
-to mom and dad: for getting me into computers -->
+<!-- # how to build an instantaneous Wikipedia solver -->
+<!-- # how to build a real-time Wikipedia solver -->
+<!-- to mom and dad: for getting me into computers -->
+<p>imagine you are reading the Wikipedia page for <a
+href="https://en.wikipedia.org/wiki/Matcha">Matcha</a>, and your trying
+to figure out how society got from this to <a
+href="https://en.wikipedia.org/wiki/Labubu">Labubu</a>… but you can only
+navigate using links on the current page. no search bar. no back button.
+no CTRL+F. just blue links.</p>
+<figure class="wiki-page-pair">
+<img src="/assets/blog/wikipedia-race-solver/matcha.png" alt="Screenshot of the Matcha Wikipedia page">
+<img src="/assets/blog/wikipedia-race-solver/labubu.png" alt="Screenshot of the Labubu Wikipedia page">
+</figure>
+<p>How long and how many clicks do you think it would take?</p>
+<p>I wanted to answer both questions so I built a solver that can find
+the shortest path between <em>any</em> two english Wikipedia pages in
+milliseconds.</p>
 <h1 id="wikipedia-is-a-graph">wikipedia is a <em>graph</em></h1>
-<p>Every<sup><a href="#fn1" class="footnote-ref" id="fnref1"
-role="doc-noteref"><sup>1</sup></a></sup> wikipedia page has links to
-other wikipedia pages and by clicking on one of those links we end up on
-that page.</p>
+<p>Every<a href="#fn1" class="footnote-ref" id="fnref1"
+role="doc-noteref"><sup>1</sup></a> wikipedia page has links to other
+wikipedia pages and by clicking on one of those links we end up on that
+page.</p>
 <p>Because of this Wikipedia can be thought of as a graph where
 <strong>each page is a node</strong> and <strong>each link is an
-edge</strong><sup><a href="#fn2" class="footnote-ref" id="fnref2"
-role="doc-noteref"><sup>2</sup></a></sup>.</p>
+edge</strong><a href="#fn2" class="footnote-ref" id="fnref2"
+role="doc-noteref"><sup>2</sup></a>.</p>
 <figure class="mono-graph" style="--graph-cols: 68; --graph-rows: 22;">
 <div class="mono-graph__canvas">
 <svg class="mono-graph__edges" aria-hidden="true">
@@ -180,34 +192,1335 @@ data-to="genz"></span></p>
 <figcaption>
 You can get from <a
 href="https://en.wikipedia.org/wiki/Matcha">Matcha</a> to <a
-href="https://en.wikipedia.org/wiki/Labubu">Labubu</a> in 3 clicks
+href="https://en.wikipedia.org/wiki/Labubu">Labubu</a> in <a
+href="https://wikiarena.org/solver?start=Matcha&amp;target=Labubu&amp;mode=all_shortest">3
+clicks</a>
 </figcaption>
 </figure>
 <p>There is actually a semi-official game called <a
 href="https://en.wikipedia.org/wiki/Wikiracing">Wikiracing</a> where
 “players compete to navigate from one Wikipedia page to another (chosen
 manually or randomly) using only the internal links of the page”.</p>
-<p>There are two variants of Wikiracing. One minimizes the <em>number of
-clicks</em> and the the other minimizes the <em>time to complete the
-race</em>. I thought it would be a fun challenge to see if I could build
-a system that is the fastest in the internet at both.</p>
-<p>Here is how it works… TODO: should the below section be hook? So here
-is how I built fastest wikipedia race solver on the internet<sup><a
+<p>There are two variants of Wikiracing. One tries to reach the goal in
+the <em>fewest number of clicks</em> and the the other tries to get
+there in the <em>shortest amount of time</em>. So I challenged myself to
+build <strong>the fastest Wikipedia solver on the internet</strong><a
 href="#fn3" class="footnote-ref" id="fnref3"
-role="doc-noteref"><sup>3</sup></a></sup>. You can play with my solver
-<a href="https://wikiarena.org/solver">here</a> and try overload it.</p>
+role="doc-noteref"><sup>3</sup></a> at both…</p>
+<p>You can play with it <a
+href="https://wikiarena.org/solver">here</a>.</p>
+<p>For the rest of this blog I am going to try my best to walk through
+how it works in a way show shows how you could have arrived at building
+it too.</p>
+<h1 id="brute-force">brute force</h1>
+<p>In computer science class I was taught to always think about the
+brute force solution to your problem first. computers are pretty fast so
+this is usually a great way to get a feel for its complexity.</p>
+<p>We havent even defined our problem yet so lets do that first:</p>
+<blockquote>
+<p>Given a Start and Target page: (S, T). Get from the S to the T using
+only links on the current page at each step.</p>
+</blockquote>
+<p>So imagine we start out on a random page that we know is part of a
+larger graph. Our goal is to find a specific page but we have no idea
+where it is on the graph. The only information we have is the pages that
+our current page links to, but unfortunately none of them our our target
+page. So somehow we have to use those links to find our target page.</p>
+<p>What should we do?</p>
+<p>idk, ¯\_(ツ)_/¯, lets try brute force… imagine we had infinite time
+and infinite browser tabs. what could we do?</p>
+<p>… we could <strong>click every link</strong> on the start page.</p>
+<p>And if none of them linked to the target page we could click every
+link<a href="#fn4" class="footnote-ref" id="fnref4"
+role="doc-noteref"><sup>4</sup></a> on every one of those pages.</p>
+<p>If none of them linked to the target page we could do it again…</p>
+<p>and then again…</p>
+<p>and again…</p>
+<p>until we found the target page.</p>
+<div class="mono-graph-animation" data-interval="1400">
+<!-- frame 1 -->
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s"
+style="--col: 34; --row: 14;">
+S
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t"
+style="--col: 34; --row: 28;">
+T
+</div>
+</div>
+<figcaption>
+Begin knowing the <strong>start</strong> and <em>target</em> page.
+</figcaption>
+</figure>
+<!-- frame 2 -->
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s"
+style="--col: 34; --row: 14;">
+S
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t"
+style="--col: 34; --row: 28;">
+T
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa0"
+style="--col: 34; --row: 10;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa1"
+style="--col: 40; --row: 11;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa2"
+style="--col: 42; --row: 14;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3"
+style="--col: 40; --row: 17;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4"
+style="--col: 34; --row: 18;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5"
+style="--col: 28; --row: 17;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa6"
+style="--col: 26; --row: 14;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa7"
+style="--col: 28; --row: 11;">
+1
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa7"></span></p>
+</div>
+<figcaption>
+Get all the pages that <strong>the start page links to</strong>.
+</figcaption>
+</figure>
+<!-- frame 3 -->
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s"
+style="--col: 34; --row: 14;">
+S
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t"
+style="--col: 34; --row: 28;">
+T
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa0"
+style="--col: 34; --row: 10;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa1"
+style="--col: 40; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa2"
+style="--col: 42; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3"
+style="--col: 40; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4"
+style="--col: 34; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5"
+style="--col: 28; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa6"
+style="--col: 26; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa7"
+style="--col: 28; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc0"
+style="--col: 34; --row: 7;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc1"
+style="--col: 42; --row: 8;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc2"
+style="--col: 48; --row: 10;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc3"
+style="--col: 50; --row: 14;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc4"
+style="--col: 48; --row: 18;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="td6"
+style="--col: 41; --row: 21;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="m2"
+style="--col: 27; --row: 21;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc8"
+style="--col: 20; --row: 18;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc9"
+style="--col: 18; --row: 14;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc10"
+style="--col: 20; --row: 10;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc11"
+style="--col: 26; --row: 8;">
+2
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa7"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa0"
+data-to="sc0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa0"
+data-to="sc1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa1"
+data-to="sc1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa1"
+data-to="sc2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa2"
+data-to="sc2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa2"
+data-to="sc3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="sc4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa4"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="m2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="sc8"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc8"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc9"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa7"
+data-to="sc10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa7"
+data-to="sc11"></span></p>
+</div>
+<figcaption>
+Get all the pages that the start page can reach in TWO links.
+</figcaption>
+</figure>
+<!-- frame 4 -->
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s"
+style="--col: 34; --row: 14;">
+S
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t"
+style="--col: 34; --row: 28;">
+T
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa0"
+style="--col: 34; --row: 10;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa1"
+style="--col: 40; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa2"
+style="--col: 42; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3"
+style="--col: 40; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4"
+style="--col: 34; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5"
+style="--col: 28; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa6"
+style="--col: 26; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa7"
+style="--col: 28; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc0"
+style="--col: 34; --row: 7;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc1"
+style="--col: 42; --row: 8;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc2"
+style="--col: 48; --row: 10;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc3"
+style="--col: 50; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc4"
+style="--col: 48; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="td6"
+style="--col: 41; --row: 21;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="m2"
+style="--col: 27; --row: 21;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc8"
+style="--col: 20; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc9"
+style="--col: 18; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc10"
+style="--col: 20; --row: 10;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc11"
+style="--col: 26; --row: 8;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd0"
+style="--col: 34; --row: 4;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd1"
+style="--col: 44; --row: 5;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd2"
+style="--col: 52; --row: 8;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd3"
+style="--col: 58; --row: 11;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd4"
+style="--col: 60; --row: 14;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd5"
+style="--col: 58; --row: 17;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd6"
+style="--col: 52; --row: 21;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb4"
+style="--col: 41; --row: 25;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb3"
+style="--col: 34; --row: 24;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb2"
+style="--col: 27; --row: 25;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd10"
+style="--col: 16; --row: 21;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd11"
+style="--col: 10; --row: 17;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd12"
+style="--col: 8; --row: 14;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd13"
+style="--col: 10; --row: 11;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd14"
+style="--col: 16; --row: 8;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd15"
+style="--col: 24; --row: 5;">
+3
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa7"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa0"
+data-to="sc0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa0"
+data-to="sc1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa1"
+data-to="sc1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa1"
+data-to="sc2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa2"
+data-to="sc2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa2"
+data-to="sc3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="sc4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa4"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="m2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="sc8"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc8"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc9"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa7"
+data-to="sc10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa7"
+data-to="sc11"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc0"
+data-to="sd0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc1"
+data-to="sd1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc1"
+data-to="sd2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc2"
+data-to="sd2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc2"
+data-to="sd3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc3"
+data-to="sd4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc3"
+data-to="sd5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc4"
+data-to="sd5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc4"
+data-to="sd6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="sd6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="sd10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc8"
+data-to="sd10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc8"
+data-to="sd11"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc9"
+data-to="sd12"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc10"
+data-to="sd13"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc10"
+data-to="sd14"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc11"
+data-to="sd15"></span></p>
+</div>
+<figcaption>
+Get all the pages that the start page can reach in THREE links.
+</figcaption>
+</figure>
+<!-- frame 5 -->
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s"
+style="--col: 34; --row: 14;">
+S
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t"
+style="--col: 34; --row: 28;">
+T
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa0"
+style="--col: 34; --row: 10;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa1"
+style="--col: 40; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa2"
+style="--col: 42; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3"
+style="--col: 40; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4"
+style="--col: 34; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5"
+style="--col: 28; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa6"
+style="--col: 26; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa7"
+style="--col: 28; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc0"
+style="--col: 34; --row: 7;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc1"
+style="--col: 42; --row: 8;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc2"
+style="--col: 48; --row: 10;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc3"
+style="--col: 50; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc4"
+style="--col: 48; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="td6"
+style="--col: 41; --row: 21;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="m2"
+style="--col: 27; --row: 21;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc8"
+style="--col: 20; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc9"
+style="--col: 18; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc10"
+style="--col: 20; --row: 10;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc11"
+style="--col: 26; --row: 8;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd0"
+style="--col: 34; --row: 4;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd1"
+style="--col: 44; --row: 5;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd2"
+style="--col: 52; --row: 8;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd3"
+style="--col: 58; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd4"
+style="--col: 60; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd5"
+style="--col: 58; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd6"
+style="--col: 52; --row: 21;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb4"
+style="--col: 41; --row: 25;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb3"
+style="--col: 34; --row: 24;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb2"
+style="--col: 27; --row: 25;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd10"
+style="--col: 16; --row: 21;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd11"
+style="--col: 10; --row: 17;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd12"
+style="--col: 8; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd13"
+style="--col: 10; --row: 11;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd14"
+style="--col: 16; --row: 8;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sd15"
+style="--col: 24; --row: 5;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se0"
+style="--col: 34; --row: 1;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se1"
+style="--col: 46; --row: 2;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se2"
+style="--col: 56; --row: 5;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se3"
+style="--col: 64; --row: 10;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se4"
+style="--col: 66; --row: 14;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se5"
+style="--col: 64; --row: 18;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se6"
+style="--col: 58; --row: 24;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se7"
+style="--col: 48; --row: 27;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se9"
+style="--col: 20; --row: 27;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se10"
+style="--col: 10; --row: 24;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se11"
+style="--col: 4; --row: 18;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se12"
+style="--col: 2; --row: 14;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se13"
+style="--col: 4; --row: 10;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se14"
+style="--col: 12; --row: 5;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="se15"
+style="--col: 22; --row: 2;">
+4
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa7"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa0"
+data-to="sc0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa0"
+data-to="sc1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa1"
+data-to="sc1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa1"
+data-to="sc2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa2"
+data-to="sc2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa2"
+data-to="sc3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="sc4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa4"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="m2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="sc8"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc8"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc9"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa6"
+data-to="sc10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa7"
+data-to="sc10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa7"
+data-to="sc11"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc0"
+data-to="sd0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc1"
+data-to="sd1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc1"
+data-to="sd2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc2"
+data-to="sd2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc2"
+data-to="sd3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc3"
+data-to="sd4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc3"
+data-to="sd5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc4"
+data-to="sd5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc4"
+data-to="sd6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="sd6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="sd10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc8"
+data-to="sd10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc8"
+data-to="sd11"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc9"
+data-to="sd12"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc10"
+data-to="sd13"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc10"
+data-to="sd14"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sc11"
+data-to="sd15"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd0"
+data-to="se0"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd0"
+data-to="se1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd1"
+data-to="se1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd2"
+data-to="se1"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd2"
+data-to="se2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd2"
+data-to="se3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd3"
+data-to="se3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd3"
+data-to="se4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd4"
+data-to="se4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd5"
+data-to="se5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd5"
+data-to="se6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd6"
+data-to="se6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd6"
+data-to="se7"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb4"
+data-to="t"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb4"
+data-to="se7"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb3"
+data-to="t"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb2"
+data-to="t"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb2"
+data-to="se9"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd10"
+data-to="se9"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd10"
+data-to="se10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd11"
+data-to="se10"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd11"
+data-to="se11"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd12"
+data-to="se11"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd12"
+data-to="se12"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd13"
+data-to="se12"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd13"
+data-to="se13"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd13"
+data-to="se14"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd14"
+data-to="se14"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd15"
+data-to="se14"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd15"
+data-to="se15"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sd15"
+data-to="se0"></span></p>
+</div>
+<figcaption>
+Get all the pages that the start page can reach in FOUR links.
+</figcaption>
+</figure>
+<!-- frame 6 -->
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s"
+style="--col: 34; --row: 14;">
+S
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t"
+style="--col: 34; --row: 28;">
+4
+</div>
+<div class="mono-graph__node" data-node="sa0"
+style="--col: 34; --row: 10;">
+
+</div>
+<div class="mono-graph__node" data-node="sa1"
+style="--col: 40; --row: 11;">
+
+</div>
+<div class="mono-graph__node" data-node="sa2"
+style="--col: 42; --row: 14;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3"
+style="--col: 40; --row: 17;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4"
+style="--col: 34; --row: 18;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5"
+style="--col: 28; --row: 17;">
+1
+</div>
+<div class="mono-graph__node" data-node="sa6"
+style="--col: 26; --row: 14;">
+
+</div>
+<div class="mono-graph__node" data-node="sa7"
+style="--col: 28; --row: 11;">
+
+</div>
+<div class="mono-graph__node" data-node="sc0"
+style="--col: 34; --row: 7;">
+
+</div>
+<div class="mono-graph__node" data-node="sc1"
+style="--col: 42; --row: 8;">
+
+</div>
+<div class="mono-graph__node" data-node="sc2"
+style="--col: 48; --row: 10;">
+
+</div>
+<div class="mono-graph__node" data-node="sc3"
+style="--col: 50; --row: 14;">
+
+</div>
+<div class="mono-graph__node" data-node="sc4"
+style="--col: 48; --row: 18;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="td6"
+style="--col: 41; --row: 21;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="m2"
+style="--col: 27; --row: 21;">
+2
+</div>
+<div class="mono-graph__node" data-node="sc8"
+style="--col: 20; --row: 18;">
+
+</div>
+<div class="mono-graph__node" data-node="sc9"
+style="--col: 18; --row: 14;">
+
+</div>
+<div class="mono-graph__node" data-node="sc10"
+style="--col: 20; --row: 10;">
+
+</div>
+<div class="mono-graph__node" data-node="sc11"
+style="--col: 26; --row: 8;">
+
+</div>
+<div class="mono-graph__node" data-node="sd0"
+style="--col: 34; --row: 4;">
+
+</div>
+<div class="mono-graph__node" data-node="sd1"
+style="--col: 44; --row: 5;">
+
+</div>
+<div class="mono-graph__node" data-node="sd2"
+style="--col: 52; --row: 8;">
+
+</div>
+<div class="mono-graph__node" data-node="sd3"
+style="--col: 58; --row: 11;">
+
+</div>
+<div class="mono-graph__node" data-node="sd4"
+style="--col: 60; --row: 14;">
+
+</div>
+<div class="mono-graph__node" data-node="sd5"
+style="--col: 58; --row: 17;">
+
+</div>
+<div class="mono-graph__node" data-node="sd6"
+style="--col: 52; --row: 21;">
+
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb4"
+style="--col: 41; --row: 25;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb3"
+style="--col: 34; --row: 24;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb2"
+style="--col: 27; --row: 25;">
+3
+</div>
+<div class="mono-graph__node" data-node="sd10"
+style="--col: 16; --row: 21;">
+
+</div>
+<div class="mono-graph__node" data-node="sd11"
+style="--col: 10; --row: 17;">
+
+</div>
+<div class="mono-graph__node" data-node="sd12"
+style="--col: 8; --row: 14;">
+
+</div>
+<div class="mono-graph__node" data-node="sd13"
+style="--col: 10; --row: 11;">
+
+</div>
+<div class="mono-graph__node" data-node="sd14"
+style="--col: 16; --row: 8;">
+
+</div>
+<div class="mono-graph__node" data-node="sd15"
+style="--col: 24; --row: 5;">
+
+</div>
+<div class="mono-graph__node" data-node="se0"
+style="--col: 34; --row: 1;">
+
+</div>
+<div class="mono-graph__node" data-node="se1"
+style="--col: 46; --row: 2;">
+
+</div>
+<div class="mono-graph__node" data-node="se2"
+style="--col: 56; --row: 5;">
+
+</div>
+<div class="mono-graph__node" data-node="se3"
+style="--col: 64; --row: 10;">
+
+</div>
+<div class="mono-graph__node" data-node="se4"
+style="--col: 66; --row: 14;">
+
+</div>
+<div class="mono-graph__node" data-node="se5"
+style="--col: 64; --row: 18;">
+
+</div>
+<div class="mono-graph__node" data-node="se6"
+style="--col: 58; --row: 24;">
+
+</div>
+<div class="mono-graph__node" data-node="se7"
+style="--col: 48; --row: 27;">
+
+</div>
+<div class="mono-graph__node" data-node="se9"
+style="--col: 20; --row: 27;">
+
+</div>
+<div class="mono-graph__node" data-node="se10"
+style="--col: 10; --row: 24;">
+
+</div>
+<div class="mono-graph__node" data-node="se11"
+style="--col: 4; --row: 18;">
+
+</div>
+<div class="mono-graph__node" data-node="se12"
+style="--col: 2; --row: 14;">
+
+</div>
+<div class="mono-graph__node" data-node="se13"
+style="--col: 4; --row: 10;">
+
+</div>
+<div class="mono-graph__node" data-node="se14"
+style="--col: 12; --row: 5;">
+
+</div>
+<div class="mono-graph__node" data-node="se15"
+style="--col: 22; --row: 2;">
+
+</div>
+<p><span class="mono-graph__edge" data-from="s" data-to="sa0"></span>
+<span class="mono-graph__edge" data-from="s" data-to="sa1"></span> <span
+class="mono-graph__edge" data-from="s" data-to="sa2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa5"></span> <span class="mono-graph__edge" data-from="s"
+data-to="sa6"></span> <span class="mono-graph__edge" data-from="s"
+data-to="sa7"></span> <span class="mono-graph__edge" data-from="sa0"
+data-to="sc0"></span> <span class="mono-graph__edge" data-from="sa0"
+data-to="sc1"></span> <span class="mono-graph__edge" data-from="sa1"
+data-to="sc1"></span> <span class="mono-graph__edge" data-from="sa1"
+data-to="sc2"></span> <span class="mono-graph__edge" data-from="sa2"
+data-to="sc2"></span> <span class="mono-graph__edge" data-from="sa2"
+data-to="sc3"></span> <span class="mono-graph__edge" data-from="sa3"
+data-to="sc4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa4"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="m2"></span> <span class="mono-graph__edge" data-from="sa5"
+data-to="sc8"></span> <span class="mono-graph__edge" data-from="sa6"
+data-to="sc8"></span> <span class="mono-graph__edge" data-from="sa6"
+data-to="sc9"></span> <span class="mono-graph__edge" data-from="sa6"
+data-to="sc10"></span> <span class="mono-graph__edge" data-from="sa7"
+data-to="sc10"></span> <span class="mono-graph__edge" data-from="sa7"
+data-to="sc11"></span> <span class="mono-graph__edge" data-from="sc0"
+data-to="sd0"></span> <span class="mono-graph__edge" data-from="sc1"
+data-to="sd1"></span> <span class="mono-graph__edge" data-from="sc1"
+data-to="sd2"></span> <span class="mono-graph__edge" data-from="sc2"
+data-to="sd2"></span> <span class="mono-graph__edge" data-from="sc2"
+data-to="sd3"></span> <span class="mono-graph__edge" data-from="sc3"
+data-to="sd4"></span> <span class="mono-graph__edge" data-from="sc3"
+data-to="sd5"></span> <span class="mono-graph__edge" data-from="sc4"
+data-to="sd5"></span> <span class="mono-graph__edge" data-from="sc4"
+data-to="sd6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb3"></span> <span class="mono-graph__edge" data-from="td6"
+data-to="sd6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb2"></span> <span class="mono-graph__edge" data-from="m2"
+data-to="sd10"></span> <span class="mono-graph__edge" data-from="sc8"
+data-to="sd10"></span> <span class="mono-graph__edge" data-from="sc8"
+data-to="sd11"></span> <span class="mono-graph__edge" data-from="sc9"
+data-to="sd12"></span> <span class="mono-graph__edge" data-from="sc10"
+data-to="sd13"></span> <span class="mono-graph__edge" data-from="sc10"
+data-to="sd14"></span> <span class="mono-graph__edge" data-from="sc11"
+data-to="sd15"></span> <span class="mono-graph__edge" data-from="sd0"
+data-to="se0"></span> <span class="mono-graph__edge" data-from="sd0"
+data-to="se1"></span> <span class="mono-graph__edge" data-from="sd1"
+data-to="se1"></span> <span class="mono-graph__edge" data-from="sd2"
+data-to="se1"></span> <span class="mono-graph__edge" data-from="sd2"
+data-to="se2"></span> <span class="mono-graph__edge" data-from="sd2"
+data-to="se3"></span> <span class="mono-graph__edge" data-from="sd3"
+data-to="se3"></span> <span class="mono-graph__edge" data-from="sd3"
+data-to="se4"></span> <span class="mono-graph__edge" data-from="sd4"
+data-to="se4"></span> <span class="mono-graph__edge" data-from="sd5"
+data-to="se5"></span> <span class="mono-graph__edge" data-from="sd5"
+data-to="se6"></span> <span class="mono-graph__edge" data-from="sd6"
+data-to="se6"></span> <span class="mono-graph__edge" data-from="sd6"
+data-to="se7"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb4"
+data-to="t"></span> <span class="mono-graph__edge" data-from="tb4"
+data-to="se7"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb3"
+data-to="t"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb2"
+data-to="t"></span> <span class="mono-graph__edge" data-from="tb2"
+data-to="se9"></span> <span class="mono-graph__edge" data-from="sd10"
+data-to="se9"></span> <span class="mono-graph__edge" data-from="sd10"
+data-to="se10"></span> <span class="mono-graph__edge" data-from="sd11"
+data-to="se10"></span> <span class="mono-graph__edge" data-from="sd11"
+data-to="se11"></span> <span class="mono-graph__edge" data-from="sd12"
+data-to="se11"></span> <span class="mono-graph__edge" data-from="sd12"
+data-to="se12"></span> <span class="mono-graph__edge" data-from="sd13"
+data-to="se12"></span> <span class="mono-graph__edge" data-from="sd13"
+data-to="se13"></span> <span class="mono-graph__edge" data-from="sd13"
+data-to="se14"></span> <span class="mono-graph__edge" data-from="sd14"
+data-to="se14"></span> <span class="mono-graph__edge" data-from="sd15"
+data-to="se14"></span> <span class="mono-graph__edge" data-from="sd15"
+data-to="se15"></span> <span class="mono-graph__edge" data-from="sd15"
+data-to="se0"></span></p>
+</div>
+<figcaption>
+Drop every page that is not on a shortest path.
+</figcaption>
+</figure>
+<!-- frame 7 -->
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s"
+style="--col: 34; --row: 14;">
+S
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t"
+style="--col: 34; --row: 28;">
+4
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3"
+style="--col: 40; --row: 17;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4"
+style="--col: 34; --row: 18;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5"
+style="--col: 28; --row: 17;">
+1
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb2"
+style="--col: 27; --row: 25;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb3"
+style="--col: 34; --row: 24;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb4"
+style="--col: 41; --row: 25;">
+3
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="m2"
+style="--col: 27; --row: 21;">
+2
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="td6"
+style="--col: 41; --row: 21;">
+2
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa4"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="s"
+data-to="sa5"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa3"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa4"
+data-to="td6"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="sa5"
+data-to="m2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb3"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb2"
+data-to="t"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb3"
+data-to="t"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="tb4"
+data-to="t"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="m2"
+data-to="tb2"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="td6"
+data-to="tb4"></span></p>
+</div>
+<figcaption>
+It takes at least 4 clicks to reach the target page.
+</figcaption>
+</figure>
+</div>
+<p>We just performed what is called <a
+href="https://en.wikipedia.org/wiki/Breadth-first_search">breadth-first
+search</a>.</p>
+<p>It was a lot of work, but some how we found the our way to the target
+page.</p>
+<p>But notice, we didn’t just find any way from the start to the target,
+<strong>we actually <em>all</em> shortest paths between the two
+pages</strong>.</p>
+<p>We should take a second to appreciate this. By expanding our web of
+pages one ring at a time we actually are guaranteed to find all shortest
+paths. If a shorter path was possible we would have found it one ring
+earlier.</p>
+<p>As you can see we had to check a lot of pages that were not part of
+any shortest paths. This wasted computation is unavoidable since we have
+no way of knowing ex ante which pages will be on the shortest paths.</p>
+<h1 id="can-we-do-better">can we do better?</h1>
+<p>If our initial approach is already guarantted to find all shortest
+paths as soon as possible, how can we make it more efficient and
+therefore faster?</p>
+<p>The issue with our approach is that the amount of work we have to do
+for each successive ring grows exponentially. Similar to how the area of
+a circle grows proportionally to the square of its radius, but much
+worse. The amount of work we have to do on the start page approximately
+the same as the amount of work we have do on every page that it links to
+in the first ring. Roughly speaking <em>it takes more work to explore
+the next ring than it took to explore all previous rings
+combined</em>.</p>
+<p>So to minimize total work we need to minimize the number of rings we
+have to explore…</p>
+<p>But aren’t we already exploring the minimum number of rings?</p>
+<p>Yes… if we explore only from the start page.</p>
+<p>Remember, initially we know about one other page: the target
+page.</p>
+<p>But, careful, we cant naively apply this same process to the target
+page because the links on the target page link <strong>away</strong>
+from the target page. We need the the pages that link <em>towards</em>
+the target page.</p>
+<p>These are called the target page’s ‘backlinks’. For example, if there
+is a <strong>link</strong> from page A to page B, then we can also think
+of it as a <em>backlink</em> from page B to page A.</p>
+<p>So if we have a way to explore all the ‘backlinks’ into a page then
+we can run this process in reverse as well starting from the target
+page. I will explain how we build this later but for now lets see it in
+action.</p>
 <h1 id="the-algorithm-bidirectional-breadth-first-search">the algorithm:
 bidirectional breadth-first search</h1>
-<p>To start we need an algorithm to find the shortest path was between
-<em>any</em> two randomly selected pages on Wikipedia.</p>
-<p>The only information we start with is the page we are initially on:
-the <strong>start page (S)</strong>. and the page we want to get to: the
-<em>target page (T)</em>.</p>
 <p>I like to visualize this process kinda as two expanding solar systems
 centered on the start and target page that grow until they overlap.
 Every step of the algorithm we add an new further out orbit to one of
 the solar systems. As soon as the two outermost orbits intersect we know
 that we have found the shortest path(s).</p>
+<p>Our previous approach was called breadth-first search, so it won’t
+surprise you that this new approach is called <a
+href="https://en.wikipedia.org/wiki/Bidirectional_search">bidirectional
+breadth-first search</a>.</p>
 <div class="mono-graph-animation" data-interval="1400">
 <figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
 <div class="mono-graph__canvas">
@@ -1066,11 +2379,14 @@ We have found the shortest paths from start to target!
 </figcaption>
 </figure>
 </div>
-<p>As you can see the algorithm is pretty straight forward and brute
-force.</p>
+<h2 id="so-its-just-brute-force-in-both-directions">so its just brute
+force in both directions?</h2>
+<p>Pretty much, yes. The additional complexity is that we now have to
+decide which direction to expand at each step.</p>
+<p>Here are the steps to the algorithm:</p>
 <ol class="incremental" type="1">
 <li><p>Initially we only know about the <strong>start</strong> and
-<em>target</em> page. And we have no idea how far apart they
+<em>target</em> page and we have no idea how far apart they
 are.</p></li>
 <li><p>We begin by checking either all the <strong>outgoing</strong>
 links for the start page or all the <em>incoming</em> links for the
@@ -1081,133 +2397,166 @@ encounter from here on out.</p></li>
 previous step we now need to get all the outgoing links from the start
 page. Both of our solar systems have their first orbital ring. We call
 the outer ring of pages that are all exactly K links away from the
-center node the frontier.</p></li>
-<li><p>Now we need to decide which frontier to grow next. Our goal is to
-minimize the number of pages we have to check so we expand the frontier
-with the <em>fewest</em> pages<sup><a href="#fn4" class="footnote-ref"
-id="fnref4" role="doc-noteref"><sup>4</sup></a></sup>. Since our target
-frontier has <em>6</em> pages and our start frontier has
-<strong>8</strong> we expand the target frontier. Notice that this is
-exactly what we just did in step 3 when start frontier had one
+center node the ‘frontier’.</p></li>
+<li><p>Now we need to decide which frontier to explore next. Our goal is
+to minimize the number of pages we have to check so we explore the
+frontier with the <em>fewest</em> pages<a href="#fn5"
+class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>.
+Since our target frontier has <em>6</em> pages and our start frontier
+has <strong>8</strong> we explore the target frontier. Notice that this
+is exactly what we just did in step 3 when start frontier had one
 page.</p></li>
 <li><p>Repeat the previous step until our frontiers intersect. We
 iteratively continue this process until we encounter a page that is part
 of the other solar system.</p></li>
 <li><p>Once our frontiers intersect at at least one page we know that we
 have found the shortest path between the start and target page.</p></li>
-<li><p>As you can see we had to check a lot of pages that were not on
-the shortest path. This wasted computation is unavoidable since we have
-no way of knowing ex ante which pages will be on the shortest
-path.</p></li>
 </ol>
 <!-- TODO: test this empirically
 The reads to sum up the frontier size is pretty cheap since you it is just (out_offsets[page + 1] - out_offsets[page]) for each page. And we can reuse this read when actually fetching and in future steps when need to recheck the frontier size again we will already have the size for 1/2. Is the extra work worth _always_ doing the optimal expansion. Are we optimizing for the average or worst case performance?
 -->
-<h2 id="sounds-easy-right">sounds easy right?</h2>
-<p>I first learned about this approach through <a
+<h2 id="pretty-cool-right">pretty cool right?</h2>
+<p>I first learned about this approach from <a
 href="https://www.sixdegreesofwikipedia.com/">Six Degrees of
 Wikipedia</a>. They were an inspiration and baseline for this work. One
 of the reasons I built this was to measure if the <a
-href="https://en.wikipedia.org/wiki/Six_degrees_of_separation">six
+href="https://en.wikipedia.org/wiki/Wikipedia:Six_degrees_of_Wikipedia">six
 degrees of separation</a> hypothesis is empirically true.</p>
 <p>Unfortunately it turns out that, at least for Wikipedia, it is
-<strong>false</strong>. The <a
+empirically <strong>false</strong>. The <a
 href="https://en.wikipedia.org/wiki/Graph_diameter">diameter</a> of
-Wikipedia is <strong>41</strong><sup><a href="#fn5" class="footnote-ref"
-id="fnref5" role="doc-noteref"><sup>5</sup></a></sup>.</p>
-<!-- # making it _fast_
-
-Now that we intuitively know how the algorithm works we have to teach a computer how to do it since they are much much faster than me clicking links.
-
-## representing a graph on a computer
-
-Computers operate on sequences of bits. So how do we turn circles with arrows between them into a continuous sequence of 1s and 0s?
-
-Lets start by looking at this from the perspective of a single node on the graph and its links. We can then apply the same logic to any graph. Here is a toy graph of a [Bittern](https://en.wikipedia.org/wiki/Bittern) and its neighbors.
-
+english Wikipedia is <strong>41</strong><a href="#fn6"
+class="footnote-ref" id="fnref6"
+role="doc-noteref"><sup>6</sup></a>.</p>
+<h1 id="making-it-fast">making it <em>fast</em></h1>
+<p>Now that we intuitively know how the algorithm works we have to teach
+a computer how to do it since they are much much faster than me clicking
+links.</p>
+<h2 id="representing-a-graph-on-a-computer">representing a graph on a
+computer</h2>
+<p>Computers operate on sequences of bits. So how do we turn circles
+with arrows between them into a continuous sequence of 1s and 0s?</p>
+<p>Lets start by looking at this from the perspective of a single node
+on the graph and its links. We can then apply the same logic to any
+graph. Here is a toy graph of a <a
+href="https://en.wikipedia.org/wiki/Bittern">Bittern</a> and its
+neighbors.</p>
 <figure class="mono-graph" style="--graph-cols: 62; --graph-rows: 16;">
 <div class="mono-graph__canvas">
-<svg class="mono-graph__edges" aria-hidden="true"></svg>
-<div class="mono-graph__node mono-graph__node" data-node="bittern" style="--col: 29; --row: 8;">Bittern</div>
-<div class="mono-graph__node mono-graph__node--warm" data-node="eagle" style="--col: 7; --row: 3;">Eagle</div>
-<div class="mono-graph__node mono-graph__node--warm" data-node="finch" style="--col: 50; --row: 3;">Finch</div>
-<div class="mono-graph__node mono-graph__node--warm" data-node="raven" style="--col: 29; --row: 15;">Raven</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="egret" style="--col: 19; --row: 2;">Egret</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="heron" style="--col: 43; --row: 7;">Heron</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="ibis" style="--col: 44; --row: 12;">Ibis</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="lark" style="--col: 12; --row: 12;">Lark</div>
-<span class="mono-graph__edge mono-graph__edge--warm" data-from="eagle" data-to="bittern"></span>
-<span class="mono-graph__edge mono-graph__edge--warm" data-from="finch" data-to="bittern"></span>
-<span class="mono-graph__edge mono-graph__edge--warm" data-from="raven" data-to="bittern"></span>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="egret"></span>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="heron"></span>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="ibis"></span>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="lark"></span>
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node" data-node="bittern"
+style="--col: 29; --row: 8;">
+Bittern
 </div>
-<figcaption></figcaption>
+<div class="mono-graph__node mono-graph__node--warm" data-node="avocet"
+style="--col: 7; --row: 3;">
+Avocet
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="curlew"
+style="--col: 50; --row: 3;">
+Curlew
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="finch"
+style="--col: 29; --row: 15;">
+Finch
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="egret"
+style="--col: 19; --row: 2;">
+Egret
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="heron"
+style="--col: 43; --row: 7;">
+Heron
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="ibis"
+style="--col: 44; --row: 12;">
+Ibis
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="lark"
+style="--col: 12; --row: 12;">
+Lark
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--warm"
+data-from="avocet" data-to="bittern"></span> <span
+class="mono-graph__edge mono-graph__edge--warm" data-from="curlew"
+data-to="bittern"></span> <span
+class="mono-graph__edge mono-graph__edge--warm" data-from="finch"
+data-to="bittern"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="bittern"
+data-to="egret"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="bittern"
+data-to="heron"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="bittern"
+data-to="ibis"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="bittern"
+data-to="lark"></span></p>
+</div>
+<figcaption>
+</figcaption>
 </figure>
-
-Bittern has a link to Egret, Heron, Lark, and Ibis. While Eagle, Finch, and Raven each link to Bittern.
-
-There are two ways to represent a graph like this on a computer.
-
-## 1. an adjacency list
-
-We can start by just listing the other pages that each page links to. 
-
+<p>Bittern has a link to Egret, Heron, Lark, and Ibis. While Eagle,
+Finch, and Raven each link to Bittern.</p>
+<p>There are two ways to represent a graph like this on a computer.</p>
+<h2 id="an-adjacency-list">1. an adjacency list</h2>
+<p>We can start by just listing the pages that each page links to.</p>
 <figure class="csr-figure">
 <pre class="csr-diagram" aria-label="Bittern neighborhood as an adjacency list">
 page     links to
 ───────  ───────────────────────────
+Avocet   Bittern
 Bittern  Egret, Heron, Ibis, Lark
-Eagle    Bittern
+Curlew   Bittern
 Finch    Bittern
-Raven    Bittern
 </pre>
-<figcaption>Bittern graph as an adjacency list</figcaption>
+<figcaption>
+Bittern graph as an adjacency list
+</figcaption>
 </figure>
-
-Notice that links are directional so we only have a row for each page that has an outgoing link.
-
-## 2. an adjacency matrix 
-
-You may have noticed that the above table kinda looks like a matrix. So lets convert it to a matrix where the rows are the source pages and the columns are the destination pages. We will write 'link' if there is a link from source to destination.
-
+<p>Notice that links are directional so we only have a row for each page
+that has an outgoing link.</p>
+<h2 id="an-adjacency-matrix">2. an adjacency matrix</h2>
+<p>You may have noticed that the above table kinda looks like a matrix.
+So lets convert it to a matrix where the rows are the source pages and
+the columns are the destination pages. We will write ‘link’ if there is
+a link from source to destination.</p>
 <figure class="csr-figure">
 <pre class="csr-diagram" aria-label="Bittern neighborhood as an adjacency matrix">
 from \ to  Bittern  Egret   Heron   Ibis    Lark
 ─────────  ───────  ──────  ──────  ──────  ──────
+Avocet     link     .       .       .       .
 Bittern    .        link    link    link    link
-Eagle      link     .       .       .       .
+Curlew     link     .       .       .       .
 Finch      link     .       .       .       .
-Raven      link     .       .       .       .
 </pre>
 </figure>
-
-If we replace the 'link' with a 1 and the '.' with a 0 we get the following matrix:
-
+<p>If we replace the ‘link’ with a 1 and the ‘.’ with a 0 we get the
+following matrix:</p>
 <figure class="csr-figure">
 <pre class="csr-diagram" aria-label="Bittern neighborhood as an adjacency matrix">
 from \ to  Bittern  Egret   Heron   Ibis    Lark
 ─────────  ───────  ──────  ──────  ──────  ──────
+Avocet     1        0       0       0       0
 Bittern    0        1       1       1       1
-Eagle      1        0       0       0       0
+Curlew     1        0       0       0       0
 Finch      1        0       0       0       0
-Raven      1        0       0       0       0
 </pre>
-<figcaption>Bittern graph as an adjacency matrix of **outgoing** links</figcaption>
+<figcaption>
+Bittern graph as an adjacency matrix of <strong>outgoing</strong> links
+</figcaption>
 </figure>
-
-FUN FACT: The matrix of _incoming_ links is just the [transpose](https://en.wikipedia.org/wiki/Transpose) of the matrix of **outgoing** links.
-
-## turning wikipedia into a sequence of numbers
-
-Computers love to store matricies. Since you can just append each row to the previous and store them as a continuous sequence without any padding.
-
-Our matrix:
-
+<p>FUN FACT: The matrix of <em>incoming</em> links is just the <a
+href="https://en.wikipedia.org/wiki/Transpose">transpose</a> of the
+matrix of <strong>outgoing</strong> links.</p>
+<h2 id="turning-wikipedia-into-a-sequence-of-numbers">turning wikipedia
+into a sequence of numbers</h2>
+<p>Computers love to store matricies. Since you can just append each row
+to the previous and store them as a continuous sequence without any
+padding.</p>
+<p>Our matrix:</p>
 <figure class="csr-figure">
 <pre class="csr-diagram" aria-label="Bittern neighborhood as an adjacency matrix">
+1  0  0  0  0
 0  1  1  1  1
 1  0  0  0  0
 1  0  0  0  0
@@ -1216,37 +2565,60 @@ Our matrix:
 becomes
 <figure class="csr-figure">
 <pre class="csr-diagram" aria-label="Bittern neighborhood as an adjacency matrix">
-[0  1  1  1  1][1  0  0  0  0][1  0  0  0  0][1  0  0  0  0][1  0  0  0  0]
+[0  1  1  1  1][1  0  0  0  0][1  0  0  0  0][1  0  0  0  0]
 </pre>
 </figure>
-
-So can we just store wikipedia this way? 
-
-no
-
-Every page in our graph is a row and column of our adjacency matrix. There are >7 Million wikipedia pages so our matrix would take 7M * 7M = 49 Trillion bits or 5.125 Terrabytes to store.
-
-However you probably noticed that because every page does not link to every other page there is alot of empty space (zeros) in this matrix. Matrices like this, with lots of zeros, are called [sparse matrices](https://en.wikipedia.org/wiki/Sparse_matrix).
-
-We can actually represent this the same data with a lot less bytes by using a [compressed sparse row](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format)) (CSR).
-
-
+<p>So can we just store wikipedia this way?</p>
+<p>Not quite.</p>
+<p>Every page in our graph is a row and column of our adjacency matrix.
+There are &gt;7 Million wikipedia pages so our matrix would take 7M * 7M
+= 49 Trillion bits (5.125 Terrabytes) to store.</p>
+<p>However you probably noticed that because every page does not link to
+every other page there is alot of empty space (zeros) in this matrix.
+Matrices like this, with lots of zeros, are called <a
+href="https://en.wikipedia.org/wiki/Sparse_matrix">sparse
+matrices</a>.</p>
+<p>We can actually represent the same data with a lot less bytes by
+using a <a
+href="https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format)">compressed
+sparse row</a> (CSR).</p>
 <figure class="mono-graph" style="--graph-cols: 56; --graph-rows: 14;">
 <div class="mono-graph__canvas">
-<svg class="mono-graph__edges" aria-hidden="true"></svg>
-<div class="mono-graph__node mono-graph__node" data-node="bittern" style="--col: 25; --row: 7;">Bittern</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="egret" style="--col: 9; --row: 2;">Egret</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="heron" style="--col: 43; --row: 3;">Heron</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="ibis" style="--col: 42; --row: 11;">Ibis</div>
-<div class="mono-graph__node mono-graph__node--accent" data-node="lark" style="--col: 10; --row: 12;">Lark</div>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="egret"></span>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="heron"></span>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="ibis"></span>
-<span class="mono-graph__edge mono-graph__edge--accent" data-from="bittern" data-to="lark"></span>
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node" data-node="bittern"
+style="--col: 25; --row: 7;">
+Bittern
 </div>
-<figcaption>Bittern has outgoing links to [Egret, Heron, Ibis, Lark]</figcaption>
+<div class="mono-graph__node mono-graph__node--accent" data-node="egret"
+style="--col: 9; --row: 2;">
+Egret
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="heron"
+style="--col: 43; --row: 3;">
+Heron
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="ibis"
+style="--col: 42; --row: 11;">
+Ibis
+</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="lark"
+style="--col: 10; --row: 12;">
+Lark
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--accent"
+data-from="bittern" data-to="egret"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="bittern"
+data-to="heron"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="bittern"
+data-to="ibis"></span> <span
+class="mono-graph__edge mono-graph__edge--accent" data-from="bittern"
+data-to="lark"></span></p>
+</div>
+<figcaption>
+Bittern has outgoing links to [Egret, Heron, Ibis, Lark]
+</figcaption>
 </figure>
-
 <figure class="csr-figure">
 <pre class="csr-diagram" aria-label="outgoing links represented as compressed sparse row arrays">
 out_offsets
@@ -1260,29 +2632,55 @@ offset  │  ...  │   0   │   2   │   6   │  ...  │
 out_neighbors           │                               │
 index    0       1      │2       3       4       5      │6       7
         ┌───────┬───────┼───────┬───────┬───────┬───────┼───────┬───────┐
-title   │ Dove  │ Duck  │ Egret │ Heron │ Ibis  │ Lark  │ Owl   │ Wren  │
+title   │Bittern│ Duck  │ Egret │ Heron │ Ibis  │ Lark  │Bittern│ Wren  │
         └───────┴───────┴───────┴───────┴───────┴───────┴───────┴───────┘
                         └─── Bittern links to [2..6) ───┘
 </pre>
-<figcaption>How we store that Bittern links to [Egret, Heron, Ibis, Lark]</figcaption>
+<figcaption>
+How we store that Bittern links to [Egret, Heron, Ibis, Lark]
+</figcaption>
 </figure>
-
-The only drawback is that we have to store both the **out** and _in_ rows.
-
+<p>Each page’s ID tells us where it is in the sequence of out_offsets.
+Then we use that to find the pages it links to in the continuous
+sequence of out_neighbors.</p>
+<!-- FOOTNOTE we only store a map from id to title.
+since titles are sorted we don't need a map from title to memory.
+given a title we can use binary search to find its id.
+since we have 7,162,815 pages worst case we have to do ceil(log2(7162815)) = 23 reads to find the id. -->
+<p>This saves us a lot of space. The tradeoff is that we have to store
+both the <strong>out</strong> and <em>in</em> rows. Because we can no
+longer transpose our metrix to get the backlinks.</p>
 <figure class="mono-graph" style="--graph-cols: 52; --graph-rows: 12;">
 <div class="mono-graph__canvas">
-<svg class="mono-graph__edges" aria-hidden="true"></svg>
-<div class="mono-graph__node mono-graph__node" data-node="bittern" style="--col: 24; --row: 6;">Bittern</div>
-<div class="mono-graph__node mono-graph__node--warm" data-node="eagle" style="--col: 7; --row: 2;">Eagle</div>
-<div class="mono-graph__node mono-graph__node--warm" data-node="finch" style="--col: 42; --row: 3;">Finch</div>
-<div class="mono-graph__node mono-graph__node--warm" data-node="raven" style="--col: 24; --row: 11;">Raven</div>
-<span class="mono-graph__edge mono-graph__edge--warm" data-from="eagle" data-to="bittern"></span>
-<span class="mono-graph__edge mono-graph__edge--warm" data-from="finch" data-to="bittern"></span>
-<span class="mono-graph__edge mono-graph__edge--warm" data-from="raven" data-to="bittern"></span>
+<svg class="mono-graph__edges" aria-hidden="true">
+</svg>
+<div class="mono-graph__node" data-node="bittern"
+style="--col: 24; --row: 6;">
+Bittern
 </div>
-<figcaption>[Eagle, Finch, Raven] have a link to Bittern</figcaption>
+<div class="mono-graph__node mono-graph__node--warm" data-node="avocet"
+style="--col: 7; --row: 2;">
+Avocet
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="curlew"
+style="--col: 42; --row: 3;">
+Curlew
+</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="finch"
+style="--col: 24; --row: 11;">
+Finch
+</div>
+<p><span class="mono-graph__edge mono-graph__edge--warm"
+data-from="avocet" data-to="bittern"></span> <span
+class="mono-graph__edge mono-graph__edge--warm" data-from="curlew"
+data-to="bittern"></span> <span
+class="mono-graph__edge mono-graph__edge--warm" data-from="finch"
+data-to="bittern"></span></p>
+</div>
+<figcaption>
+[Avocet, Curlew, Finch] have a link to Bittern
+</figcaption>
 </figure>
-
 <figure class="csr-figure">
 <pre class="csr-diagram" aria-label="incoming links represented as compressed sparse row arrays">
 in_offsets
@@ -1296,21 +2694,25 @@ offset  │  ...  │   0   │   2   │   5   │  ...  │
 in_neighbors            │                       │
 index    0       1      │2       3       4      │5       6
         ┌───────┬───────┼───────┬───────┬───────┼───────┬───────┐
-title   │ Crane │ Crow  │ Eagle │ Finch │ Raven │ Swan  │ Tern  │
+title   │ Crane │ Crow  │Avocet │Curlew │ Finch │ Swan  │ Tern  │
         └───────┴───────┴───────┴───────┴───────┴───────┴───────┘
                         └[2..5) links to Bittern┘
 </pre>
-<figcaption>How we store that [Eagle, Finch, Raven] have a link to Bittern</figcaption>
+<figcaption>
+How we store that [Avocet, Curlew, Finch] have a link to Bittern
+</figcaption>
 </figure>
-
-we store this continuously in memory
-
-this layout matches the way modern machines want to read memory. if a page has four neighbors, i can pull those four ids from a contiguous region instead of bouncing around memory one pointer at a time.
-
-FOOTNOTE we only store a map from id to title.
-since titles are sorted we don't need a map from title to memory.
-given a title we can use binary search to find its id.
-since we have 7,162,815 pages worst case we have to do ceil(log2(7162815)) = 23 reads to find the id. -->
+<p>We store all of these continuously in memory as one continuous string
+of bytes.</p>
+<p>In total our entire graph takes up 4.1 Billion bytes or ~4.1 GB.
+Making it small enough to fit entirely into RAM on most modern machines.
+This extremely important because <a
+href="https://static.googleusercontent.com/media/sre.google/en//static/pdf/rule-of-thumb-latency-numbers-letter.pdf">&gt;15x
+faster</a> to read from RAM than from an SSD.</p>
+<!-- do exact calcualtion to show total bytes -->
+<!-- This layout matches the way modern machines want to read memory. if a page has four neighbors, i can pull those four ids from a contiguous region instead of bouncing around memory one pointer at a time. -->
+<h1 id="preprocessing-the-graph">preprocessing the graph</h1>
+<p>coming soon…</p>
 <aside id="footnotes" class="footnotes footnotes-end-of-document"
 role="doc-endnotes">
 <hr />
@@ -1326,9 +2728,11 @@ wikipedia stores them as separate pages. see more in the preprocessing
 section.<a href="#fnref2" class="footnote-back"
 role="doc-backlink">↩︎</a></p></li>
 <li id="fn3"><p>that I know of. <a href="https://xkcd.com/386/">please
-tell me if I am wrong</a><a href="#fnref3" class="footnote-back"
-role="doc-backlink">↩︎</a></p></li>
-<li id="fn4"><p>The astute among you will notice that we actually want
+tell me if I am misinformed</a> so I have a benchmark to target.<a
+href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>that we haven’t visited already.<a href="#fnref4"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>The astute among you will notice that we actually want
 to expand the frontier with the fewest <em>edges</em> (not
 <em>nodes</em>). However we don’t actually know how many edges each
 frontier has without summing them up for every page in
@@ -1338,12 +2742,12 @@ smaller frontier. We can save some time and effort with a simple
 heuristic: since wikipedia has an equal number of incoming and outgoing
 links we know that number of edges in a frontier is proportional to the
 number of nodes in the frontier. by chosing the frontier with the fewest
-nodes we make the optimal choice in expectation.<a href="#fnref4"
+nodes we make the optimal choice in expectation.<a href="#fnref5"
 class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5"><p>The shortest path between ‘Yu ssi samdaerok’ and ‘2009
+<li id="fn6"><p>The shortest path between ‘Yu ssi samdaerok’ and ‘2009
 California League season’ is <a
 href="https://wikiarena.org/solver?start=Yu+ssi+samdaerok&amp;target=2009+California+League+season&amp;mode=all_shortest">41
-steps</a><a href="#fnref5" class="footnote-back"
+steps</a><a href="#fnref6" class="footnote-back"
 role="doc-backlink">↩︎</a></p></li>
 </ol>
 </aside>

@@ -1,5 +1,6 @@
 import { SCENES } from "./data.mjs";
-import { attachBfcacheAnimationLifecycle } from "../shared/bfcache_animation_lifecycle.mjs";
+import { registerMediaExport } from "../shared/media_export.mjs";
+import { attachViewportAnimationLifecycle } from "../shared/viewport_animation_lifecycle.mjs";
 import {
   formatCompactPromptScene,
   shouldUseCompactPromptLayout,
@@ -10,6 +11,9 @@ const SCREEN_ELEMENT_ID = "abstraction-screen";
 const CURSOR = "█";
 const CUT_DURATION_MS = 180;
 const CURSOR_BLINK_MS = 450;
+const LOOP_DURATION_MS = SCENES.reduce((totalDurationMs, scene) => {
+  return totalDurationMs + scene.durationMs + scene.holdMs + CUT_DURATION_MS;
+}, 0);
 
 function measureCharacterCell(referenceElement) {
   const probe = document.createElement("span");
@@ -60,6 +64,10 @@ function bootAbstractionAnimation() {
   }
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mediaExport = registerMediaExport({
+    fps: 8,
+    loopDurationMs: LOOP_DURATION_MS,
+  });
   const reversedScenes = [...SCENES].reverse();
   const state = createAnimationState(reducedMotion, SCENES);
   let availableColumns = computeAvailableColumns(screenElement);
@@ -192,7 +200,8 @@ function bootAbstractionAnimation() {
 
   window.addEventListener("resize", onResize);
 
-  attachBfcacheAnimationLifecycle({
+  attachViewportAnimationLifecycle({
+    element: screenElement.closest(".art-section") ?? screenElement,
     pause() {
       stopAnimationFrame();
     },
@@ -203,7 +212,9 @@ function bootAbstractionAnimation() {
   });
 
   render();
-  startAnimationFrame();
+  mediaExport.setReady({
+    sceneCount: SCENES.length,
+  });
 }
 
 bootAbstractionAnimation();

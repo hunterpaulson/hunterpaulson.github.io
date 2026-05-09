@@ -1,4 +1,5 @@
-import { attachBfcacheAnimationLifecycle } from "../shared/bfcache_animation_lifecycle.mjs";
+import { registerMediaExport } from "../shared/media_export.mjs";
+import { attachViewportAnimationLifecycle } from "../shared/viewport_animation_lifecycle.mjs";
 import { shouldRecreateFarmingSimulation } from "./resize_policy.mjs";
 import { FarmingSimulation, parseCorpusText } from "./simulation.mjs";
 
@@ -8,6 +9,7 @@ const TARGET_FPS = 12;
 const RESIZE_DEBOUNCE_MS = 120;
 const DEFAULT_SEED = "farming-v1";
 const NARROW_VIEWPORT_QUERY = "(max-width: 700px)";
+const FIXED_ROWS_ATTRIBUTE = "farmingRows";
 
 function measureCharacterCell(referenceElement) {
   const probe = document.createElement("span");
@@ -27,6 +29,7 @@ function measureCharacterCell(referenceElement) {
 function computeFieldSize(fieldElement) {
   const cell = measureCharacterCell(fieldElement);
   const fieldBounds = fieldElement.getBoundingClientRect();
+  const fixedRows = Number.parseInt(fieldElement.dataset[FIXED_ROWS_ATTRIBUTE] || "", 10);
 
   const availableWidth = fieldBounds.width || fieldElement.clientWidth || 80 * cell.width;
   const columns = Math.max(20, Math.floor(availableWidth / cell.width));
@@ -35,7 +38,9 @@ function computeFieldSize(fieldElement) {
     cell.height * 12,
     window.innerHeight - fieldBounds.top - cell.height * 4,
   );
-  const rows = Math.max(10, Math.floor(availableHeight / cell.height));
+  const rows = Number.isInteger(fixedRows) && fixedRows > 0
+    ? fixedRows
+    : Math.max(10, Math.floor(availableHeight / cell.height));
 
   return {
     columns,
@@ -72,10 +77,16 @@ async function bootFarmingAnimation() {
     return;
   }
 
+  const mediaExport = registerMediaExport({
+    fps: TARGET_FPS,
+    frameDurationMs: 1000 / TARGET_FPS,
+  });
+
   let corpusLines = [];
   try {
     corpusLines = await loadCorpusLines();
   } catch (error) {
+    mediaExport.update({ error: error.message });
     fieldElement.textContent = `farming corpus error: ${error.message}`;
     return;
   }
@@ -111,6 +122,11 @@ async function bootFarmingAnimation() {
       corpusLines,
     });
     renderFrame();
+    mediaExport.setReady({
+      rows: nextDimensions.rows,
+      columns: nextDimensions.columns,
+      seed,
+    });
   }
 
   function stopTimer() {
@@ -142,9 +158,9 @@ async function bootFarmingAnimation() {
   }
 
   createSimulation();
-  startTimer();
 
-  attachBfcacheAnimationLifecycle({
+  attachViewportAnimationLifecycle({
+    element: fieldElement.closest(".art-section") ?? fieldElement,
     pause() {
       stopTimer();
       clearResizeTimer();

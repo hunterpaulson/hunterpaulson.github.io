@@ -2,38 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://hunterpaulson.dev/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
+  </url>
+  <url>
+    <loc>https://hunterpaulson.dev/art/</loc>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/blog/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/blog/do-it-badly/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/blog/donut/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/blog/industrialization/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/blog/just-another-abstraction/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/blog/stochastic-agentic-ascent/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/blog/wikipedia-race-solver/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
   <url>
     <loc>https://hunterpaulson.dev/projects/</loc>
-    <lastmod>2026-05-09T00:17:27.548Z</lastmod>
+    <lastmod>2026-05-09T00:54:34.196Z</lastmod>
   </url>
 </urlset>

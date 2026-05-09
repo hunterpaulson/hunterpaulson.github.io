@@ -98,12 +98,16 @@ function outlineCodeBlocks() {
     if (code.dataset.outlined === "true") {
       continue;
     }
-    const lines = code.textContent.trimEnd().split("\n");
-    const maxWidth = lines.reduce((max, line) => Math.max(max, line.length), 0);
+    const textLines = code.textContent.trimEnd().split("\n");
+    const maxWidth = textLines.reduce((max, line) => Math.max(max, line.length), 0);
     const top = `╭${"─".repeat(maxWidth + 2)}╮`;
     const bottom = `╰${"─".repeat(maxWidth + 2)}╯`;
-    const wrapped = lines.map((line) => `│ ${line.padEnd(maxWidth, " ")} │`);
-    code.textContent = [top, ...wrapped, bottom].join("\n");
+    const htmlLines = code.innerHTML.trimEnd().split("\n");
+    const wrapped = htmlLines.map((htmlLine, i) => {
+      const pad = maxWidth - (textLines[i] ? textLines[i].length : 0);
+      return `│ ${htmlLine}${" ".repeat(pad)} │`;
+    });
+    code.innerHTML = [top, ...wrapped, bottom].join("\n");
     code.dataset.outlined = "true";
   }
 }

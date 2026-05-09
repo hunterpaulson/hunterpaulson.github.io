@@ -7,12 +7,13 @@
     "dev": "vite",
     "build": "make",
     "preview": "vite preview",
-    "test": "node --test",
-    "generate:blog:industrialization:corpus": "node scripts/blog/industrialization/generate-corpus.mjs"
+    "test": "bun test",
+    "generate:blog:industrialization:corpus": "bun scripts/blog/industrialization/generate-corpus.mjs"
   },
   "author": "Hunter Paulson",
   "license": "MIT",
   "devDependencies": {
     "vite": "^5.4.2"
-  }
+  },
+  "packageManager": "bun@1.3.11"
 }

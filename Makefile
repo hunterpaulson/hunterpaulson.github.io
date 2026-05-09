@@ -53,13 +53,13 @@ copy-src:
 
 # Re-generate blog listing when any blog post changes
 $(BLOG_INDEX_MD): $(BLOGS) scripts/update-blog-index.js
-	@node scripts/update-blog-index.js
+	@bun scripts/update-blog-index.js
 
 
 # Build sitemap and robots metadata
 $(SITEMAP_FILE) $(ROBOTS_FILE): $(HOME) $(SECTIONS) $(BLOGS) scripts/generate-sitemap.js $(ROBOT_FRAME) Makefile
 	@mkdir -p $(DIST_DIR)
-	@node scripts/generate-sitemap.js
+	@bun scripts/generate-sitemap.js
 
 
 clean:

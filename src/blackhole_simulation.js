@@ -1,3 +1,6 @@
+import { registerMediaExport } from "./blog/shared/media_export.mjs";
+import { attachViewportAnimationLifecycle } from "./blog/shared/viewport_animation_lifecycle.mjs";
+
 export async function initBlackholeSimulation({
   frameId = "bh",
   statusId = "bh-status",
@@ -18,6 +21,10 @@ export async function initBlackholeSimulation({
   const targetFps = 30;
   const defaultFov = 60;
   const diskRotationSpeed = 1;
+  const mediaExport = registerMediaExport({
+    fps: targetFps,
+    loopDurationMs: ((Math.PI * 2) / diskRotationSpeed) * 1000,
+  });
 
   let sliderColumns = width;
   let trackLength = sliderColumns;
@@ -39,6 +46,7 @@ export async function initBlackholeSimulation({
   let renderer = null;
   let useGpu = false;
   let gpuRunning = false;
+  let gpuLoopGeneration = 0;
   let animationTimer = null;
   let animationStartTime = performance.now();
   let rebuildTimeout = null;
@@ -62,6 +70,7 @@ export async function initBlackholeSimulation({
   let wasmGenerateFrame = null;
   let wasmDestroy = null;
   let wasmLoaded = false;
+  let detachViewportLifecycle = null;
 
   function updateStatus(message) {
     if (statusElement) {
@@ -258,6 +267,9 @@ export async function initBlackholeSimulation({
     frameElement.textContent = frame;
     centerIfOverflow();
     recordFps("webgpu");
+    if (!mediaExport.controller.ready) {
+      mediaExport.setReady({ renderer: "webgpu" });
+    }
   }
 
   function scheduleNextFrame(loopFunction) {
@@ -267,6 +279,63 @@ export async function initBlackholeSimulation({
     }
 
     setTimeout(loopFunction, 0);
+  }
+
+  function startGpuLoop() {
+    if (!renderer || gpuRunning) {
+      return;
+    }
+
+    gpuRunning = true;
+    gpuLoopGeneration += 1;
+    const currentGeneration = gpuLoopGeneration;
+
+    async function gpuLoop() {
+      if (!gpuRunning || currentGeneration !== gpuLoopGeneration) {
+        return;
+      }
+
+      try {
+        await runGpuTick();
+      } catch (error) {
+        console.error("GPU frame failed", error);
+        stopCurrentRenderer();
+        return;
+      }
+
+      if (!gpuRunning || currentGeneration !== gpuLoopGeneration) {
+        return;
+      }
+
+      scheduleNextFrame(gpuLoop);
+    }
+
+    gpuLoop();
+  }
+
+  function stopGpuLoop() {
+    gpuRunning = false;
+    gpuLoopGeneration += 1;
+  }
+
+  function pauseCurrentRenderer() {
+    stopGpuLoop();
+    stopAnimation();
+  }
+
+  function resumeCurrentRenderer() {
+    if (cleanedUp) {
+      return;
+    }
+
+    if (useGpu && renderer) {
+      startGpuLoop();
+      return;
+    }
+
+    if (!useGpu && wasmLoaded && wasmGenerateFrame) {
+      startWasmLoop();
+    }
   }
 
   async function loadWasmRenderer() {
@@ -300,6 +369,9 @@ export async function initBlackholeSimulation({
     frameElement.textContent = wasmModule.UTF8ToString(framePointer);
     centerIfOverflow();
     recordFps("wasm");
+    if (!mediaExport.controller.ready) {
+      mediaExport.setReady({ renderer: "wasm" });
+    }
   }
 
   function stopAnimation() {
@@ -317,8 +389,7 @@ export async function initBlackholeSimulation({
   }
 
   function stopCurrentRenderer() {
-    gpuRunning = false;
-    stopAnimation();
+    pauseCurrentRenderer();
 
     if (renderer) {
       try {
@@ -433,6 +504,7 @@ export async function initBlackholeSimulation({
     rebuildTimeout = setTimeout(() => {
       rebuildTimeout = null;
       rebuildSceneWasm().catch((error) => {
+        mediaExport.update({ error: error.message });
         console.error("blackhole rebuild failed", error);
         frameElement.textContent = "failed to render animation";
       });
@@ -546,28 +618,10 @@ export async function initBlackholeSimulation({
       updateStatus("[webgpu] initializing...");
       renderer = await initGpuRenderer();
       useGpu = true;
-      gpuRunning = true;
       lastSliderState = { ...sliderState };
       resetFpsTracking();
       animationStartTime = performance.now();
-
-      async function gpuLoop() {
-        if (!gpuRunning) {
-          return;
-        }
-
-        try {
-          await runGpuTick();
-        } catch (error) {
-          console.error("GPU frame failed", error);
-          stopCurrentRenderer();
-          return;
-        }
-
-        scheduleNextFrame(gpuLoop);
-      }
-
-      gpuLoop();
+      startGpuLoop();
       return true;
     } catch (error) {
       console.warn("WebGPU not available:", error.message);
@@ -584,6 +638,7 @@ export async function initBlackholeSimulation({
       await rebuildSceneWasm();
       return true;
     } catch (error) {
+      mediaExport.update({ error: error.message });
       console.error("failed to initialize wasm blackhole", error);
       frameElement.textContent = "failed to load animation";
       slidersElement.textContent = "sliders unavailable";
@@ -618,6 +673,11 @@ export async function initBlackholeSimulation({
     if (vsyncCheckbox) {
       vsyncCheckbox.removeEventListener("change", onVsyncChange);
     }
+
+    if (detachViewportLifecycle) {
+      detachViewportLifecycle();
+      detachViewportLifecycle = null;
+    }
   }
 
   slidersElement.addEventListener("pointerdown", onPointerDown);
@@ -641,6 +701,16 @@ export async function initBlackholeSimulation({
   if (!gpuSuccess) {
     await startWasmRenderer();
   }
+
+  detachViewportLifecycle = attachViewportAnimationLifecycle({
+    element: frameElement.closest(".art-section") ?? frameElement,
+    pause() {
+      pauseCurrentRenderer();
+    },
+    resume() {
+      resumeCurrentRenderer();
+    },
+  });
 
   return cleanup;
 }

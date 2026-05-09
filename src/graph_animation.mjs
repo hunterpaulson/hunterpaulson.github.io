@@ -1,3 +1,6 @@
+import { registerMediaExport } from "./blog/shared/media_export.mjs";
+import { attachViewportAnimationLifecycle } from "./blog/shared/viewport_animation_lifecycle.mjs";
+
 export function initializeGraphAnimations({
   root = document,
   windowObject = window,
@@ -49,6 +52,11 @@ export function initializeGraphAnimations({
     let isPlaying = !prefersReducedMotion;
     let timerId = null;
 
+    function setActiveIndex(nextIndex) {
+      activeIndex = ((nextIndex % frames.length) + frames.length) % frames.length;
+      render();
+    }
+
     function render() {
       frames.forEach((frame, frameIndex) => {
         const isActive = frameIndex === activeIndex;
@@ -89,8 +97,7 @@ export function initializeGraphAnimations({
 
     previousButton.addEventListener("click", () => {
       pausePlayback();
-      activeIndex = (activeIndex - 1 + frames.length) % frames.length;
-      render();
+      setActiveIndex(activeIndex - 1);
     });
 
     playButton.addEventListener("click", () => {
@@ -101,11 +108,37 @@ export function initializeGraphAnimations({
 
     nextButton.addEventListener("click", () => {
       pausePlayback();
-      activeIndex = (activeIndex + 1) % frames.length;
-      render();
+      setActiveIndex(activeIndex + 1);
     });
 
+    const mediaExportId = animation.dataset.mediaExportId;
+    const mediaExport = mediaExportId
+      ? registerMediaExport({
+          id: mediaExportId,
+          loopDurationMs: frames.length * resolvedIntervalMs,
+          seek(frameTimeMs) {
+            pausePlayback();
+            setActiveIndex(Math.floor(frameTimeMs / resolvedIntervalMs));
+          },
+        })
+      : null;
+
     render();
-    syncTimer();
+    if (mediaExport) {
+      mediaExport.setReady({
+        frameCount: frames.length,
+        intervalMs: resolvedIntervalMs,
+      });
+    }
+    attachViewportAnimationLifecycle({
+      element: animation,
+      pause() {
+        stopTimer();
+      },
+      resume() {
+        syncTimer();
+      },
+      windowObject,
+    });
   });
 }

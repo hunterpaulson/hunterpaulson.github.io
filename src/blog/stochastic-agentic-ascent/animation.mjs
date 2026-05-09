@@ -1,5 +1,6 @@
 import { preserveScrollOffset } from "../shared/animated_text_pane.mjs";
-import { attachBfcacheAnimationLifecycle } from "../shared/bfcache_animation_lifecycle.mjs";
+import { registerMediaExport } from "../shared/media_export.mjs";
+import { attachViewportAnimationLifecycle } from "../shared/viewport_animation_lifecycle.mjs";
 import { KERNEL_STAGES } from "./data.mjs";
 import {
   CODE_LINE_COUNT,
@@ -13,6 +14,7 @@ const HOLD_MS = 1500;
 const KERNEL_SCROLL_SCREEN_ELEMENT_ID = "stochastic-agentic-ascent-kernel-scroll-screen";
 const TRANSITION_MS = 1050;
 const WHEEL_PIXELS_PER_LINE = 32;
+const LOOP_DURATION_MS = ((KERNEL_STAGES.length - 1) * (HOLD_MS + TRANSITION_MS)) + HOLD_MS;
 
 function measureCharacterCell(referenceElement) {
   const probe = document.createElement("span");
@@ -63,6 +65,10 @@ function bootOptimizerAnimation() {
   }
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mediaExport = registerMediaExport({
+    fps: 6,
+    loopDurationMs: LOOP_DURATION_MS,
+  });
   const state = createAnimationState();
   let availableColumns = clampFrameWidth(Math.min(
     computeAvailableColumns(kernelScrollScreenElement),
@@ -227,10 +233,12 @@ function bootOptimizerAnimation() {
   if (reducedMotion) {
     state.stageIndex = KERNEL_STAGES.length - 1;
     render();
+    mediaExport.setReady({ stageCount: KERNEL_STAGES.length });
     return;
   }
 
-  attachBfcacheAnimationLifecycle({
+  attachViewportAnimationLifecycle({
+    element: kernelScrollScreenElement.closest(".art-section") ?? kernelScrollScreenElement,
     pause() {
       stopAnimationFrame();
     },
@@ -241,7 +249,7 @@ function bootOptimizerAnimation() {
   });
 
   render();
-  startAnimationFrame();
+  mediaExport.setReady({ stageCount: KERNEL_STAGES.length });
 }
 
 bootOptimizerAnimation();

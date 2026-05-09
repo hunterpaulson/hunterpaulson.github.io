@@ -1,0 +1,336 @@
+<div id="wikipedia-bidirectional-bfs-animation" class="mono-graph-animation" data-interval="1400" data-media-export-id="wikipedia-bidirectional-bfs">
+
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true"></svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s" style="--col: 34; --row: 8;">S</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t" style="--col: 34; --row: 22;">T</div>
+</div>
+<figcaption>Begin with the **start** and _target_ page.</figcaption>
+</figure>
+
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true"></svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s" style="--col: 34; --row: 8;">S</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t" style="--col: 34; --row: 22;">T</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb0" style="--col: 34; --row: 26;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb1" style="--col: 27; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb2" style="--col: 27; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb3" style="--col: 34; --row: 18;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb4" style="--col: 41; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb5" style="--col: 41; --row: 24;"></div>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb0" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb1" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb2" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb3" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb4" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb5" data-to="t"></span>
+</div>
+<figcaption>Get all the pages that _link to the target page_.</figcaption>
+</figure>
+
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true"></svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s" style="--col: 34; --row: 8;">S</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t" style="--col: 34; --row: 22;">T</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa0" style="--col: 34; --row: 4;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa1" style="--col: 40; --row: 5;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa2" style="--col: 42; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3" style="--col: 40; --row: 11;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4" style="--col: 34; --row: 12;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5" style="--col: 28; --row: 11;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa6" style="--col: 26; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa7" style="--col: 28; --row: 5;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb0" style="--col: 34; --row: 26;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb1" style="--col: 27; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb2" style="--col: 27; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb3" style="--col: 34; --row: 18;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb4" style="--col: 41; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb5" style="--col: 41; --row: 24;"></div>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa0"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa1"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa4"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa5"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa7"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb0" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb1" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb2" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb3" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb4" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb5" data-to="t"></span>
+</div>
+<figcaption>Get all the pages that **the start page links to**.</figcaption>
+</figure>
+
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true"></svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s" style="--col: 34; --row: 8;">S</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t" style="--col: 34; --row: 22;">T</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa0" style="--col: 34; --row: 4;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa1" style="--col: 40; --row: 5;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa2" style="--col: 42; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3" style="--col: 40; --row: 11;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4" style="--col: 34; --row: 12;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5" style="--col: 28; --row: 11;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa6" style="--col: 26; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa7" style="--col: 28; --row: 5;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb0" style="--col: 34; --row: 26;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb1" style="--col: 27; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb2" style="--col: 27; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb3" style="--col: 34; --row: 18;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb4" style="--col: 41; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb5" style="--col: 41; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="m2" style="--col: 27; --row: 15;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td0" style="--col: 34; --row: 29;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td1" style="--col: 24; --row: 28;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td2" style="--col: 19; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td3" style="--col: 19; --row: 19;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td6" style="--col: 41; --row: 15;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td7" style="--col: 49; --row: 19;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td8" style="--col: 49; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td9" style="--col: 44; --row: 28;"></div>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa0"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa1"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa4"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa5"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa7"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb0" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb1" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb2" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb3" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb4" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb5" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td0" data-to="tb0"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td1" data-to="tb1"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td2" data-to="tb1"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td2" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td3" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="m2" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="m2" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td6" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td6" data-to="tb4"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td7" data-to="tb4"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td7" data-to="tb5"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td8" data-to="tb5"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td9" data-to="tb5"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td1" data-to="tb0"></span>
+</div>
+<figcaption>Get all the pages that _can reach the target page_ in 2 links.</figcaption>
+</figure>
+
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true"></svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s" style="--col: 34; --row: 8;">S</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t" style="--col: 34; --row: 22;">T</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa0" style="--col: 34; --row: 4;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa1" style="--col: 40; --row: 5;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa2" style="--col: 42; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3" style="--col: 40; --row: 11;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4" style="--col: 34; --row: 12;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5" style="--col: 28; --row: 11;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa6" style="--col: 26; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa7" style="--col: 28; --row: 5;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb0" style="--col: 34; --row: 26;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb1" style="--col: 27; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb2" style="--col: 27; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb3" style="--col: 34; --row: 18;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb4" style="--col: 41; --row: 20;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="tb5" style="--col: 41; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc0" style="--col: 34; --row: 1;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc1" style="--col: 42; --row: 2;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc2" style="--col: 48; --row: 4;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc3" style="--col: 50; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc4" style="--col: 48; --row: 12;"></div>
+<div class="mono-graph__node" data-node="m2" style="--col: 27; --row: 15;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc8" style="--col: 20; --row: 12;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc9" style="--col: 18; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc10" style="--col: 20; --row: 4;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sc11" style="--col: 26; --row: 2;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td0" style="--col: 34; --row: 29;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td1" style="--col: 24; --row: 28;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td2" style="--col: 19; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td3" style="--col: 19; --row: 19;"></div>
+<div class="mono-graph__node" data-node="td6" style="--col: 41; --row: 15;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td7" style="--col: 49; --row: 19;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td8" style="--col: 49; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="td9" style="--col: 44; --row: 28;"></div>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa0"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa1"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa4"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa5"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa7"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa0" data-to="sc0"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa0" data-to="sc1"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa7" data-to="sc11"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa1" data-to="sc1"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa1" data-to="sc2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa2" data-to="sc2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa2" data-to="sc3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa3" data-to="sc4"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa3" data-to="sc5"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa3" data-to="td6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa4" data-to="m1"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa4" data-to="td6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa5" data-to="m2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa5" data-to="sc8"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa6" data-to="sc8"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa6" data-to="sc9"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa6" data-to="sc10"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa7" data-to="sc10"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td6" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="m2" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb0" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb1" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb2" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb3" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb4" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="tb5" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td7" data-to="tb5"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td0" data-to="tb0"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td1" data-to="tb1"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td1" data-to="tb0"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td2" data-to="tb1"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td2" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td3" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="m2" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="m1" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td6" data-to="tb4"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td7" data-to="tb4"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td8" data-to="tb5"></span>
+<span class="mono-graph__edge mono-graph__edge--warm" data-from="td9" data-to="tb5"></span>
+</div>
+<figcaption>Get all the pages that **the start page can reach** in 2 links.</figcaption>
+</figure>
+
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true"></svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s" style="--col: 34; --row: 8;">S</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t" style="--col: 34; --row: 22;">4</div>
+<div class="mono-graph__node" data-node="sa0" style="--col: 34; --row: 4;"></div>
+<div class="mono-graph__node" data-node="sa1" style="--col: 40; --row: 5;"></div>
+<div class="mono-graph__node" data-node="sa2" style="--col: 42; --row: 8;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3" style="--col: 40; --row: 11;">1</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4" style="--col: 34; --row: 12;">1</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5" style="--col: 28; --row: 11;">1</div>
+<div class="mono-graph__node" data-node="sa6" style="--col: 26; --row: 8;"></div>
+<div class="mono-graph__node" data-node="sa7" style="--col: 28; --row: 5;"></div>
+<div class="mono-graph__node" data-node="tb0" style="--col: 34; --row: 26;"></div>
+<div class="mono-graph__node" data-node="tb1" style="--col: 27; --row: 24;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb2" style="--col: 27; --row: 20;">3</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb3" style="--col: 34; --row: 18;">3</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb4" style="--col: 41; --row: 20;">3</div>
+<div class="mono-graph__node" data-node="tb5" style="--col: 41; --row: 24;"></div>
+<div class="mono-graph__node" data-node="sc0" style="--col: 34; --row: 1;"></div>
+<div class="mono-graph__node" data-node="sc1" style="--col: 42; --row: 2;"></div>
+<div class="mono-graph__node" data-node="sc2" style="--col: 48; --row: 4;"></div>
+<div class="mono-graph__node" data-node="sc3" style="--col: 50; --row: 8;"></div>
+<div class="mono-graph__node" data-node="sc4" style="--col: 48; --row: 12;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="m2" style="--col: 27; --row: 15;">2</div>
+<div class="mono-graph__node" data-node="sc8" style="--col: 20; --row: 12;"></div>
+<div class="mono-graph__node" data-node="sc9" style="--col: 18; --row: 8;"></div>
+<div class="mono-graph__node" data-node="sc10" style="--col: 20; --row: 4;"></div>
+<div class="mono-graph__node" data-node="sc11" style="--col: 26; --row: 2;"></div>
+<div class="mono-graph__node" data-node="td0" style="--col: 34; --row: 29;"></div>
+<div class="mono-graph__node" data-node="td1" style="--col: 24; --row: 28;"></div>
+<div class="mono-graph__node" data-node="td2" style="--col: 19; --row: 24;"></div>
+<div class="mono-graph__node" data-node="td3" style="--col: 19; --row: 19;"></div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="td6" style="--col: 41; --row: 15;">2</div>
+<div class="mono-graph__node" data-node="td7" style="--col: 49; --row: 19;"></div>
+<div class="mono-graph__node" data-node="td8" style="--col: 49; --row: 24;"></div>
+<div class="mono-graph__node" data-node="td9" style="--col: 44; --row: 28;"></div>
+<span class="mono-graph__edge" data-from="s" data-to="sa0"></span>
+<span class="mono-graph__edge" data-from="s" data-to="sa1"></span>
+<span class="mono-graph__edge" data-from="s" data-to="sa2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa4"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa5"></span>
+<span class="mono-graph__edge" data-from="s" data-to="sa6"></span>
+<span class="mono-graph__edge" data-from="s" data-to="sa7"></span>
+<span class="mono-graph__edge" data-from="sa0" data-to="sc0"></span>
+<span class="mono-graph__edge" data-from="sa0" data-to="sc1"></span>
+<span class="mono-graph__edge" data-from="sa7" data-to="sc11"></span>
+<span class="mono-graph__edge" data-from="sa1" data-to="sc1"></span>
+<span class="mono-graph__edge" data-from="sa1" data-to="sc2"></span>
+<span class="mono-graph__edge" data-from="sa2" data-to="sc2"></span>
+<span class="mono-graph__edge" data-from="sa2" data-to="sc3"></span>
+<span class="mono-graph__edge" data-from="sa3" data-to="sc4"></span>
+<span class="mono-graph__edge" data-from="sa3" data-to="sc5"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa3" data-to="td6"></span>
+<span class="mono-graph__edge" data-from="sa4" data-to="m1"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa4" data-to="td6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa5" data-to="m2"></span>
+<span class="mono-graph__edge" data-from="sa5" data-to="sc8"></span>
+<span class="mono-graph__edge" data-from="sa6" data-to="sc8"></span>
+<span class="mono-graph__edge" data-from="sa6" data-to="sc9"></span>
+<span class="mono-graph__edge" data-from="sa6" data-to="sc10"></span>
+<span class="mono-graph__edge" data-from="sa7" data-to="sc10"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="td6" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="m2" data-to="tb3"></span>
+<span class="mono-graph__edge" data-from="tb0" data-to="t"></span>
+<span class="mono-graph__edge" data-from="tb1" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="tb2" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="tb3" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="tb4" data-to="t"></span>
+<span class="mono-graph__edge" data-from="tb5" data-to="t"></span>
+<span class="mono-graph__edge" data-from="td7" data-to="tb5"></span>
+<span class="mono-graph__edge" data-from="td0" data-to="tb0"></span>
+<span class="mono-graph__edge" data-from="td1" data-to="tb1"></span>
+<span class="mono-graph__edge" data-from="td1" data-to="tb0"></span>
+<span class="mono-graph__edge" data-from="td2" data-to="tb1"></span>
+<span class="mono-graph__edge" data-from="td2" data-to="tb2"></span>
+<span class="mono-graph__edge" data-from="td3" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="m2" data-to="tb2"></span>
+<span class="mono-graph__edge" data-from="m1" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="td6" data-to="tb4"></span>
+<span class="mono-graph__edge" data-from="td7" data-to="tb4"></span>
+<span class="mono-graph__edge" data-from="td8" data-to="tb5"></span>
+<span class="mono-graph__edge" data-from="td9" data-to="tb5"></span>
+</div>
+<figcaption>Find all the connections to the nodes where they intersect.</figcaption>
+</figure>
+
+<figure class="mono-graph mono-graph-animation__frame" style="--graph-cols: 68; --graph-rows: 30;">
+<div class="mono-graph__canvas">
+<svg class="mono-graph__edges" aria-hidden="true"></svg>
+<div class="mono-graph__node mono-graph__node--accent" data-node="s" style="--col: 34; --row: 8;">S</div>
+<div class="mono-graph__node mono-graph__node--warm" data-node="t" style="--col: 34; --row: 22;">4</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa3" style="--col: 40; --row: 11;">1</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa4" style="--col: 34; --row: 12;">1</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="sa5" style="--col: 28; --row: 11;">1</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb2" style="--col: 27; --row: 20;">3</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb3" style="--col: 34; --row: 18;">3</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="tb4" style="--col: 41; --row: 20;">3</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="m2" style="--col: 27; --row: 15;">2</div>
+<div class="mono-graph__node mono-graph__node--accent" data-node="td6" style="--col: 41; --row: 15;">2</div>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa4"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="s" data-to="sa5"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa3" data-to="td6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa4" data-to="td6"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="sa5" data-to="m2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="td6" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="m2" data-to="tb3"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="tb2" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="tb3" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="tb4" data-to="t"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="m2" data-to="tb2"></span>
+<span class="mono-graph__edge mono-graph__edge--accent" data-from="td6" data-to="tb4"></span>
+</div>
+<figcaption>We have found the shortest paths from start to target!</figcaption>
+</figure>
+
+</div>

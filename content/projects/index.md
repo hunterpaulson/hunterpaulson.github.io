@@ -8,15 +8,21 @@ lang: en
 
 ## [wikiarena.org](https://wikiarena.org)
 
-this was supposed to be an eval for language models but while building that I got nerd sniped and ended up building what may be **the fastest wikipedia race solver on the internet**.
+> can LLMs actually navigate a website that is in their training data?
 
-<!-- ## fmt2fmt
+a benchmark for agentic web navigation where LLMs compete to navigate from one Wikipedia page to another in the fewest number of steps.
 
-> what gets measured gets fixed
+## wikipedia race solver
 
-(my PayPal team's version of the classic quote)
+while building [wikiarena.org](https://wikiarena.org) I got [nerd sniped](https://xkcd.com/356/) into building what may be [the fastest wikipedia race solver on the internet](/blog/wikipedia-race-solver/).
 
-the stuff I do at work and can share -->
+## [typeGPT.dev](https://typegpt.dev)
+
+> _Can you type faster than GPT-2?_
+
+runs GPT-2 locally in-browser using [WebGPT](https://github.com/0hq/WebGPT) and generates typing tests using only words in the selected wordset. 
+
+I built this to learn local llm inference and also so I could practice typing probable word sequences instead of words sampled uniformly at random.
 
 # work experience 
 

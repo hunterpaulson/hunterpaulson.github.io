@@ -12,6 +12,8 @@ const RESIZE_DEBOUNCE_MS = 120;
 const ROW_COUNT = 36;
 const TARGET_FPS = 60;
 const FRAME_DURATION_MS = 1000 / TARGET_FPS;
+const GLYPH_STEP_SEED = 83492791;
+const PASS_SEED = 1597334677;
 
 function hashInteger(value) {
   let hashed = value | 0;
@@ -104,22 +106,28 @@ function resolveColumnCount(rootElement, characterWidth) {
   return Math.max(MIN_COLUMN_COUNT, Math.min(MAX_COLUMN_COUNT, availableColumns));
 }
 
-function matrixGlyph({ column, row, timeMs, distanceFromHead, headStep, passIndex }) {
+function matrixGlyph({
+  column,
+  row,
+  distanceFromHead,
+  headStep,
+  passIndex,
+  speedRowsPerSecond,
+}) {
   const cellSeed = ((column + 1) * 73856093) ^ ((row + 1) * 19349663);
-  const isHead = distanceFromHead < 1.25;
   const mutationSeed = cellSeed ^ 0x9e3779b9;
-  if (isHead) {
-    const seed = cellSeed ^ (passIndex * 1597334677) ^ (headStep * 83492791);
-    return GLYPHS[hashInteger(seed) % GLYPHS.length];
-  }
+  const headEntryStep = headStep - Math.floor(distanceFromHead);
+  const tailAgeMs = Math.max(0, ((distanceFromHead - 1) / speedRowsPerSecond) * 1000);
 
   const mutationRateMs = 900 + Math.floor(unitRandom(mutationSeed) * 3600);
   const mutationPhaseMs = unitRandom(cellSeed ^ 0x85ebca6b) * mutationRateMs;
   const isStaticTailGlyph = unitRandom(cellSeed ^ 0xc2b2ae35) < 0.45;
   const tick = isStaticTailGlyph
     ? 0
-    : Math.floor((timeMs + mutationPhaseMs) / mutationRateMs);
-  const seed = cellSeed ^ (passIndex * 1597334677) ^ (tick * 83492791);
+    : Math.floor((tailAgeMs + mutationPhaseMs) / mutationRateMs);
+  const seed = cellSeed
+    ^ (passIndex * PASS_SEED)
+    ^ ((headEntryStep + tick) * GLYPH_STEP_SEED);
   return GLYPHS[hashInteger(seed) % GLYPHS.length];
 }
 
@@ -153,7 +161,7 @@ function showCell(cell, { glyph, head, opacity }) {
   cell.matrixVisible = true;
 }
 
-function renderMatrixFrame({ cells, columnCount, rowCount, streams, timeMs }) {
+export function renderMatrixFrame({ cells, columnCount, rowCount, streams, timeMs }) {
   for (let column = 0; column < columnCount; column += 1) {
     const stream = streams[column];
     const progressRows = ((timeMs / 1000) * stream.speedRowsPerSecond) + stream.offsetRows;
@@ -176,10 +184,10 @@ function renderMatrixFrame({ cells, columnCount, rowCount, streams, timeMs }) {
         glyph: matrixGlyph({
           column,
           row,
-          timeMs,
           distanceFromHead,
           headStep: Math.floor(unwrappedHeadRow),
           passIndex: Math.floor((unwrappedHeadRow - row) / stream.cycleLength),
+          speedRowsPerSecond: stream.speedRowsPerSecond,
         }),
         head: distanceFromHead < 1.25,
         opacity,
@@ -334,4 +342,6 @@ function bootMatrixRain() {
   window.addEventListener("orientationchange", scheduleResizeMatrix);
 }
 
-bootMatrixRain();
+if (typeof document !== "undefined") {
+  bootMatrixRain();
+}

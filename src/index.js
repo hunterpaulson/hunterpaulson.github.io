@@ -264,12 +264,19 @@ function layoutMonoGraphs() {
 
     const canvasPadColumns = readNumericCustomProperty(graph, "--mono-graph-canvas-pad-cols");
     const canvasPadRows = readNumericCustomProperty(graph, "--mono-graph-canvas-pad-rows");
+    const graphColumns = readNumericCustomProperty(graph, "--graph-cols", 24);
+    const graphRows = readNumericCustomProperty(graph, "--graph-rows", 8);
     const nodePadColumns = readNumericCustomProperty(graph, "--mono-graph-node-pad-cols");
     const nodePadRows = readNumericCustomProperty(graph, "--mono-graph-node-pad-rows");
     const borderThickness = readNumericCustomProperty(graph, "--border-thickness");
     const insetX = canvasPadColumns * cell.width;
     const insetY = canvasPadRows * cell.height;
+    const canvasWidth = (graphColumns + (canvasPadColumns * 2)) * cell.width;
+    const canvasHeight = (graphRows + (canvasPadRows * 2)) * cell.height;
     const nodeBoundsById = new Map();
+
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
 
     const nodes = canvas.querySelectorAll(".mono-graph__node[data-node]");
     nodes.forEach((node) => {
@@ -328,8 +335,7 @@ function layoutMonoGraphs() {
       nodeBoundsById.set(node.dataset.node, bounds);
     });
 
-    const canvasRect = canvas.getBoundingClientRect();
-    svg.setAttribute("viewBox", `0 0 ${canvasRect.width} ${canvasRect.height}`);
+    svg.setAttribute("viewBox", `0 0 ${canvasWidth} ${canvasHeight}`);
     svg.replaceChildren();
 
     const defs = document.createElementNS(svgNamespace, "defs");

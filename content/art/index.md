@@ -103,11 +103,13 @@ my favorite movie of all time
 <pre
   id="d"
   style="
-    width:80ch;
+    width:100%;
+    max-width:80ch;
     height:calc(40 * var(--line-height));
     margin:calc(var(--line-height) * 2) auto;
     white-space:pre;
-    overflow:hidden;
+    overflow-x:auto;
+    overflow-y:hidden;
   "
   aria-live="off"
 >

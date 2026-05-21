@@ -2,10 +2,13 @@ import { registerMediaExport } from "../blog/shared/media_export.mjs";
 import { attachViewportAnimationLifecycle } from "../blog/shared/viewport_animation_lifecycle.mjs";
 
 const CELL_COUNT_ATTRIBUTE = "matrixCellsReady";
-const COLUMN_COUNT = 80;
 const GLYPHS = Array.from("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ");
 const LOOP_DURATION_MS = 8000;
 const MATRIX_EXPORT_ID = "matrix-rain";
+const MAX_COLUMN_COUNT = 80;
+const MIN_COLUMN_COUNT = 28;
+const MEASURED_CELL_PRECISION = 100;
+const RESIZE_DEBOUNCE_MS = 120;
 const ROW_COUNT = 36;
 const TARGET_FPS = 60;
 const FRAME_DURATION_MS = 1000 / TARGET_FPS;
@@ -35,14 +38,16 @@ function createColumnStreams(columnCount, rowCount) {
   });
 }
 
-function createCells(rootElement, columnCount, rowCount) {
-  if (rootElement.dataset[CELL_COUNT_ATTRIBUTE] === `${columnCount}x${rowCount}`) {
+function createCells(rootElement, { cellHeight, cellWidth, columnCount, rowCount, signature }) {
+  if (rootElement.dataset[CELL_COUNT_ATTRIBUTE] === signature) {
     return Array.from(rootElement.querySelectorAll(".matrix-rain__cell"));
   }
 
   rootElement.replaceChildren();
   rootElement.style.setProperty("--matrix-columns", columnCount);
   rootElement.style.setProperty("--matrix-rows", rowCount);
+  rootElement.style.width = `${cellWidth * columnCount}px`;
+  rootElement.style.height = `${cellHeight * rowCount}px`;
 
   const fragment = document.createDocumentFragment();
   const cells = [];
@@ -53,14 +58,50 @@ function createCells(rootElement, columnCount, rowCount) {
       cell.setAttribute("aria-hidden", "true");
       cell.style.setProperty("--matrix-column", column);
       cell.style.setProperty("--matrix-row", row);
+      cell.style.left = `${cellWidth * column}px`;
+      cell.style.top = `${cellHeight * row}px`;
+      cell.style.width = `${cellWidth}px`;
+      cell.style.height = `${cellHeight}px`;
+      cell.style.lineHeight = `${cellHeight}px`;
       fragment.appendChild(cell);
       cells.push(cell);
     }
   }
 
   rootElement.appendChild(fragment);
-  rootElement.dataset[CELL_COUNT_ATTRIBUTE] = `${columnCount}x${rowCount}`;
+  rootElement.dataset[CELL_COUNT_ATTRIBUTE] = signature;
   return cells;
+}
+
+function roundCellDimension(value) {
+  return Math.round(value * MEASURED_CELL_PRECISION) / MEASURED_CELL_PRECISION;
+}
+
+function measureCharacterCell(rootElement) {
+  const probe = document.createElement("span");
+  probe.textContent = "0";
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.height = "var(--line-height)";
+  probe.style.lineHeight = "var(--line-height)";
+  probe.style.width = "1ch";
+  rootElement.appendChild(probe);
+  const rect = probe.getBoundingClientRect();
+  probe.remove();
+  return {
+    height: roundCellDimension(rect.height || 16),
+    width: roundCellDimension(rect.width || 8),
+  };
+}
+
+function resolveColumnCount(rootElement, characterWidth) {
+  const parentWidth = rootElement.parentElement?.clientWidth
+    || document.documentElement.clientWidth
+    || window.innerWidth
+    || MAX_COLUMN_COUNT * characterWidth;
+  const availableColumns = Math.floor(parentWidth / characterWidth);
+  return Math.max(MIN_COLUMN_COUNT, Math.min(MAX_COLUMN_COUNT, availableColumns));
 }
 
 function matrixGlyph({ column, row, timeMs, distanceFromHead, headStep, passIndex }) {
@@ -154,8 +195,41 @@ function bootMatrixRain() {
   }
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const cells = createCells(rootElement, COLUMN_COUNT, ROW_COUNT);
-  const streams = createColumnStreams(COLUMN_COUNT, ROW_COUNT);
+  let columnCount = 0;
+  let cells = [];
+  let streams = [];
+  let currentTimeMs = 0;
+  let layoutSignature = "";
+
+  function configureMatrix() {
+    const measuredCell = measureCharacterCell(rootElement);
+    const nextColumnCount = resolveColumnCount(rootElement, measuredCell.width);
+    const nextSignature = [
+      nextColumnCount,
+      ROW_COUNT,
+      measuredCell.width,
+      measuredCell.height,
+    ].join("x");
+
+    if (nextSignature === layoutSignature && cells.length > 0) {
+      return false;
+    }
+
+    columnCount = nextColumnCount;
+    layoutSignature = nextSignature;
+    cells = createCells(rootElement, {
+      cellHeight: measuredCell.height,
+      cellWidth: measuredCell.width,
+      columnCount,
+      rowCount: ROW_COUNT,
+      signature: layoutSignature,
+    });
+    streams = createColumnStreams(columnCount, ROW_COUNT);
+    return true;
+  }
+
+  configureMatrix();
+
   const mediaExport = registerMediaExport({
     fps: TARGET_FPS,
     id: MATRIX_EXPORT_ID,
@@ -164,7 +238,7 @@ function bootMatrixRain() {
       stopAnimation();
       renderMatrixFrame({
         cells,
-        columnCount: COLUMN_COUNT,
+        columnCount,
         rowCount: ROW_COUNT,
         streams,
         timeMs: frameTimeMs,
@@ -175,16 +249,45 @@ function bootMatrixRain() {
   let animationFrameId = null;
   let elapsedOffsetMs = 0;
   let lastFrameTimeMs = 0;
+  let resizeTimerId = null;
   let startTimeMs = performance.now();
 
   function renderAtTime(timeMs) {
+    currentTimeMs = timeMs;
     renderMatrixFrame({
       cells,
-      columnCount: COLUMN_COUNT,
+      columnCount,
       rowCount: ROW_COUNT,
       streams,
       timeMs,
     });
+  }
+
+  function setExportReady() {
+    mediaExport.setReady({
+      columns: columnCount,
+      rows: ROW_COUNT,
+    });
+  }
+
+  function resizeMatrix() {
+    if (!configureMatrix()) {
+      return;
+    }
+
+    renderAtTime(currentTimeMs);
+    setExportReady();
+  }
+
+  function scheduleResizeMatrix() {
+    if (resizeTimerId !== null) {
+      window.clearTimeout(resizeTimerId);
+    }
+
+    resizeTimerId = window.setTimeout(() => {
+      resizeTimerId = null;
+      resizeMatrix();
+    }, RESIZE_DEBOUNCE_MS);
   }
 
   function stopAnimation() {
@@ -205,10 +308,7 @@ function bootMatrixRain() {
   }
 
   renderAtTime(0);
-  mediaExport.setReady({
-    columns: COLUMN_COUNT,
-    rows: ROW_COUNT,
-  });
+  setExportReady();
 
   function startAnimation() {
     if (reducedMotion || animationFrameId !== null) {
@@ -229,6 +329,9 @@ function bootMatrixRain() {
       startAnimation();
     },
   });
+
+  window.addEventListener("resize", scheduleResizeMatrix);
+  window.addEventListener("orientationchange", scheduleResizeMatrix);
 }
 
 bootMatrixRain();

@@ -1,6 +1,20 @@
 ---
 title: just another abstraction
 date: 2026-03-08
+description: coding agents are like compilers.
+social-image: /assets/blog/just-another-abstraction/social/edit-distance-abstraction.gif
+social-image-alt: computer, compile this for me.
+canonical-url: "https://hunterpaulson.dev/blog/just-another-abstraction/"
+og-type: "article"
+site-name: "hunter paulson"
+social-description: "coding agents are like compilers."
+social-image-height: 576
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/blog/just-another-abstraction/social/edit-distance-abstraction.gif"
+social-image-width: 768
+social-title: "just another abstraction | hunter paulson"
+twitter-card: "summary_large_image"
+article-published-time: "2026-03-08"
 ---
 
 # just another abstraction

@@ -2,6 +2,18 @@
 title: projects
 author: Hunter Paulson
 lang: en
+description: Selected software projects and experiments by Hunter Paulson.
+canonical-url: "https://hunterpaulson.dev/projects/"
+og-type: "website"
+site-name: "hunter paulson"
+social-description: "Selected software projects and experiments by Hunter Paulson."
+social-image-alt: "ASCII black hole animation from Hunter Paulson's personal website."
+social-image-height: 769
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/social/home-blackhole.gif"
+social-image-width: 769
+social-title: "hunter paulson | projects"
+twitter-card: "summary_large_image"
 ---
 
 # personal projects

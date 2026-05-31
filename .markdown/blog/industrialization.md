@@ -1,6 +1,20 @@
 ---
 title: industrialization of software
 date: 2026-02-16
+description: coding agents are like tractors.
+social-image: /assets/blog/industrialization/social/tractors-farming-code.gif
+social-image-alt: ASCII tractors moving through a field of code.
+canonical-url: "https://hunterpaulson.dev/blog/industrialization/"
+og-type: "article"
+site-name: "hunter paulson"
+social-description: "coding agents are like tractors."
+social-image-height: 711
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/blog/industrialization/social/tractors-farming-code.gif"
+social-image-width: 769
+social-title: "industrialization of software | hunter paulson"
+twitter-card: "summary_large_image"
+article-published-time: "2026-02-16"
 ---
 
 # industrialization of software

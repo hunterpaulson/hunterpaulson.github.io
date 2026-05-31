@@ -5,6 +5,19 @@ listed: false
 noindex: true
 lang: en
 toc-title: Contents
+description: by Oskar Wickström
+canonical-url: "https://hunterpaulson.dev/blog/monospace/"
+og-type: "article"
+site-name: "hunter paulson"
+social-description: "by Oskar Wickström"
+social-image-alt: "ASCII black hole animation from Hunter Paulson's personal website."
+social-image-height: 769
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/social/home-blackhole.gif"
+social-image-width: 769
+social-title: "The Monospace Web | hunter paulson"
+twitter-card: "summary_large_image"
+article-published-time: "2025-10-06"
 ---
 
 ## Introduction

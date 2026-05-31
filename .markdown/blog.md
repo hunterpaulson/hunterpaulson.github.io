@@ -1,5 +1,17 @@
 ---
 title: blog
+description: Writing by Hunter Paulson on software, systems, agents, and learning in public.
+canonical-url: "https://hunterpaulson.dev/blog/"
+og-type: "website"
+site-name: "hunter paulson"
+social-description: "Writing by Hunter Paulson on software, systems, agents, and learning in public."
+social-image-alt: "ASCII black hole animation from Hunter Paulson's personal website."
+social-image-height: 769
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/social/home-blackhole.gif"
+social-image-width: 769
+social-title: "hunter paulson | blog"
+twitter-card: "summary_large_image"
 ---
 
 # latest posts

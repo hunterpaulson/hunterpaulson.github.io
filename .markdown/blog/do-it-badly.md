@@ -1,6 +1,19 @@
 ---
 title: do it badly
 date: 2025-11-24
+description: A small argument for starting with the minimum viable commit, learning from a bad first version, and then doing it again.
+canonical-url: "https://hunterpaulson.dev/blog/do-it-badly/"
+og-type: "article"
+site-name: "hunter paulson"
+social-description: "A small argument for starting with the minimum viable commit, learning from a bad first version, and then doing it again."
+social-image-alt: "ASCII black hole animation from Hunter Paulson's personal website."
+social-image-height: 769
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/social/home-blackhole.gif"
+social-image-width: 769
+social-title: "do it badly | hunter paulson"
+twitter-card: "summary_large_image"
+article-published-time: "2025-11-24"
 ---
 
 # do it badly

@@ -5,7 +5,25 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+  <link rel="canonical" href="https://hunterpaulson.dev/blog/just-another-abstraction/" />
   <meta name="dcterms.date" content="2026-03-08" />
+  <meta name="description" content="coding agents are like compilers." />
+  <meta property="og:site_name" content="hunter paulson" />
+  <meta property="og:title" content="just another abstraction | hunter paulson" />
+  <meta property="og:description" content="coding agents are like compilers." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://hunterpaulson.dev/blog/just-another-abstraction/" />
+  <meta property="og:image" content="https://hunterpaulson.dev/assets/blog/just-another-abstraction/social/edit-distance-abstraction.gif" />
+  <meta property="og:image:type" content="image/gif" />
+  <meta property="og:image:width" content="768" />
+  <meta property="og:image:height" content="576" />
+  <meta property="og:image:alt" content="computer, compile this for me." />
+  <meta property="article:published_time" content="2026-03-08" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="just another abstraction | hunter paulson" />
+  <meta name="twitter:description" content="coding agents are like compilers." />
+  <meta name="twitter:image" content="https://hunterpaulson.dev/assets/blog/just-another-abstraction/social/edit-distance-abstraction.gif" />
+  <meta name="twitter:image:alt" content="computer, compile this for me." />
   <title>just another abstraction | hunter paulson</title>
   <link rel="stylesheet" href="/src/reset.css" />
   <link rel="stylesheet" href="/src/index.css" />
@@ -31,51 +49,30 @@
   </tr>
 </table>
 <h1 id="just-another-abstraction">just another abstraction</h1>
-<p>in the beginning we wrote machine code: raw binary instructions fed
-directly to the cpu.</p>
-<p>assembly was the first abstraction. it gave us a set of
-human-readable cpu instructions that <strong>assemblers</strong> convert
-into machine code. we still managed every register, memory address, and
-clock cycle.</p>
-<p>then came compiled languages like c and fortran, allowing us to write
-something that looked like math and logic while a
-<strong>compiler</strong> translates it down to assembly for us. we no
-longer thought about opcodes or registers but we still manually
-allocated and freed memory.</p>
-<p>soon enough higher-level languages, like java and python, took that
-off our plate too. <strong>garbage collectors</strong> manage memory, we
-just had to write and run the code.</p>
-<p>now even that is handled for us. <strong>coding agents</strong>
-compile intent into running software. we no longer need to memorize
-libraries, functions, or syntax.</p>
-<p><a href="https://x.com/karpathy/status/1617979122625712128">the
-<em>only</em> programming language is natural language</a>. another
-layer of tooling has arrived and taken over more of the minutiae, giving
-us more time to think about which problems to solve.</p>
+<p>in the beginning we wrote machine code: raw binary instructions fed directly to the cpu.</p>
+<p>assembly was the first abstraction. it gave us a set of human-readable cpu instructions that <strong>assemblers</strong> convert into machine code. we still managed every register, memory address, and clock cycle.</p>
+<p>then came compiled languages like c and fortran, allowing us to write something that looked like math and logic while a <strong>compiler</strong> translates it down to assembly for us. we no longer thought about opcodes or registers but we still manually allocated and freed memory.</p>
+<p>soon enough higher-level languages, like java and python, took that off our plate too. <strong>garbage collectors</strong> manage memory, we just had to write and run the code.</p>
+<p>now even that is handled for us. <strong>coding agents</strong> compile intent into running software. we no longer need to memorize libraries, functions, or syntax.</p>
+<p><a href="https://x.com/karpathy/status/1617979122625712128">the <em>only</em> programming language is natural language</a>. another layer of tooling has arrived and taken over more of the minutiae, giving us more time to think about which problems to solve.</p>
 <div class="{=html}">
-<div aria-label="edit distance abstraction animation"
-style="margin:calc(var(--line-height) * 2) 0">
+<div aria-label="edit distance abstraction animation" style="margin:calc(var(--line-height) * 2) 0">
 <pre
     id="abstraction-screen"
     aria-live="off"
     tabindex="0"
     style="width:calc(round(down, 100%, 1ch)); height:calc(30 * var(--line-height)); margin:0; white-space:pre; overflow-x:auto; overflow-y:hidden; border:var(--border-thickness) solid var(--text-color)"
   >(loading abstraction...)</pre>
-<p><label style="width:auto; margin-top:var(--line-height)"><input type="checkbox" id="abstraction-reverse" />
-reverse direction</label></p>
+<p><label style="width:auto; margin-top:var(--line-height)"><input type="checkbox" id="abstraction-reverse" /> reverse direction</label></p>
 </div>
 <script type="module" src="/src/blog/just-another-abstraction/animation.mjs"></script>
 </div>
 <hr />
 <p>this is part 2 of <em>coding agents are like…</em></p>
 <ol class="incremental" type="1">
-<li><em>tractors</em> = <a
-href="/blog/industrialization/">industrialization of software</a></li>
-<li><em>compilers</em> = <a href="/blog/just-another-abstraction/">just
-another abstraction</a></li>
-<li><em>optimizers</em> = <a
-href="/blog/stochastic-agentic-ascent/">stochastic agentic
-ascent</a></li>
+<li><em>tractors</em> = <a href="/blog/industrialization/">industrialization of software</a></li>
+<li><em>compilers</em> = <a href="/blog/just-another-abstraction/">just another abstraction</a></li>
+<li><em>optimizers</em> = <a href="/blog/stochastic-agentic-ascent/">stochastic agentic ascent</a></li>
 </ol>
 <hr />
 <footer class="site-footer">

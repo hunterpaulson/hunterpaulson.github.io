@@ -1,6 +1,20 @@
 ---
 title: donut.js
 date: 2025-10-15
+description: A tiny JavaScript donut rendered in monospace.
+social-image: /assets/blog/donut/social/donut-js.gif
+social-image-alt: Monospace ASCII torus
+canonical-url: "https://hunterpaulson.dev/blog/donut/"
+og-type: "article"
+site-name: "hunter paulson"
+social-description: "A tiny JavaScript donut rendered in monospace."
+social-image-height: 768
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/blog/donut/social/donut-js.gif"
+social-image-width: 768
+social-title: "donut.js | hunter paulson"
+twitter-card: "summary_large_image"
+article-published-time: "2025-10-15"
 ---
 
 this is my attempt to recreate [aikon's donut.c](https://www.a1k0n.net/2011/07/20/donut-math.html) animation on the web with obfuscated javascript.

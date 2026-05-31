@@ -2,6 +2,19 @@
 title: art
 author: Hunter Paulson
 lang: en
+description: ASCII animations by Hunter Paulson.
+social-image: /assets/art/matrix-rain.gif
+social-image-alt: Green Matrix-style digital rain made of monospace characters.
+canonical-url: "https://hunterpaulson.dev/art/"
+og-type: "website"
+site-name: "hunter paulson"
+social-description: "ASCII animations by Hunter Paulson."
+social-image-height: 692
+social-image-type: "image/gif"
+social-image-url: "https://hunterpaulson.dev/assets/art/matrix-rain.gif"
+social-image-width: 768
+social-title: "hunter paulson | art"
+twitter-card: "summary_large_image"
 ---
 
 a collection of animations I made in reverse chronological order

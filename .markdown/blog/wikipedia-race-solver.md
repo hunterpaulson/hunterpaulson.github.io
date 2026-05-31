@@ -121,7 +121,7 @@ In computer science class I was taught to always think about the brute force sol
 
 We havent even defined our problem yet so lets do that first:
 
-> Given a Start and Target page: (S, T). Get from the S to the T using only links on the current page at each step. 
+> Given a pair of pages (S, T). Get from the start page (S) to the target page (T) using only links on the current page at each step.
 
 So imagine we start out on a random page that we know is part of a larger graph. Our goal is to find a specific page but we have no idea where it is on the graph. The only information we have is the pages that our current page links to, but unfortunately none of them our our target page. So somehow we have to use those links to find our target page.
 

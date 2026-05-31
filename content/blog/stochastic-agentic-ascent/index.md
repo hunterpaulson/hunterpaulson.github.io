@@ -1,6 +1,9 @@
 ---
 title: stochastic agentic ascent
 date: 2026-03-15
+description: coding agents are like optimizers.
+social-image: /assets/blog/stochastic-agentic-ascent/social/stochastic-agentic-ascent.gif
+social-image-alt: Monospace CUDA kernel and performance chart animation about optimization.
 ---
 
 # stochastic agentic ascent

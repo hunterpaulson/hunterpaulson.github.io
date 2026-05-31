@@ -1,6 +1,7 @@
 ---
 title: computer scientist
 lang: en
+description: Hunter Paulson's personal website for writing, art, projects, and experiments in computer science.
 ---
 
 hello guild navigator, welcome to my light cone.

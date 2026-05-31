@@ -1,6 +1,7 @@
 ---
 title: do it badly
 date: 2025-11-24
+description: A small argument for starting with the minimum viable commit, learning from a bad first version, and then doing it again.
 ---
 
 # do it badly

@@ -1,6 +1,9 @@
 ---
 title: donut.js
 date: 2025-10-15
+description: A tiny JavaScript donut rendered in monospace.
+social-image: /assets/blog/donut/social/donut-js.gif
+social-image-alt: Monospace ASCII torus
 ---
 
 this is my attempt to recreate [aikon's donut.c](https://www.a1k0n.net/2011/07/20/donut-math.html) animation on the web with obfuscated javascript.

@@ -5,6 +5,9 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+$if(canonical-url)$
+  <link rel="canonical" href="$canonical-url$" />
+$endif$
 $for(author-meta)$
   <meta name="author" content="$author-meta$" />
 $endfor$
@@ -16,6 +19,32 @@ $if(keywords)$
 $endif$
 $if(description-meta)$
   <meta name="description" content="$description-meta$" />
+$endif$
+$if(social-title)$
+  <meta property="og:site_name" content="$site-name$" />
+  <meta property="og:title" content="$social-title$" />
+  <meta property="og:description" content="$social-description$" />
+  <meta property="og:type" content="$og-type$" />
+  <meta property="og:url" content="$canonical-url$" />
+  <meta property="og:image" content="$social-image-url$" />
+$if(social-image-type)$
+  <meta property="og:image:type" content="$social-image-type$" />
+$endif$
+$if(social-image-width)$
+  <meta property="og:image:width" content="$social-image-width$" />
+$endif$
+$if(social-image-height)$
+  <meta property="og:image:height" content="$social-image-height$" />
+$endif$
+  <meta property="og:image:alt" content="$social-image-alt$" />
+$if(article-published-time)$
+  <meta property="article:published_time" content="$article-published-time$" />
+$endif$
+  <meta name="twitter:card" content="$twitter-card$" />
+  <meta name="twitter:title" content="$social-title$" />
+  <meta name="twitter:description" content="$social-description$" />
+  <meta name="twitter:image" content="$social-image-url$" />
+  <meta name="twitter:image:alt" content="$social-image-alt$" />
 $endif$
 $if(noindex)$
   <meta name="robots" content="noindex" />

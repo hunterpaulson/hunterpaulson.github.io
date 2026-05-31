@@ -8,6 +8,8 @@ CSS_FILES=/src/reset.css /src/index.css
 CSS_ARGS=$(foreach css,$(CSS_FILES),--css $(css))
 INCLUDES=$(shell find $(CONTENT_DIR)/includes -type f 2>/dev/null)
 EXPAND_INCLUDES=scripts/expand-markdown-includes.mjs
+PREPARE_MARKDOWN=scripts/prepare-markdown-page.mjs
+PAGE_METADATA=scripts/page-metadata.mjs
 
 HOME=$(wildcard $(CONTENT_DIR)/*.md)
 SECTIONS=$(wildcard $(CONTENT_DIR)/*/index.md)
@@ -68,17 +70,17 @@ clean:
 	rm -rf $(DIST_DIR)
 
 # Home page (content/index.md -> dist/index.html)
-$(HTML_HOME): $(DIST_DIR)/%.html: $(CONTENT_DIR)/%.md $(TEMPLATE) $(EXPAND_INCLUDES) $(INCLUDES) Makefile
+$(HTML_HOME): $(DIST_DIR)/%.html: $(CONTENT_DIR)/%.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
-	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(EXPAND_INCLUDES) "$<" "$$prepared_md"; pandoc --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
 
 # Section index pages (blog/index.md, projects/index.md -> dist/*/index.html)
-$(HTML_SECTIONS): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(INCLUDES) Makefile
+$(HTML_SECTIONS): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
 	@if [ "$(dir $@)" = "$(DIST_DIR)/blog/" ]; then bun scripts/update-blog-index.js; fi
-	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(EXPAND_INCLUDES) "$<" "$$prepared_md"; pandoc --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
 
 # Blog posts - use date from frontmatter
-$(HTML_BLOGS): $(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(INCLUDES) Makefile
+$(HTML_BLOGS): $(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
-	@prepared_md="$(DIST_DIR)/.markdown/blog/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(EXPAND_INCLUDES) "$<" "$$prepared_md"; pandoc -s $(CSS_ARGS) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+	@prepared_md="$(DIST_DIR)/.markdown/blog/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none -s $(CSS_ARGS) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)

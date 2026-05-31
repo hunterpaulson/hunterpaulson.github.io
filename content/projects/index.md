@@ -2,6 +2,7 @@
 title: projects
 author: Hunter Paulson
 lang: en
+description: Selected software projects and experiments by Hunter Paulson.
 ---
 
 # personal projects

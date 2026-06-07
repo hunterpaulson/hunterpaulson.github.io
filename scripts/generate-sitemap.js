@@ -5,7 +5,6 @@ const path = require("path");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const CONTENT_DIR = path.join(ROOT_DIR, "content");
-const BLOG_CONTENT_DIR = path.join(CONTENT_DIR, "blog");
 const DIST_DIR = path.join(ROOT_DIR, "dist");
 const SITEMAP_PATH = path.join(DIST_DIR, "sitemap.xml");
 const ROBOTS_PATH = path.join(DIST_DIR, "robots.txt");
@@ -76,72 +75,49 @@ function shouldIncludeInSitemap(filePath) {
   return !parseBooleanValue(frontMatter.noindex, false);
 }
 
-function listContentTopLevelPages() {
-  const entries = fs.readdirSync(CONTENT_DIR, { withFileTypes: true });
-  const pages = [];
-
-  for (const entry of entries) {
-    if (!entry.isFile()) {
-      continue;
-    }
-
-    if (!entry.name.endsWith(".md")) {
-      continue;
-    }
-
-    const filePath = path.join(CONTENT_DIR, entry.name);
-    const slug = entry.name.slice(0, -3);
-    const relativeUrl = slug === "index" ? "/" : `/${slug}.html`;
-    pages.push({ filePath, relativeUrl });
+function relativeMarkdownUrl(relativePath) {
+  const normalizedPath = relativePath.split(path.sep).join("/");
+  if (normalizedPath === "index.md") {
+    return "/";
   }
-
-  return pages;
+  if (normalizedPath.endsWith("/index.md")) {
+    return `/${normalizedPath.slice(0, -"/index.md".length)}/`;
+  }
+  return `/${normalizedPath.slice(0, -".md".length)}.html`;
 }
 
-function listSectionIndexPages() {
-  const entries = fs.readdirSync(CONTENT_DIR, { withFileTypes: true });
+function isBuildableMarkdownPage(relativePath) {
+  const parts = relativePath.split(path.sep);
+  return parts.length === 1 || parts[parts.length - 1] === "index.md";
+}
+
+function listMarkdownPages(directory = CONTENT_DIR) {
+  const entries = fs.readdirSync(directory, { withFileTypes: true });
   const pages = [];
 
   for (const entry of entries) {
-    if (!entry.isDirectory()) {
+    const filePath = path.join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      if (filePath === path.join(CONTENT_DIR, "includes")) {
+        continue;
+      }
+      pages.push(...listMarkdownPages(filePath));
       continue;
     }
 
-    const filePath = path.join(CONTENT_DIR, entry.name, "index.md");
-    if (!fs.existsSync(filePath)) {
+    if (!entry.isFile() || !entry.name.endsWith(".md")) {
+      continue;
+    }
+
+    const relativePath = path.relative(CONTENT_DIR, filePath);
+    if (!isBuildableMarkdownPage(relativePath)) {
       continue;
     }
 
     pages.push({
       filePath,
-      relativeUrl: `/${entry.name}/`,
-    });
-  }
-
-  return pages;
-}
-
-function listBlogPostPages() {
-  if (!fs.existsSync(BLOG_CONTENT_DIR)) {
-    return [];
-  }
-
-  const entries = fs.readdirSync(BLOG_CONTENT_DIR, { withFileTypes: true });
-  const pages = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const filePath = path.join(BLOG_CONTENT_DIR, entry.name, "index.md");
-    if (!fs.existsSync(filePath)) {
-      continue;
-    }
-
-    pages.push({
-      filePath,
-      relativeUrl: `/blog/${entry.name}/`,
+      relativeUrl: relativeMarkdownUrl(relativePath),
     });
   }
 
@@ -149,11 +125,7 @@ function listBlogPostPages() {
 }
 
 function collectPages() {
-  const allPages = [
-    ...listContentTopLevelPages(),
-    ...listSectionIndexPages(),
-    ...listBlogPostPages(),
-  ];
+  const allPages = listMarkdownPages();
 
   const byUrl = new Map();
   for (const page of allPages) {

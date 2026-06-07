@@ -14,10 +14,13 @@ PAGE_METADATA=scripts/page-metadata.mjs
 HOME=$(wildcard $(CONTENT_DIR)/*.md)
 SECTIONS=$(wildcard $(CONTENT_DIR)/*/index.md)
 BLOGS=$(wildcard $(CONTENT_DIR)/blog/*/index.md)
+INDEX_PAGES=$(shell find $(CONTENT_DIR) -path "$(CONTENT_DIR)/includes" -prune -o -mindepth 2 -name index.md -print)
+NESTED_INDEX_PAGES=$(filter-out $(SECTIONS) $(BLOGS),$(INDEX_PAGES))
 
 HTML_HOME=$(patsubst $(CONTENT_DIR)/%.md,$(DIST_DIR)/%.html,$(HOME))
 HTML_SECTIONS=$(patsubst $(CONTENT_DIR)/%/index.md,$(DIST_DIR)/%/index.html,$(SECTIONS))
 HTML_BLOGS=$(patsubst $(CONTENT_DIR)/blog/%/index.md,$(DIST_DIR)/blog/%/index.html,$(BLOGS))
+HTML_NESTED_INDEX_PAGES=$(patsubst $(CONTENT_DIR)/%/index.md,$(DIST_DIR)/%/index.html,$(NESTED_INDEX_PAGES))
 
 BLOG_INDEX_MD=$(CONTENT_DIR)/blog/index.md
 SITEMAP_FILE=$(DIST_DIR)/sitemap.xml
@@ -26,7 +29,7 @@ ROBOT_FRAME=$(wildcard assets/blackhole_frame_robot.txt)
 
 .PHONY: all clean assets copy-assets copy-src
 
-all: $(HTML_HOME) $(HTML_SECTIONS) $(HTML_BLOGS) assets copy-assets copy-src $(SITEMAP_FILE) $(ROBOTS_FILE)
+all: $(HTML_HOME) $(HTML_SECTIONS) $(HTML_BLOGS) $(HTML_NESTED_INDEX_PAGES) assets copy-assets copy-src $(SITEMAP_FILE) $(ROBOTS_FILE)
 
 assets: assets/blackhole_frames.txt assets/blackhole_wasm.js
 
@@ -61,7 +64,7 @@ $(BLOG_INDEX_MD): $(BLOGS) scripts/update-blog-index.js
 
 
 # Build sitemap and robots metadata
-$(SITEMAP_FILE) $(ROBOTS_FILE): $(HOME) $(SECTIONS) $(BLOGS) scripts/generate-sitemap.js $(ROBOT_FRAME) Makefile
+$(SITEMAP_FILE) $(ROBOTS_FILE): $(HOME) $(SECTIONS) $(BLOGS) $(NESTED_INDEX_PAGES) scripts/generate-sitemap.js $(ROBOT_FRAME) Makefile
 	@mkdir -p $(DIST_DIR)
 	@bun scripts/generate-sitemap.js
 
@@ -84,3 +87,8 @@ $(HTML_SECTIONS): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE
 $(HTML_BLOGS): $(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
 	@prepared_md="$(DIST_DIR)/.markdown/blog/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none -s $(CSS_ARGS) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+
+# Nested section pages (agent-harness/context-window/index.md -> dist/agent-harness/context-window/index.html)
+$(HTML_NESTED_INDEX_PAGES): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
+	@mkdir -p $(dir $@)
+	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)

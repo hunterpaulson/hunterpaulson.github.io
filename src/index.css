@@ -871,6 +871,365 @@ blockquote > *:last-child {
   margin-bottom: 0;
 }
 
+.agent-page-list {
+  display: grid;
+  gap: var(--line-height);
+  padding-left: 0;
+  list-style: none;
+}
+
+.agent-page-list > li {
+  margin-top: 0;
+}
+
+.agent-context-window {
+  display: grid;
+  gap: calc(var(--line-height) * 1.5);
+  margin: calc(var(--line-height) * 2) 0;
+}
+
+.agent-context-window * {
+  margin-top: 0;
+}
+
+.agent-context-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--line-height) / 2) 2ch;
+  align-items: center;
+  color: var(--text-color-alt);
+}
+
+.agent-token-key {
+  display: inline-block;
+  width: 2ch;
+  height: calc(var(--line-height) * 0.75);
+  margin: 0 1ch 0 0;
+  border: var(--border-thickness) solid var(--text-color);
+  vertical-align: middle;
+}
+
+.agent-token-key--model {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+.agent-token-key--environment {
+  border-color: var(--accent-secondary);
+  background: color-mix(in srgb, var(--accent-secondary) 18%, transparent);
+}
+
+.agent-context-stages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2ch;
+}
+
+.agent-context-stage {
+  display: grid;
+  gap: var(--line-height);
+  padding: var(--line-height) 1ch;
+  border: var(--border-thickness) solid var(--text-color);
+}
+
+.agent-context-stage-title {
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.agent-context-stack {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  padding: 0;
+  list-style: none;
+}
+
+.agent-context-stack > li::before {
+  content: none;
+  counter-increment: none;
+}
+
+.agent-context-message {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) solid var(--text-color-alt);
+  min-height: calc(var(--line-height) * 2);
+}
+
+.agent-context-message--model {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 9%, transparent);
+}
+
+.agent-context-message--environment {
+  border-color: var(--accent-secondary);
+  background: color-mix(in srgb, var(--accent-secondary) 9%, transparent);
+}
+
+.agent-context-message-label {
+  color: var(--text-color-alt);
+}
+
+.agent-context-message-body {
+  overflow-wrap: anywhere;
+}
+
+.agent-context-arrow {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--line-height) * 2);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) dashed var(--text-color-alt);
+  color: var(--text-color-alt);
+  text-align: center;
+}
+
+@media screen and (max-width: 720px) {
+  .agent-context-stages {
+    grid-template-columns: 1fr;
+  }
+}
+
+.agent-flow-diagram {
+  --agent-flow-panel-width: 30ch;
+  --agent-role-system: var(--text-color);
+  --agent-role-developer: #b197fc;
+  --agent-role-tools: var(--accent-secondary);
+  --agent-role-user: #ffd43b;
+  --agent-role-assistant: var(--accent-primary);
+  --agent-role-tool-call: #69db7c;
+  --agent-role-tool-result: #4dabf7;
+  --agent-role-risk: #ff6b6b;
+  --agent-role-muted: var(--text-color-alt);
+  --agent-cache-read: #22b8cf;
+  --agent-cache-write: #ff922b;
+  display: grid;
+  gap: var(--line-height);
+  width: calc(round(down, 100%, 1ch));
+  margin: calc(var(--line-height) * 2) 0;
+  overflow: visible;
+}
+
+.agent-flow-diagram * {
+  margin-top: 0;
+}
+
+.agent-flow-diagram > figcaption {
+  color: var(--text-color-alt);
+}
+
+.agent-flow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--line-height) / 2) 2ch;
+  align-items: center;
+}
+
+.agent-flow-key {
+  display: inline-block;
+  width: 2ch;
+  height: calc(var(--line-height) * 0.75);
+  margin: 0 1ch 0 0;
+  border: var(--border-thickness) solid currentColor;
+  vertical-align: middle;
+}
+
+.agent-flow-key--system {
+  color: var(--agent-role-system);
+}
+
+.agent-flow-key--developer {
+  color: var(--agent-role-developer);
+}
+
+.agent-flow-key--tools {
+  color: var(--agent-role-tools);
+}
+
+.agent-flow-key--user {
+  color: var(--agent-role-user);
+}
+
+.agent-flow-key--assistant {
+  color: var(--agent-role-assistant);
+}
+
+.agent-flow-key--tool-call {
+  color: var(--agent-role-tool-call);
+}
+
+.agent-flow-key--tool-result {
+  color: var(--agent-role-tool-result);
+}
+
+.agent-flow-key--cache-read {
+  color: var(--agent-cache-read);
+  border-style: dashed;
+}
+
+.agent-flow-key--cache-write {
+  color: var(--agent-cache-write);
+  border-style: dashed;
+}
+
+.agent-flow-scroll {
+  width: calc(round(down, 100%, 1ch));
+  max-width: 100%;
+  overflow: visible;
+}
+
+.agent-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--agent-flow-panel-width)), 1fr));
+  gap: 2ch;
+}
+
+.agent-flow-panel {
+  display: grid;
+  align-content: start;
+  gap: calc(var(--line-height) / 2);
+  min-width: 0;
+  padding: 0;
+}
+
+.agent-flow-panel-title {
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.agent-flow-panel-note {
+  color: var(--agent-role-risk);
+}
+
+.agent-flow-stack {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+}
+
+.agent-flow-message {
+  position: relative;
+  display: grid;
+  gap: calc(var(--line-height) / 3);
+  min-height: calc(var(--line-height) * 2);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) solid var(--agent-role-system);
+  overflow-wrap: anywhere;
+}
+
+.agent-flow-message-label {
+  color: var(--text-color-alt);
+}
+
+.agent-flow-message-body {
+  font-weight: var(--font-weight-medium);
+}
+
+.agent-flow-message--system {
+  border-color: var(--agent-role-system);
+}
+
+.agent-flow-message--developer {
+  border-color: var(--agent-role-developer);
+  background: color-mix(in srgb, var(--agent-role-developer) 10%, transparent);
+}
+
+.agent-flow-message--tools {
+  border-color: var(--agent-role-tools);
+  background: color-mix(in srgb, var(--agent-role-tools) 10%, transparent);
+}
+
+.agent-flow-message--user {
+  border-color: var(--agent-role-user);
+  background: color-mix(in srgb, var(--agent-role-user) 8%, transparent);
+}
+
+.agent-flow-message--assistant {
+  border-color: var(--agent-role-assistant);
+  background: color-mix(in srgb, var(--agent-role-assistant) 10%, transparent);
+}
+
+.agent-flow-message--tool-call {
+  border-color: var(--agent-role-tool-call);
+  background: color-mix(in srgb, var(--agent-role-tool-call) 10%, transparent);
+}
+
+.agent-flow-message--tool-result {
+  border-color: var(--agent-role-tool-result);
+  background: color-mix(in srgb, var(--agent-role-tool-result) 10%, transparent);
+}
+
+.agent-flow-message--risk {
+  border-color: var(--agent-role-risk);
+  background: color-mix(in srgb, var(--agent-role-risk) 10%, transparent);
+}
+
+.agent-flow-message--muted {
+  border-color: var(--text-color-alt);
+  color: var(--text-color-alt);
+}
+
+.agent-flow-message.cache-read {
+  box-shadow: inset -0.75ch 0 0 var(--agent-cache-read);
+  padding-right: 2ch;
+}
+
+.agent-flow-message.cache-write {
+  box-shadow: inset -0.75ch 0 0 var(--agent-cache-write);
+  padding-right: 2ch;
+}
+
+.agent-flow-message.is-inserted {
+  box-shadow: inset 0.75ch 0 0 var(--agent-role-risk);
+  padding-left: 2ch;
+}
+
+.agent-flow-message.is-inserted.cache-write {
+  box-shadow:
+    inset 0.75ch 0 0 var(--agent-role-risk),
+    inset -0.75ch 0 0 var(--agent-cache-write);
+  padding-left: 2ch;
+  padding-right: 2ch;
+}
+
+.agent-flow-callout {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  padding: var(--line-height) 1ch;
+  border: var(--border-thickness) dashed var(--text-color-alt);
+  color: var(--text-color-alt);
+}
+
+.agent-flow-callout--risk {
+  border-color: var(--agent-role-risk);
+  color: var(--agent-role-risk);
+}
+
+.agent-flow-compare {
+  display: grid;
+  gap: var(--line-height);
+}
+
+.agent-flow-compare > section {
+  min-width: 0;
+}
+
+.agent-flow-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2ch;
+}
+
+@media screen and (max-width: 720px) {
+  .agent-flow-diagram {
+    --agent-flow-panel-width: 26ch;
+  }
+
+  .agent-flow-split {
+    grid-template-columns: 1fr;
+  }
+}
+
 .diagram-gallery {
   display: grid;
   gap: calc(var(--line-height) * 2);

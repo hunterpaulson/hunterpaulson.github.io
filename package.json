@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "make",
+    "audit:grid": "bun scripts/grid-audit.mjs",
     "export:media": "bun scripts/export-media.mjs",
     "export:art": "bun scripts/export-media.mjs all-gifs",
     "preview": "vite preview",
@@ -18,6 +19,7 @@
   "devDependencies": {
     "gifenc": "^1.0.3",
     "pngjs": "^7.0.0",
+    "prismjs": "^1.30.0",
     "puppeteer-core": "^24.40.0",
     "vite": "^5.4.2"
   }

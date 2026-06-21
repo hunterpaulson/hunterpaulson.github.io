@@ -56,6 +56,12 @@ copy-assets: assets
 copy-src:
 	@mkdir -p $(DIST_DIR)/src
 	@cp -r src/* $(DIST_DIR)/src/
+	@cp node_modules/prismjs/prism.js $(DIST_DIR)/src/prism.js
+	@cp node_modules/prismjs/components/prism-clike.min.js $(DIST_DIR)/src/prism-clike.min.js
+	@cp node_modules/prismjs/components/prism-python.min.js $(DIST_DIR)/src/prism-python.min.js
+	@cp node_modules/prismjs/components/prism-javascript.min.js $(DIST_DIR)/src/prism-javascript.min.js
+	@cp node_modules/prismjs/components/prism-typescript.min.js $(DIST_DIR)/src/prism-typescript.min.js
+	@cp node_modules/prismjs/components/prism-markup.min.js $(DIST_DIR)/src/prism-markup.min.js
 
 
 # Re-generate blog listing when any blog post changes
@@ -75,20 +81,20 @@ clean:
 # Home page (content/index.md -> dist/index.html)
 $(HTML_HOME): $(DIST_DIR)/%.html: $(CONTENT_DIR)/%.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
-	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE) --no-highlight
 
 # Section index pages (blog/index.md, projects/index.md -> dist/*/index.html)
 $(HTML_SECTIONS): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
 	@if [ "$(dir $@)" = "$(DIST_DIR)/blog/" ]; then bun scripts/update-blog-index.js; fi
-	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE) --no-highlight
 
 # Blog posts - use date from frontmatter
 $(HTML_BLOGS): $(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
-	@prepared_md="$(DIST_DIR)/.markdown/blog/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none -s $(CSS_ARGS) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+	@prepared_md="$(DIST_DIR)/.markdown/blog/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none -s $(CSS_ARGS) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE) --no-highlight
 
 # Nested section pages (agent-harness/context-window/index.md -> dist/agent-harness/context-window/index.html)
 $(HTML_NESTED_INDEX_PAGES): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
-	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE)
+	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE) --no-highlight

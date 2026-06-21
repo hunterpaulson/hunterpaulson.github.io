@@ -8,7 +8,7 @@ social-image-alt: Monospace ASCII torus
 
 this is my attempt to recreate [aikon's donut.c](https://www.a1k0n.net/2011/07/20/donut-math.html) animation on the web with obfuscated javascript.
 
-```js
+```{.js .nowrap filename="donut.js"}
              (()=>{w=80;;h=
          45;l=".,-~:;=!*#$@";A
        =B=0;setInterval(_=>{s =(

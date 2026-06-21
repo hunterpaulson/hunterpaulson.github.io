@@ -1,0 +1,230 @@
+.code-block {
+  position: relative;
+  width: 100%;
+  margin: calc(var(--line-height) * 1.5) 0 var(--line-height);
+  border: var(--border-thickness) solid var(--text-color);
+}
+
+.code-block__toolbar {
+  position: absolute;
+  top: calc(var(--line-height) / -2 - var(--border-thickness) / 2);
+  left: 1ch;
+  right: 1ch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--line-height);
+  margin: 0;
+  padding: 0;
+  color: var(--text-color-alt);
+  font-weight: var(--font-weight-medium);
+}
+
+.code-block__toolbar > * {
+  margin: 0;
+  padding: 0;
+  background: var(--background-color);
+}
+
+.code-block__language {
+  min-width: 0;
+  max-width: calc(100% - 7ch);
+  padding: 0 1ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-block pre {
+  margin: 0;
+  padding:
+    calc(var(--line-height) - var(--border-thickness))
+    calc(1ch - var(--border-thickness))
+    calc(var(--line-height) - var(--border-thickness));
+  overflow-x: hidden;
+}
+
+.code-block code {
+  display: block;
+  white-space: normal;
+}
+
+.code-block__line {
+  display: block;
+  min-height: var(--line-height);
+  margin: 0;
+  padding-left: var(--code-indent);
+  overflow-wrap: anywhere;
+  text-indent: calc(0ch - var(--code-indent));
+  white-space: pre-wrap;
+}
+
+.code-block__line + .code-block__line {
+  margin-top: 0;
+}
+
+.code-block pre.nowrap {
+  overflow-x: auto;
+}
+
+.code-block pre.nowrap code {
+  white-space: pre;
+}
+
+.code-block__copy {
+  width: auto;
+  height: var(--line-height);
+  padding: 0;
+  border: 0;
+  color: var(--text-color-alt);
+  background: var(--background-color);
+  line-height: var(--line-height);
+  text-transform: none;
+}
+
+.code-block__copy:hover,
+.code-block__copy:focus-visible {
+  color: var(--accent-primary);
+  background: var(--background-color);
+}
+
+.code-block__copy:active {
+  transform: none;
+}
+
+code[class*="language-"],
+pre[class*="language-"] {
+  background: none;
+  text-shadow: none;
+}
+
+/* Mocha: overlay #6c7086 | Latte: overlay #9ca0b0 */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6c7086;
+}
+:root.theme-light .token.comment,
+:root.theme-light .token.prolog,
+:root.theme-light .token.doctype,
+:root.theme-light .token.cdata {
+  color: #9ca0b0;
+}
+
+/* Mocha: text #cdd6f4 | Latte: text #4c4f69 */
+.token.punctuation {
+  color: #cdd6f4;
+}
+:root.theme-light .token.punctuation {
+  color: #4c4f69;
+}
+
+/* Mocha: peach #fab387 | Latte: peach #fe640b
+   numbers, booleans, constants */
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #fab387;
+}
+:root.theme-light .token.boolean,
+:root.theme-light .token.number,
+:root.theme-light .token.constant,
+:root.theme-light .token.symbol,
+:root.theme-light .token.deleted {
+  color: #fe640b;
+}
+
+/* Mocha: green #a6e3a1 | Latte: green #40a02b
+   strings, builtins */
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted,
+.token.selector,
+.token.attr-name {
+  color: #a6e3a1;
+}
+:root.theme-light .token.string,
+:root.theme-light .token.char,
+:root.theme-light .token.builtin,
+:root.theme-light .token.inserted,
+:root.theme-light .token.selector,
+:root.theme-light .token.attr-name {
+  color: #40a02b;
+}
+
+/* Mocha: sky #89dceb | Latte: sky #04a5e5
+   operators */
+.token.operator,
+.token.entity,
+.token.url {
+  color: #89dceb;
+}
+:root.theme-light .token.operator,
+:root.theme-light .token.entity,
+:root.theme-light .token.url {
+  color: #04a5e5;
+}
+
+/* Mocha: mauve #cba6f7 | Latte: mauve #8839ef
+   keywords, attributes */
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #cba6f7;
+}
+:root.theme-light .token.atrule,
+:root.theme-light .token.attr-value,
+:root.theme-light .token.keyword {
+  color: #8839ef;
+}
+
+/* Mocha: blue #89b4fa | Latte: blue #1e66f5
+   functions, property, tag */
+.token.function,
+.token.class-name,
+.token.property,
+.token.tag {
+  color: #89b4fa;
+}
+:root.theme-light .token.function,
+:root.theme-light .token.class-name,
+:root.theme-light .token.property,
+:root.theme-light .token.tag {
+  color: #1e66f5;
+}
+
+/* Mocha: yellow #f9e2af | Latte: yellow #df8e1d
+   regex, important */
+.token.regex,
+.token.important {
+  color: #f9e2af;
+}
+:root.theme-light .token.regex,
+:root.theme-light .token.important {
+  color: #df8e1d;
+}
+
+/* Mocha: flamingo #f2cdcd | Latte: flamingo #dd7878
+   variables */
+.token.variable {
+  color: #f2cdcd;
+}
+:root.theme-light .token.variable {
+  color: #dd7878;
+}
+
+.token.important {
+  font-weight: inherit;
+}
+
+.token.bold {
+  font-weight: var(--font-weight-bold);
+}
+
+.token.italic {
+  font-style: italic;
+}

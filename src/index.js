@@ -92,27 +92,167 @@ if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(updateMeasuredGridVariables);
 }
 
-function outlineCodeBlocks() {
+function wrapHighlightedCodeLines(code, sourceText) {
+  const sourceLines = sourceText.split("\n");
+  const lineFragments = [document.createDocumentFragment()];
+  let lineIndex = 0;
+
+  function appendText(text, ancestors) {
+    const parts = text.split("\n");
+
+    parts.forEach((part, partIndex) => {
+      let parent = lineFragments[lineIndex];
+
+      for (const ancestor of ancestors) {
+        const clone = ancestor.cloneNode(false);
+        parent.append(clone);
+        parent = clone;
+      }
+
+      parent.append(document.createTextNode(part));
+
+      if (partIndex < parts.length - 1) {
+        lineIndex += 1;
+        lineFragments.push(document.createDocumentFragment());
+      }
+    });
+  }
+
+  function visit(node, ancestors = []) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      appendText(node.textContent, ancestors);
+      return;
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    const nextAncestors = ancestors.concat(node);
+    node.childNodes.forEach((child) => visit(child, nextAncestors));
+  }
+
+  code.childNodes.forEach((child) => visit(child));
+
+  const wrappedLines = lineFragments.map((fragment, index) => {
+    const line = document.createElement("span");
+    const leadingWhitespace = (sourceLines[index] || "").match(/^[\t ]*/)[0];
+    let indentColumns = 0;
+
+    for (const character of leadingWhitespace) {
+      indentColumns = character === "\t"
+        ? indentColumns + (4 - (indentColumns % 4))
+        : indentColumns + 1;
+    }
+
+    line.className = "code-block__line";
+    line.style.setProperty("--code-indent", `${indentColumns}ch`);
+    line.append(fragment);
+    return line;
+  });
+
+  code.replaceChildren(...wrappedLines);
+}
+
+function enhanceCodeBlocks() {
   const codeBlocks = document.querySelectorAll("pre > code");
+  const languageExtensions = {
+    bash: "sh",
+    csharp: "cs",
+    javascript: "js",
+    markdown: "md",
+    markup: "html",
+    python: "py",
+    ruby: "rb",
+    shell: "sh",
+    typescript: "ts",
+    yaml: "yml",
+  };
+
   for (const code of codeBlocks) {
-    if (code.dataset.outlined === "true") {
+    if (code.dataset.enhanced === "true") {
       continue;
     }
-    const textLines = code.textContent.trimEnd().split("\n");
-    const maxWidth = textLines.reduce((max, line) => Math.max(max, line.length), 0);
-    const top = `╭${"─".repeat(maxWidth + 2)}╮`;
-    const bottom = `╰${"─".repeat(maxWidth + 2)}╯`;
-    const htmlLines = code.innerHTML.trimEnd().split("\n");
-    const wrapped = htmlLines.map((htmlLine, i) => {
-      const pad = maxWidth - (textLines[i] ? textLines[i].length : 0);
-      return `│ ${htmlLine}${" ".repeat(pad)} │`;
+
+    const pre = code.parentElement;
+    if (!pre) {
+      continue;
+    }
+    const sourceText = code.textContent;
+
+    const languageClass = Array.from(code.classList).find((className) =>
+      className.startsWith("language-"),
+    );
+    const language = languageClass
+      ? languageClass.slice("language-".length)
+      : "";
+    const extension = languageExtensions[language] || language || "txt";
+    const labelText = pre.dataset.filename || `.${extension}`;
+
+    const shell = document.createElement("div");
+    shell.className = "code-block";
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "code-block__toolbar";
+
+    const label = document.createElement("span");
+    label.className = "code-block__language";
+    label.textContent = labelText;
+    label.title = labelText;
+
+    const copyButton = document.createElement("button");
+    copyButton.className = "code-block__copy";
+    copyButton.type = "button";
+    copyButton.textContent = "[ cp ]";
+    copyButton.setAttribute("aria-label", `Copy ${labelText} code`);
+    copyButton.setAttribute("aria-live", "polite");
+
+    let copyResetTimer;
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(sourceText);
+        copyButton.textContent = "[ ✓ ]";
+        copyButton.setAttribute("aria-label", "Code copied");
+        window.clearTimeout(copyResetTimer);
+        copyResetTimer = window.setTimeout(() => {
+          copyButton.textContent = "[ cp ]";
+          copyButton.setAttribute("aria-label", `Copy ${labelText} code`);
+        }, 1600);
+      } catch {
+        copyButton.textContent = "[ ! ]";
+        copyButton.setAttribute("aria-label", "Could not copy code");
+      }
     });
-    code.innerHTML = [top, ...wrapped, bottom].join("\n");
-    code.dataset.outlined = "true";
+
+    pre.before(shell);
+    shell.append(toolbar, pre);
+    toolbar.append(label, copyButton);
+    if (!pre.classList.contains("nowrap")) {
+      wrapHighlightedCodeLines(code, sourceText);
+    }
+    code.dataset.enhanced = "true";
   }
 }
 
-outlineCodeBlocks();
+if (typeof Prism !== "undefined") {
+  document.querySelectorAll("pre > code").forEach(function (code) {
+    var pre = code.parentElement;
+    var hasLanguage = Array.from(code.classList).some(function (className) {
+      return className.startsWith("language-");
+    });
+    var language = pre && Array.from(pre.classList).find(function (className) {
+      return Prism.languages[className];
+    });
+
+    if (pre && language && !hasLanguage) {
+      code.classList.add("language-" + language);
+      pre.classList.remove(language);
+    }
+  });
+  Prism.highlightAll();
+}
+
+enhanceCodeBlocks();
 
 function centerScrollableDiagrams({ force = false } = {}) {
   const scrollContainers = document.querySelectorAll("figure, .mono-graph-animation__viewport");

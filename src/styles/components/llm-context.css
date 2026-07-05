@@ -1,0 +1,436 @@
+.llm-context-diagram {
+  --llm-context-panel-width: 30ch;
+  --llm-context-cache-bar-width: 0.75ch;
+  --llm-role-system: var(--text-color);
+  --llm-role-developer: #b197fc;
+  --llm-role-tools: var(--accent-secondary);
+  --llm-role-user: #ffd43b;
+  --llm-role-assistant: var(--accent-primary);
+  --llm-role-tool-call: #69db7c;
+  --llm-role-tool-result: #4dabf7;
+  --llm-role-risk: #ff6b6b;
+  --llm-role-benefit: #69db7c;
+  --llm-role-muted: var(--text-color-alt);
+  --llm-context-cache-read: #22b8cf;
+  --llm-context-cache-write: #ff922b;
+  --llm-context-new: var(--text-color);
+  display: grid;
+  gap: var(--line-height);
+  width: calc(round(down, 100%, 1ch));
+  margin: calc(var(--line-height) * 2) 0;
+  overflow: visible;
+}
+
+.llm-context-diagram * {
+  margin-top: 0;
+}
+
+.llm-context-diagram > figcaption {
+  color: var(--text-color-alt);
+}
+
+.llm-context-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--line-height) / 2) 2ch;
+  align-items: center;
+}
+
+.llm-context-key {
+  display: inline-block;
+  width: 2ch;
+  height: calc(var(--line-height) * 0.75);
+  margin: 0 1ch 0 0;
+  border: var(--border-thickness) solid currentColor;
+  vertical-align: middle;
+}
+
+.llm-context-key--system {
+  color: var(--llm-role-system);
+}
+
+.llm-context-key--developer {
+  color: var(--llm-role-developer);
+}
+
+.llm-context-key--tools {
+  color: var(--llm-role-tools);
+}
+
+.llm-context-key--user {
+  color: var(--llm-role-user);
+}
+
+.llm-context-key--assistant {
+  color: var(--llm-role-assistant);
+}
+
+.llm-context-key--tool-call {
+  color: var(--llm-role-tool-call);
+}
+
+.llm-context-key--tool-result {
+  color: var(--llm-role-tool-result);
+}
+
+.llm-context-key--cache-read {
+  color: var(--text-color);
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read);
+}
+
+.llm-context-key--cache-write {
+  color: var(--text-color);
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write);
+}
+
+.llm-context-key--new {
+  color: var(--llm-context-new, var(--text-color));
+}
+
+.llm-context-key--danger {
+  color: var(--llm-role-risk);
+}
+
+.llm-context-key--benefit {
+  color: var(--llm-role-benefit);
+}
+
+.llm-context-scroll {
+  width: calc(round(down, 100%, 1ch));
+  max-width: 100%;
+  overflow: visible;
+}
+
+.llm-context-scroll--nowrap {
+  overflow-x: auto;
+}
+
+.llm-context-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--llm-context-panel-width)), 1fr));
+  gap: 2ch;
+}
+
+.llm-context-grid--pair {
+  grid-template-columns: repeat(2, minmax(var(--llm-context-panel-width), 1fr));
+  grid-template-rows: auto auto;
+  row-gap: calc(var(--line-height) / 2);
+  min-width: calc((var(--llm-context-panel-width) * 2) + 2ch);
+}
+
+.llm-context-grid--pair > .llm-context-panel {
+  grid-row: 1 / span 2;
+  grid-template-rows: subgrid;
+}
+
+.llm-context-grid--pair > .llm-context-panel:first-child {
+  grid-column: 1;
+}
+
+.llm-context-grid--pair > .llm-context-panel:last-child {
+  grid-column: 2;
+}
+
+.llm-context-grid--pair .llm-context-stack {
+  align-self: start;
+}
+
+.llm-context-panel {
+  display: grid;
+  align-content: start;
+  gap: calc(var(--line-height) / 2);
+  min-width: 0;
+  padding: 0;
+}
+
+.llm-context-panel-title {
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.llm-context-panel-note {
+  color: var(--llm-role-risk);
+}
+
+.llm-context-stack {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+}
+
+.llm-context-message {
+  position: relative;
+  display: grid;
+  gap: calc(var(--line-height) / 3);
+  min-height: calc(var(--line-height) * 2);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) solid var(--llm-role-system);
+  overflow-wrap: anywhere;
+}
+
+.llm-context-message-label {
+  color: var(--text-color-alt);
+}
+
+.llm-context-message-body {
+  font-weight: var(--font-weight-medium);
+}
+
+.llm-context-message--system {
+  border-color: var(--llm-role-system);
+}
+
+.llm-context-message--developer {
+  border-color: var(--llm-role-developer);
+  background: color-mix(in srgb, var(--llm-role-developer) 10%, transparent);
+}
+
+.llm-context-message--tools {
+  border-color: var(--llm-role-tools);
+  background: color-mix(in srgb, var(--llm-role-tools) 10%, transparent);
+}
+
+.llm-context-message--user {
+  border-color: var(--llm-role-user);
+  background: color-mix(in srgb, var(--llm-role-user) 8%, transparent);
+}
+
+.llm-context-message--assistant {
+  border-color: var(--llm-role-assistant);
+  background: color-mix(in srgb, var(--llm-role-assistant) 10%, transparent);
+}
+
+.llm-context-message--tool-call {
+  border-color: var(--llm-role-tool-call);
+  background: color-mix(in srgb, var(--llm-role-tool-call) 10%, transparent);
+}
+
+.llm-context-message--tool-result {
+  border-color: var(--llm-role-tool-result);
+  background: color-mix(in srgb, var(--llm-role-tool-result) 10%, transparent);
+}
+
+.llm-context-message--risk {
+  border-color: var(--llm-role-risk);
+  background: color-mix(in srgb, var(--llm-role-risk) 10%, transparent);
+}
+
+.llm-context-message--muted {
+  border-color: var(--text-color-alt);
+  color: var(--text-color-alt);
+}
+
+.llm-context-message.is-danger .llm-context-message-cost {
+  color: var(--llm-role-risk);
+}
+
+.llm-context-message.is-benefit .llm-context-message-cost {
+  color: var(--llm-role-benefit);
+}
+
+.llm-context-diagram--token-costs .llm-context-key:not(
+  .llm-context-key--cache-read,
+  .llm-context-key--cache-write,
+  .llm-context-key--new,
+  .llm-context-key--danger,
+  .llm-context-key--benefit
+) {
+  color: var(--text-color-alt);
+}
+
+.llm-context-diagram--token-costs {
+  --llm-context-cache-read: #56b4e9;
+  --llm-context-cache-write: #e69f00;
+  --llm-context-cache-read-muted: color-mix(in srgb, var(--llm-context-cache-read) 48%, var(--background-color) 52%);
+  --llm-context-cache-write-muted: color-mix(in srgb, var(--llm-context-cache-write) 48%, var(--background-color) 52%);
+  --llm-context-new: var(--text-color);
+  --llm-context-muted-label: color-mix(in srgb, var(--text-color) 42%, var(--background-color) 58%);
+  --llm-context-muted-body: color-mix(in srgb, var(--text-color) 62%, var(--background-color) 38%);
+  --llm-context-active-label: color-mix(in srgb, var(--text-color) 78%, var(--background-color) 22%);
+  --llm-context-active-body: var(--text-color);
+}
+
+.llm-context-diagram--token-costs :is(
+  .llm-context-key--cache-read,
+  .llm-context-key--cache-write
+) {
+  color: var(--llm-context-muted-body);
+}
+
+.llm-context-diagram--token-costs .llm-context-key--cache-read {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read-muted);
+}
+
+.llm-context-diagram--token-costs .llm-context-key--cache-write {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write-muted);
+}
+
+.llm-context-diagram--token-costs .llm-context-key--new {
+  color: var(--llm-context-new);
+}
+
+.llm-context-diagram--token-costs .llm-context-key--danger {
+  color: var(--llm-role-risk);
+}
+
+.llm-context-diagram--token-costs
+  .llm-context-key--benefit {
+  color: var(--llm-role-benefit);
+}
+
+.llm-context-diagram--token-costs .llm-context-key--cache-write.llm-context-key--new {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write);
+}
+
+.llm-context-diagram--token-costs .llm-context-message {
+  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+  border-color: var(--text-color-alt);
+  background: transparent;
+}
+
+.llm-context-diagram--token-costs .llm-context-message > p {
+  display: grid;
+  align-content: space-between;
+  gap: calc(var(--line-height) / 3);
+  height: 100%;
+  margin: 0;
+}
+
+.llm-context-diagram--token-costs
+  .llm-context-message
+  .llm-context-message-label {
+  color: var(--llm-context-muted-label);
+}
+
+.llm-context-diagram--token-costs
+  .llm-context-message
+  :is(.llm-context-message-body, .llm-context-message-cost) {
+  color: var(--llm-context-muted-body);
+}
+
+.llm-context-message.cache-read {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read);
+  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+}
+
+.llm-context-message.cache-write {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write);
+  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+}
+
+.llm-context-diagram--token-costs .llm-context-message.cache-read {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read-muted);
+}
+
+.llm-context-diagram--token-costs .llm-context-message.cache-write {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write-muted);
+}
+
+.llm-context-diagram--token-costs .llm-context-message.is-new {
+  border-color: var(--llm-context-new);
+}
+
+.llm-context-diagram--token-costs
+  .llm-context-message.is-new
+  .llm-context-message-label {
+  color: var(--llm-context-active-label);
+}
+
+.llm-context-diagram--token-costs
+  .llm-context-message.is-new
+  :is(.llm-context-message-body, .llm-context-message-cost) {
+  color: var(--llm-context-active-body);
+}
+
+.llm-context-diagram--token-costs
+  .llm-context-message.is-danger
+  .llm-context-message-cost {
+  color: var(--llm-role-risk);
+}
+
+.llm-context-diagram--token-costs
+  .llm-context-message.is-benefit
+  .llm-context-message-cost {
+  color: var(--llm-role-benefit);
+}
+
+.llm-context-diagram--token-costs .llm-context-message.is-new.cache-read {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read);
+  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+}
+
+.llm-context-diagram--token-costs .llm-context-message.is-new.cache-write {
+  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write);
+  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+}
+
+.llm-context-message-cost {
+  justify-self: end;
+  align-self: end;
+  color: var(--text-color);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.llm-context-diagram--token-costs .llm-context-message--omitted {
+  place-items: center;
+  min-height: var(--line-height);
+  padding-top: 0;
+  padding-bottom: 0;
+  border-style: dashed;
+  text-align: center;
+}
+
+.llm-context-diagram--token-costs .llm-context-message--omitted p {
+  margin: 0;
+}
+
+.llm-context-message.is-inserted {
+  box-shadow: inset 0.75ch 0 0 var(--llm-role-risk);
+  padding-left: 2ch;
+}
+
+.llm-context-message.is-inserted.cache-write {
+  box-shadow:
+    inset 0.75ch 0 0 var(--llm-role-risk),
+    inset -0.75ch 0 0 var(--llm-context-cache-write);
+  padding-left: 2ch;
+  padding-right: 2ch;
+}
+
+.llm-context-callout {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  padding: var(--line-height) 1ch;
+  border: var(--border-thickness) dashed var(--text-color-alt);
+  color: var(--text-color-alt);
+}
+
+.llm-context-callout--risk {
+  border-color: var(--llm-role-risk);
+  color: var(--llm-role-risk);
+}
+
+.llm-context-compare {
+  display: grid;
+  gap: var(--line-height);
+}
+
+.llm-context-compare > section {
+  min-width: 0;
+}
+
+.llm-context-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2ch;
+}
+
+@media screen and (max-width: 720px) {
+  .llm-context-diagram {
+    --llm-context-panel-width: 20ch;
+  }
+
+  .llm-context-split {
+    grid-template-columns: 1fr;
+  }
+}

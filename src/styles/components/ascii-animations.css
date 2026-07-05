@@ -1,0 +1,27 @@
+#farming-field {
+  overflow: hidden;
+  white-space: pre;
+  user-select: none;
+}
+
+#bar-chart-race,
+.automation-futures-chart {
+  overflow: hidden;
+  white-space: pre;
+  user-select: none;
+}
+
+.bar-chart-race-controls,
+.automation-futures-controls {
+  margin-top: var(--line-height);
+}
+
+.bar-chart-race-toggle,
+.automation-futures-toggle {
+  display: inline-block;
+}
+
+.bar-chart-race-toggle-checkbox,
+.automation-futures-toggle-checkbox {
+  margin: 0;
+}

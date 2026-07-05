@@ -1,0 +1,119 @@
+.agent-page-list {
+  display: grid;
+  gap: var(--line-height);
+  padding-left: 0;
+  list-style: none;
+}
+
+.agent-page-list > li {
+  margin-top: 0;
+}
+
+.agent-context-window {
+  display: grid;
+  gap: calc(var(--line-height) * 1.5);
+  margin: calc(var(--line-height) * 2) 0;
+}
+
+.agent-context-window * {
+  margin-top: 0;
+}
+
+.agent-context-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--line-height) / 2) 2ch;
+  align-items: center;
+  color: var(--text-color-alt);
+}
+
+.agent-token-key {
+  display: inline-block;
+  width: 2ch;
+  height: calc(var(--line-height) * 0.75);
+  margin: 0 1ch 0 0;
+  border: var(--border-thickness) solid var(--text-color);
+  vertical-align: middle;
+}
+
+.agent-token-key--model {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+.agent-token-key--environment {
+  border-color: var(--accent-secondary);
+  background: color-mix(in srgb, var(--accent-secondary) 18%, transparent);
+}
+
+.agent-context-stages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2ch;
+}
+
+.agent-context-stage {
+  display: grid;
+  gap: var(--line-height);
+  padding: var(--line-height) 1ch;
+  border: var(--border-thickness) solid var(--text-color);
+}
+
+.agent-context-stage-title {
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.agent-context-stack {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  padding: 0;
+  list-style: none;
+}
+
+.agent-context-stack > li::before {
+  content: none;
+  counter-increment: none;
+}
+
+.agent-context-message {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) solid var(--text-color-alt);
+  min-height: calc(var(--line-height) * 2);
+}
+
+.agent-context-message--model {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 9%, transparent);
+}
+
+.agent-context-message--environment {
+  border-color: var(--accent-secondary);
+  background: color-mix(in srgb, var(--accent-secondary) 9%, transparent);
+}
+
+.agent-context-message-label {
+  color: var(--text-color-alt);
+}
+
+.agent-context-message-body {
+  overflow-wrap: anywhere;
+}
+
+.agent-context-arrow {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--line-height) * 2);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) dashed var(--text-color-alt);
+  color: var(--text-color-alt);
+  text-align: center;
+}
+
+@media screen and (max-width: 720px) {
+  .agent-context-stages {
+    grid-template-columns: 1fr;
+  }
+}

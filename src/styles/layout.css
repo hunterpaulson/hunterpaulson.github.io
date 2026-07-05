@@ -1,0 +1,88 @@
+.width-min {
+  width: 0%;
+}
+.width-auto {
+  width: 100%;
+}
+
+.header {
+  margin-bottom: calc(var(--line-height) * 2);
+}
+.header h1 {
+  margin: 0;
+}
+.header .title {
+  color: var(--text-color);
+}
+/* .header tr td:last-child {
+  text-align: left;
+} */
+
+/* Site title link - no underline, but keep hover effect */
+.site-title {
+  text-decoration: none !important;
+}
+.site-title:hover,
+.site-title:focus {
+  color: color-mix(in srgb, var(--text-color) 60%, var(--background-color) 40%);
+}
+
+/* Blog post header row with title and date */
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 0;
+}
+
+.post-title {
+  margin-top: 0;
+}
+
+.post-date {
+  width: 10ch;
+  text-align: right;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.site-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1ch;
+  flex-wrap: wrap;
+  width: calc(round(down, 100%, 1ch));
+}
+.site-footer > * {
+  margin-top: 0;
+}
+.footer-attribution {
+  line-height: var(--line-height);
+}
+.footer-controls {
+  display: grid;
+  gap: 0;
+  justify-items: start;
+  align-items: start;
+}
+.footer-controls label {
+  width: auto;
+  margin-top: 0;
+  text-align: left;
+}
+
+@media screen and (max-width: 480px) {
+  .site-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .footer-controls {
+    justify-items: start;
+  }
+  .footer-controls label,
+  .debug-toggle-label,
+  .theme-toggle-label {
+    text-align: left;
+  }
+}

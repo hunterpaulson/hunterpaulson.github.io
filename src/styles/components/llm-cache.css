@@ -1,0 +1,348 @@
+/* Reusable token, KV-cache, and retention diagram primitives. */
+.llm-cache-visual {
+  --llm-cache-read: #56b4e9;
+  --llm-cache-write: #e69f00;
+  --llm-cache-not-retained: #ff6b6b;
+  --llm-cache-token-input: color-mix(in srgb, var(--text-color) 48%, var(--background-color) 52%);
+  --llm-cache-token-output: var(--text-color);
+  --llm-cache-muted: var(--text-color-alt);
+  display: grid;
+  gap: var(--line-height);
+  width: calc(round(down, 100%, 1ch));
+  margin: calc(var(--line-height) * 2) 0;
+  overflow: visible;
+}
+
+.llm-cache-visual * {
+  margin-top: 0;
+}
+
+.llm-cache-visual > figcaption {
+  color: var(--text-color-alt);
+}
+
+.llm-cache-scroll {
+  width: calc(round(down, 100%, 1ch));
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.llm-cache-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--line-height) / 2) 1.5ch;
+  align-items: center;
+}
+
+.llm-cache-legend-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.llm-cache-swatch {
+  display: inline-block;
+  width: 2ch;
+  height: calc(var(--line-height) * 0.75);
+  margin: 0 1ch 0 0;
+  border: var(--border-thickness) solid var(--llm-cache-muted);
+  vertical-align: middle;
+}
+
+.llm-cache-swatch--input {
+  border-color: var(--llm-cache-token-input);
+}
+
+.llm-cache-swatch--output {
+  border-color: var(--llm-cache-token-output);
+}
+
+.llm-cache-swatch--write {
+  border-color: var(--llm-cache-write);
+}
+
+.llm-cache-swatch--read {
+  border-color: var(--llm-cache-read);
+}
+
+.llm-cache-swatch--not-retained {
+  border-color: var(--llm-cache-not-retained);
+  border-style: dashed;
+}
+
+.llm-token-sequence {
+  display: flex;
+  gap: 1ch;
+  align-items: stretch;
+  width: max-content;
+  min-width: 100%;
+}
+
+.llm-token-group {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: calc(var(--line-height) / 2);
+  align-content: start;
+}
+
+.llm-token-group + .llm-token-group {
+  padding-left: 1ch;
+  border-left: var(--border-thickness) dashed var(--text-color-alt);
+}
+
+.llm-token-group-label {
+  color: var(--text-color-alt);
+  text-align: center;
+}
+
+.llm-token-columns {
+  display: flex;
+  gap: 1ch;
+  align-items: start;
+}
+
+.llm-token-column {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: calc(var(--line-height) / 2);
+  width: 10ch;
+}
+
+.llm-token-cell {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--line-height) * 2);
+  padding: calc(var(--line-height) / 2) 0;
+  border: var(--border-thickness) solid var(--llm-cache-token-input);
+  color: var(--llm-cache-token-input);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.llm-token-cell--input {
+  border-color: var(--llm-cache-token-input);
+  color: var(--llm-cache-token-input);
+}
+
+.llm-token-cell--output,
+.llm-token-cell--generated,
+.llm-token-cell--current {
+  border-color: var(--llm-cache-token-output);
+  color: var(--llm-cache-token-output);
+}
+
+.llm-token-cell--omitted {
+  min-height: var(--line-height);
+  padding-top: 0;
+  padding-bottom: 0;
+  border-style: dotted;
+}
+
+.llm-kv-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: calc(var(--line-height) * 1.5);
+  border: var(--border-thickness) solid var(--llm-cache-muted);
+  color: var(--llm-cache-muted);
+}
+
+.llm-kv-pair > span {
+  display: grid;
+  place-items: center;
+}
+
+.llm-kv-pair > span + span {
+  border-left: var(--border-thickness) solid currentColor;
+}
+
+.llm-kv-pair--cache-write,
+.llm-kv-pair--retained {
+  border-color: var(--llm-cache-write);
+  border-style: solid;
+  color: var(--llm-cache-write);
+}
+
+.llm-kv-pair--cache-read {
+  border-color: var(--llm-cache-read);
+  border-style: solid;
+  color: var(--llm-cache-read);
+}
+
+.llm-kv-pair--not-retained,
+.llm-kv-pair--missing {
+  border-color: var(--llm-cache-not-retained);
+  border-style: dashed;
+  color: var(--llm-cache-not-retained);
+}
+
+.llm-kv-pair--not-retained > span + span,
+.llm-kv-pair--missing > span + span {
+  border-left-style: dashed;
+}
+
+.llm-kv-pair--new {
+  border-color: var(--llm-cache-write);
+  color: var(--llm-cache-write);
+}
+
+.llm-decode-step {
+  display: grid;
+  grid-template-columns: 13ch 3ch max-content 3ch 10ch;
+  gap: 1ch;
+  align-items: center;
+  width: max-content;
+  min-width: 100%;
+}
+
+.llm-decode-stage {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  align-content: start;
+}
+
+.llm-decode-stage-label {
+  min-height: var(--line-height);
+  color: var(--text-color-alt);
+  text-align: center;
+}
+
+.llm-decode-arrow {
+  color: var(--accent-primary);
+  text-align: center;
+}
+
+.llm-vector-triplet {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: var(--border-thickness) solid var(--llm-cache-read);
+  color: var(--llm-cache-read);
+}
+
+.llm-vector-triplet > span {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--line-height) * 1.5);
+}
+
+.llm-vector-triplet > span + span {
+  border-left: var(--border-thickness) solid currentColor;
+}
+
+.llm-kv-bank {
+  display: flex;
+  gap: 1ch;
+}
+
+.llm-kv-bank .llm-token-column {
+  width: 10ch;
+}
+
+.llm-cache-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(30ch, 1fr));
+  gap: 2ch;
+  min-width: 64ch;
+}
+
+.llm-cache-lane {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  align-content: start;
+}
+
+.llm-cache-lane-title {
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.llm-cache-stage {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  min-height: calc(var(--line-height) * 3);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) solid var(--llm-cache-muted);
+  align-content: center;
+}
+
+.llm-cache-stage--live {
+  border-color: var(--text-color);
+}
+
+.llm-cache-stage--retained {
+  border-color: var(--llm-cache-write);
+  border-style: solid;
+}
+
+.llm-cache-stage--missing {
+  border-style: dotted;
+  color: var(--text-color-alt);
+}
+
+.llm-cache-stage-label {
+  color: var(--text-color-alt);
+}
+
+.llm-mini-kv-strip {
+  display: flex;
+  gap: 0.5ch;
+}
+
+.llm-mini-kv-strip .llm-kv-pair {
+  width: 5ch;
+  min-height: var(--line-height);
+}
+
+.llm-cache-action {
+  min-height: var(--line-height);
+  color: var(--text-color-alt);
+  text-align: center;
+}
+
+.llm-memory-hierarchy {
+  display: grid;
+  gap: calc(var(--line-height) / 2);
+  min-width: 58ch;
+}
+
+.llm-memory-tier {
+  display: grid;
+  grid-template-columns: 15ch minmax(22ch, 1fr) 16ch;
+  gap: 1ch;
+  min-height: calc(var(--line-height) * 3);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border: var(--border-thickness) solid var(--llm-cache-muted);
+  align-items: center;
+}
+
+.llm-memory-tier--hbm {
+  border-color: var(--text-color);
+}
+
+.llm-memory-tier--host {
+  border-color: var(--llm-cache-write);
+}
+
+.llm-memory-tier--remote {
+  border-style: dotted;
+}
+
+.llm-memory-tier-name {
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.llm-memory-tier-tradeoff {
+  color: var(--text-color-alt);
+  text-align: right;
+}
+
+.llm-memory-arrow {
+  color: var(--text-color-alt);
+  text-align: center;
+}
+
+.llm-cache-design-note {
+  padding: calc(var(--line-height) / 2) 1ch;
+  border-left: 1ch solid var(--accent-secondary);
+  color: var(--text-color-alt);
+}

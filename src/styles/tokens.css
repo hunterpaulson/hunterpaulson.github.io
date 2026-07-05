@@ -1,0 +1,32 @@
+:root {
+  --font-family: "JetBrains Mono", monospace;
+  --line-height-target: 1.20rem;
+  --line-height: var(--line-height-target);
+  --measured-ch: 1ch;
+  --measured-row: var(--line-height);
+  --border-thickness: 2px;
+  --text-color: #f9f6ee;
+  --text-color-alt: #b0b3b8; /* ashy grey */
+  --background-color: #06180f;
+  --accent-primary: #82cbff;
+  --accent-secondary: #ffb166;
+
+  --font-weight-normal: 500;
+  --font-weight-medium: 600;
+  --font-weight-bold: 800;
+
+  font-family: var(--font-family);
+  font-optical-sizing: auto;
+  font-weight: var(--font-weight-normal);
+  font-style: normal;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 16px;
+}
+
+:root.theme-light {
+  --text-color: #06180f;
+  --text-color-alt: #3a6b35; /* plant green */
+  --background-color: #f9f6ee;
+  --accent-primary: #6fb8e6;
+  --accent-secondary: #d97a2b;
+}

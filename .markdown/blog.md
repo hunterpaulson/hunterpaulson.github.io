@@ -18,6 +18,7 @@ twitter-card: "summary_large_image"
 
 <!-- BLOG-POSTS:START -->
 
+- 2026-07-04 — [LLM API providers are charging you _twice_ for output tokens](/blog/cache-write-output-tokens/)
 - 2026-04-30 — [how to build the fastest wikipedia race solver on the internet](/blog/wikipedia-race-solver/)
 - 2026-03-15 — [stochastic agentic ascent](/blog/stochastic-agentic-ascent/)
 - 2026-03-08 — [just another abstraction](/blog/just-another-abstraction/)

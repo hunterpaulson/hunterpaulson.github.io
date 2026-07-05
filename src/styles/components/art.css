@@ -1,0 +1,67 @@
+.art-section {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.art-actions {
+  margin: 0 0 var(--line-height);
+}
+
+.art-section--graph + .art-actions {
+  margin-top: var(--line-height);
+}
+
+.art-actions a + a {
+  margin-left: 1ch;
+}
+
+.art-section > :first-child {
+  margin-top: 0;
+}
+
+.art-section > :last-child {
+  margin-bottom: 0;
+}
+
+.matrix-rain {
+  --matrix-green: #00ff73;
+  --matrix-head: #f2fff7;
+  position: relative;
+  width: 100%;
+  height: 0;
+  margin: calc(var(--line-height) * 2) auto;
+  overflow: hidden;
+  background: var(--background-color);
+  color: var(--matrix-green);
+}
+
+:root.theme-light .matrix-rain {
+  --matrix-green: var(--text-color);
+  --matrix-head: var(--text-color);
+}
+
+.matrix-rain > * {
+  margin: 0;
+}
+
+.matrix-rain__cell {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 1ch;
+  height: var(--line-height);
+  margin: 0;
+  background: transparent;
+  color: var(--matrix-green);
+  line-height: var(--line-height);
+  opacity: var(--matrix-opacity, 0);
+  text-align: center;
+  text-shadow: none;
+  will-change: contents, opacity;
+}
+
+.matrix-rain__cell--head {
+  color: var(--matrix-head);
+  text-shadow: 0 0 0.18em color-mix(in srgb, var(--matrix-head) 45%, var(--matrix-green) 55%);
+}

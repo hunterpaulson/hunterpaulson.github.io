@@ -48,15 +48,19 @@
     <td class="width-min"><a href="https://www.linkedin.com/in/hunterpaulson">linkedin</a></td>
   </tr>
 </table>
+<nav id="TOC" role="doc-toc">
+<h2 id="toc-title">Contents</h2>
+
+</nav>
 <h1 id="llm-api-providers-are-charging-you-twice-for-output-tokens">LLM API providers are charging you <em>twice</em> for output tokens</h1>
-<p>Under agentic inference patterns current apis charge you twice for the output tokens. Once when they are generated, at output price, and again, at cache write price, when they are written to the prompt prefix cache on the subsequent api call.</p>
+<p>Under agentic inference patterns current APIs charge you twice for output tokens. Once when they are generated, at output price, and again when they are written to the prompt prefix cache, at cache write price, on the subsequent API call.</p>
 <p>It doesn’t have to be this way. Open source inference engines, <a href="https://github.com/sgl-project/sglang">SGLang</a> and <a href="https://github.com/vllm-project/vllm">vLLM</a>, retain the KV cache for <em>both</em> prompts and generations.</p>
-<p>LLM API provider’s inference engines are almost surely capable of this under the hood as well, however current apis don’t give us a way to request the retention of KVs for output tokens.</p>
-<p>There needs to be a way for us to signal, or even <a href="#proposed-new-pricing-model">pay</a>, them to store output tokens as well.</p>
-<h2 id="all-apis-only-cache-the-prompt-input-not-the-output."><em>all</em> apis only cache the prompt (input), not the output.</h2>
-<p>LLM APIs only allow us to request that computation done for input tokens is retained so that it can be reused on future requests with the same prompt prefix. This is called <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">prompt</a> <a href="https://developers.openai.com/api/docs/guides/prompt-caching">caching</a>.</p>
-<p>This worked fine for chatbots (<a href="#prompt-caching-was-built-for-chatbots-not-agents">see appendix</a>), but with current ‘agentic’ inference patterns this is no longer sufficient. This is becasue <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop">agent loops</a> always<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> reuse the output from the previous result on the very next api request.</p>
-<p>Here is what this looks like at Anthropic’s Fable 5<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a> api prices:</p>
+<p>LLM API providers’ inference engines are almost surely capable of this under the hood as well, however current APIs don’t give their users a way to request the retention of KVs for output tokens.</p>
+<p>There needs to be a way for API users to signal, or even <a href="#proposed-new-pricing-model">pay</a>, providers to store output tokens as well.</p>
+<h2 id="all-apis-only-cache-the-prompt-input-not-the-output."><em>all</em> APIs only cache the prompt (input), not the output.</h2>
+<p>LLM APIs allow their users to request that KVs computed for input tokens be retained so that they can be reused on future requests with the same prompt prefix. This is aptly called <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">prompt</a> <a href="https://developers.openai.com/api/docs/guides/prompt-caching">caching</a>.</p>
+<p>This worked fine for chatbots (<a href="#prompt-caching-was-built-for-chatbots-not-agents">see appendix</a>), but is no longer sufficient for agents. The core of every agent, the <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop">agent loop</a>, always<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> reuses the output from the previous result on the following API request. Because the output from the previous request was not cached we must pay to write it to the cache on the next request.</p>
+<p>Let’s walk through a minimal example of what this looks like from the perspective of someone using Anthropic’s <a href="https://platform.claude.com/docs/en/about-claude/models/introducing-claude-fable-5-and-claude-mythos-5">Fable 5</a> through the API. This looks identical for OpenAI and Gemini APIs just with different pricing.</p>
 <figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>
 legend
@@ -74,7 +78,7 @@ request 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write is-new">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write is-new">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
@@ -87,7 +91,7 @@ result 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
@@ -103,7 +107,7 @@ result 1
 </div>
 </div>
 <figcaption>
-initial request <em>only retains input tokens</em> in the prompt cache even though all messages will be prefix of next request
+initial request <em>only retains input tokens</em> in the prompt cache even though all messages will be in prefix of next request
 </figcaption>
 </figure>
 <figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
@@ -115,7 +119,7 @@ request 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
@@ -137,7 +141,7 @@ result 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
@@ -162,20 +166,20 @@ result 2
 since the assistant message and tool call weren’t cached after output you have to pay <em>cache write</em> input price for tokens you <strong>already paid full output price</strong> for
 </figcaption>
 </figure>
-<p>Notice that you pay for assistant tokens, with tool calls, twice.</p>
-<p>For every token generated before the last api request in the agent loop you pay output tokens at least 2 times. First you pay for the tokens as they are generated (result 1). Then on the very next request after you execute the tools and append the tool results to the context you pay to add the tokens to the ‘prompt prefix cache’ (request 2). Then you pay to read them from cache on every following request before compaction.</p>
+<p>Notice that you pay for assistant tokens with tool calls twice.</p>
+<p>For every token generated before the last API request in the agent loop you pay output tokens at least 2 times. First you pay for the tokens as they are generated (result 1). Then on the very next request, after you execute the tools and append the tool results to the context, you pay to add the tokens to the ‘prompt prefix cache’ (request 2). Then you pay to read them from cache on every following request before compaction.</p>
 <!-- ## but I don't pay API prices? this still burns through your limits 20% faster. -->
 <!-- Say you prompt `claude-fable-5` in Claude Code to see why it is burning through your limit so fast. -->
 <h2 id="how-much-are-we-actually-paying-for-output-tokens">how much are we actually paying for output tokens?</h2>
 <blockquote>
 <p>~<strong>16-25%</strong> more than advertised</p>
 </blockquote>
-<p>Naively, if we are paying output price upon generation and then cache write input price on the next request then we can just add up their costs to get a estimate of how much we are really paying for ‘agentic output tokens’<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>.</p>
-<pre data-filename="Claude Fable 5"><code>output + cache WRITE input = cost of &#39;agentic&#39; output tokens
+<p>Naively, if we are paying output price upon generation and then cache write input price on the next request then we can just add up their costs to get an estimate of how much we are really paying for ‘agentic output tokens’<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+<pre data-filename="Claude Fable 5"><code>output + cache WRITE input = cost of &#39;agentic output tokens&#39;
 $50.00 + $12.50            = $62.50 / 1M tokens
 
 $62.50 / $50.00 = 1.25 =&gt; 25% more than advertised output price</code></pre>
-<pre data-filename="GPT 5.6 Sol"><code>output + cache WRITE input = cost of &#39;agentic&#39; output tokens
+<pre data-filename="GPT 5.6 Sol"><code>output + cache WRITE input = cost of &#39;agentic output tokens&#39;
 $30.00 + $5.00             = $35.00 / 1M tokens
 
 $35.00 / $30.00 = 1.1667 =&gt; 16.67% more than advertised output price</code></pre>
@@ -183,8 +187,8 @@ $35.00 / $30.00 = 1.1667 =&gt; 16.67% more than advertised output price</code></
 <h1 id="it-doesnt-have-to-be-this-way">it doesn’t have to be this way</h1>
 <p>From the perspective of the prompt prefix cache there is no difference between input and output tokens, it is all just tokens.</p>
 <p>Just like they retain the KV cache blocks for input tokens, providers can <strong>retain the KV cache blocks created during generation</strong> so we no longer have to pay for cache write on the next call.</p>
-<p>Lets take a look at what goes on under the hood with the prompt prefix cache for our two requests in the example above.</p>
-<figure class="llm-cache-visual" aria-label="legend for token and kv cache diagrams">
+<p>Let’s take a look at what goes on under the hood with the prompt prefix cache for our two requests in the example above.</p>
+<figure class="llm-cache-visual" aria-label="legend for token and KV cache diagrams">
 <figcaption>
 legend
 </figcaption>
@@ -192,7 +196,7 @@ legend
 <p><span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--input"></span>input token</span> <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--output"></span>output token</span> <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--write"></span>cache write retained</span> <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--read"></span>cache read</span> <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--not-retained"></span>not retained</span></p>
 </div>
 </figure>
-<h2 id="request-1">request 1:</h2>
+<h3 id="request-1">request 1:</h3>
 <figure class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
@@ -248,7 +252,7 @@ tool call
 during prefill and decode KVs are generated for input and output tokens respectively. However only KVs for input tokens are retained in the prompt prefix cache between requests
 </figcaption>
 </figure>
-<h2 id="request-2">request 2:</h2>
+<h3 id="request-2">request 2:</h3>
 <figure class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
@@ -327,18 +331,18 @@ assistant
 assistant and tool call KVs that weren’t retained from the previous request are now <em>recomputed</em> during prefill
 </figcaption>
 </figure>
-<p>During inference, Key and Value vectors (KVs) are generated for every token. KVs for input tokens are generated all at once during prefill. And the K and V for each output token is generated one at time during autoregressive decode<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>.</p>
-<p>After generation decode is complete (because LLM completed a tool call) the KVs are <em>retained</em> in blocks<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> so they can be reused, instead of recomputed, during the subsequent request.</p>
+<p>During inference, Key and Value vectors (KVs) are generated for every token. KVs for input tokens are generated all at once during prefill. And the K and V for each output token is generated one at a time during autoregressive decode<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>.</p>
+<p>After decode is complete (because LLM completed a tool call) blocks<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a> of KVs are <em>retained</em> in cache so they can be reused, instead of recomputed, during the subsequent request.</p>
 <p>However only KV blocks for input tokens are <em>retained</em>, meaning that output tokens from request 1 must be <code>recomputed</code> during prefill stage of request 2.</p>
-<p>If this sounds redundant that’s because it is. There is nothing preventing them from retaining the KV blocks for the output tokens too. In fact this is exactly what the open source inference engines <a href="https://github.com/sgl-project/sglang">SGLang</a><a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a> and <a href="https://github.com/vllm-project/vllm">vLLM</a><a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a> do.</p>
+<p>If this sounds redundant that’s because it is. There is nothing preventing them from retaining the KV blocks for the output tokens too. In fact this is exactly what the open source inference engines <a href="https://github.com/sgl-project/sglang">SGLang</a><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> and <a href="https://github.com/vllm-project/vllm">vLLM</a><a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a> do.</p>
 <h1 id="how-it-should-look">how it should look</h1>
 <!-- > Never refill tokens you just `decoded`. -->
 <blockquote>
 <p>Never <code>prefill</code> tokens you just <code>decoded</code></p>
 </blockquote>
-<p>Instead of discarding the KVs for output tokens we can just retain their blocks with the rest of the prompt prefix cache at the end of request 1.</p>
-<p>Then on our next request (request 2) all of our tokens from request 1 will be in the prompt prefix cache, saving us from recomputing anything during prefill.</p>
-<h2 id="request-1-1">request 1:</h2>
+<p>Instead of discarding the KVs for output tokens providers can just retain their blocks with the rest of the prompt prefix cache at the end of request 1.</p>
+<p>Then on the next request (request 2) all KV blocks from request 1 will be in the prompt prefix cache, saving the inference engine from recomputing anything during prefill.</p>
+<h3 id="request-1-1">request 1:</h3>
 <figure class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
@@ -391,10 +395,10 @@ tool call
 </div>
 </div>
 <figcaption>
-KVs generated during decode are <em>retained</em> with the rest of the prompt prefix cache so they can be resued in the next request
+KVs generated during decode are <em>retained</em> with the rest of the prompt prefix cache so they can be reused in the next request
 </figcaption>
 </figure>
-<h2 id="request-2-1">request 2:</h2>
+<h3 id="request-2-1">request 2:</h3>
 <figure class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
@@ -474,8 +478,8 @@ now only the KVs for the <em>tool result</em> are computed during prefill since 
 </figcaption>
 </figure>
 <p>Notice how there is no longer any overlap between prefill and decode across requests.</p>
-<h3 id="how-this-looks-from-the-api-user-perspective">how this looks from the API user perspective</h3>
-<p>If API providers retain output tokens in the prompt prefix cache then we only have to pay <strong>cache read</strong> price for every subsequent request that contains them.</p>
+<h2 id="how-this-looks-from-the-api-user-perspective">how this looks from the API user perspective</h2>
+<p>If API providers retain output tokens in the prompt prefix cache then users only have to pay <strong>cache read</strong> price for every subsequent request that contains them.</p>
 <figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>
 legend
@@ -493,7 +497,7 @@ request 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write is-new">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write is-new">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
@@ -506,7 +510,7 @@ result 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
@@ -534,7 +538,7 @@ request 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
@@ -556,7 +560,7 @@ result 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a weather man</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
@@ -581,12 +585,12 @@ result 2
 On the next request input assistant message and tool call are charged at cache <strong>read</strong> pricing. Only the tool result needs to pay cache input price
 </figcaption>
 </figure>
-<p>Notice how now we only pay full price for new input or output tokens the first time they appear. From then on they are always ‘cache read input tokens’.</p>
+<p>Notice how now API users only pay full price for new input or output tokens the first time they appear. From then on they are always ‘cache read input tokens’.</p>
 <h2 id="how-much-money-would-this-save">how much money would this save?</h2>
 <blockquote>
 <p>~<strong>12.9-18.4%</strong> on output tokens, depending on the provider.</p>
 </blockquote>
-<p>Now that we understand how prompt prefix caching should work lets estimate how much we should ideally be paying.</p>
+<p>Now that we understand how prompt prefix caching should work let’s estimate how much this would save API users<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>.</p>
 <pre data-filename="Claude Fable 5"><code>output + cache WRITE input = CURRENT cost of output tokens
 $50.00 + $12.50            = $62.50 / 1M tokens
 
@@ -594,7 +598,7 @@ output + cache READ  input = IDEAL   cost of output tokens
 $50.00 + $1.00             = $51.00 / 1M tokens
 
 $62.50 - $51.00 = $11.50 extra per 1M output tokens
-$51.00 / $62.50 = 0.816 =&gt; 18.4% more than necessary</code></pre>
+$51.00 / $62.50 = 0.816 =&gt; 18.4% savings</code></pre>
 <pre data-filename="GPT 5.6 Sol"><code>output + cache WRITE input = CURRENT cost of output tokens
 $30.00 + $5.00             = $35.00 / 1M tokens
 
@@ -602,12 +606,12 @@ output + cache READ  input = IDEAL   cost of output tokens
 $30.00 + $0.50             = $30.50 / 1M tokens
 
 $35.00 - $30.50 = $4.50 extra per 1M output tokens
-$30.50 / $35.00 = 0.871 =&gt; 12.9% more than necessary</code></pre>
+$30.50 / $35.00 = 0.871 =&gt; 12.9% savings</code></pre>
 <h2 id="this-improves-performance-too">this improves performance too</h2>
 <!-- The purpose of the prompt prefix cache isn't just to save money. Its primary purpose is to reduce the amount of precious compute that needs to be done for every request.
 Running GPUs costs money so saving a even a few FLOPs^[FLoating point OPerations, the total number of adds and multiplies.] per request can lower response time as well as cost. -->
 <p><code>Time to first token (TTFT):</code></p>
-<p>No<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a> recomputation means less computation done during prefill. and prefill is <a href="https://jax-ml.github.io/scaling-book/roofline/">compute bound</a> less computation means users get the first token faster.</p>
+<p>No<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a> recomputation means less computation done during prefill. and prefill is <a href="https://jax-ml.github.io/scaling-book/roofline/">compute bound</a> so less computation means users get their first token faster.</p>
 <!-- From [OpenAI's prompt caching docs](https://developers.openai.com/api/docs/guides/prompt-caching#how-it-works):
 
 > Cache Hit: If a matching prefix is found, the system uses the cached result. This significantly decreases latency and reduces costs. -->
@@ -615,23 +619,12 @@ Running GPUs costs money so saving a even a few FLOPs^[FLoating point OPerations
 <p><code>Cache Hit Rate:</code></p>
 <p>the <a href="https://arxiv.org/pdf/2312.07104">SGLang Radix Attention Paper</a> defines the “cache hit rate as number of <code>cached prompt tokens / number of prompt tokens</code>”</p>
 <p>Since output tokens are part of the subsequent prompt it is trivial to see that having them cached will improve the cache hit rate, up to its theoretical limit.</p>
-<p>however it is impossible to reach 100% under this definition since entirely new tokens are appended to the context each model request, e.g. tool results or new user prompts. instead we should measure <code>cache read input tokens</code> / <code>total tokens at the end of previous request</code> to have higher signal into true cache reuse and more easily see when we invalidate the prompt prefix cache.</p>
-<h3 id="why-doesnt-it-look-this-way">why doesn’t it look this way?</h3>
-<p>APIs were designed for chatbot applications.</p>
-<p>NOTE: this section is entirely speculative</p>
-<p>engineers at these labs are smarter than me so somebody has to know this. Just incentives make it so</p>
-<p>everyone is pretty much standardized on three api formats: OpenAI completions and responses and Anthropic’s messages.</p>
-<p>so other inference providers just use the same standard.</p>
-<p>so until someone implements this then nobody has to. but as soon as one does then everyone does. since its hard to compete with a &gt;10% discount.</p>
-<p>Their internal inference engines probably already do this for their internal inference.</p>
-<p>if anthropic doesn’t already do output KV reuse internally then this is quite literally a <a href="https://nonint.com/2023/11/05/compute-multipliers/">compute multiplier</a> for them.</p>
-<p>note this may not save compute at all because it is almost guaranteed that providers already do this anyway.</p>
-<p>While it is possible that providers already do this under the hood but since that would be a PR nightmare I doubt it.</p>
-<h1 id="how-can-api-providers-fix-this">how can API providers fix this?</h1>
-<p>they need to proide a way for users to request that the output token blocks are retained in the prompt prefix cache.</p>
+<p>however it is impossible to reach 100% under this definition since entirely new tokens are appended to the context each model request, e.g. tool results or new user prompts. instead everyone should measure <code>cache read input tokens</code> / <code>total tokens at the end of previous request</code> to have higher signal into true cache reuse and more easily see when a request invalidates the prompt prefix cache.</p>
+<h1 id="how-can-api-providers-support-this">how can API providers support this?</h1>
+<p>APIs need to have a way for users to request that the output token blocks are retained in the prompt prefix cache.</p>
 <p>For providers with <em>implicit</em> caching like <a href="https://developers.openai.com/api/docs/guides/prompt-caching#requirements">OpenAI</a> and <a href="https://ai.google.dev/gemini-api/docs/caching#implicit-caching">Gemini</a> they can make this change entirely on the backend since they already handle caching for their users.</p>
 <p>For providers with <em>explicit</em> caching like <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">Anthropic</a> this requires an update to the API.</p>
-<h2 id="proposed-anthropic-api-implementation">proposed Anthropic api implementation</h2>
+<h2 id="proposed-anthropic-api-implementation">proposed Anthropic API implementation</h2>
 <p>if people are already using <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching#automatic-caching">automatic caching</a>, Anthropic could extend their top level <code>cache_control</code> object with an optional key.</p>
 <pre class="python"><code># call
 response = client.messages.create(
@@ -640,7 +633,7 @@ response = client.messages.create(
     ####################################
     cache_control={ # existing automatic caching param
         &quot;cache_output&quot;: True, # new, indicates to cache output
-        &quot;type&quot;: &quot;ephemeral&quot; # or e.g. &quot;intelligent&quot; to only retain cache if stop_reason == &quot;tool_use&quot;
+        &quot;type&quot;: &quot;ephemeral&quot;, # or e.g. &quot;intelligent&quot; to only retain cache if stop_reason == &quot;tool_use&quot;
         &quot;ttl&quot;: &quot;5m&quot;
     },
     ####################################
@@ -666,38 +659,48 @@ response = client.messages.create(
 }</code></pre>
 <h2 id="proposed-new-pricing-model">proposed new pricing model</h2>
 <p>Again, providers where caching is already priced in<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a> don’t need to change anything.</p>
-<p>however anthropic charges extra for storing the KV cache between requests. they charge 25% of the price of input tokens to store these in cache for up to 5 minutes. essentially this is a flat cost paid per token when that token is retained in the prompt prefix cache between api requests. currently it is only applied to input tokens but since there is no fundamental difference between caching input and output tokens it would make sense to have a single price for caching any type of token.</p>
-<p>If they continue with the same pricing model they would likely need to add something akin to a <code>cache_retention_per_1M_tokens</code>. lets assume this would be at the same 0.25x input token price it is currenlty.</p>
+<p>however Anthropic charges extra for storing the KV cache between requests. they charge 25% of the price of input tokens to store these in cache for up to 5 minutes. essentially this is a flat fee paid per token when that token is retained in the prompt prefix cache between API requests. currently it is only applied to input tokens but since there is no fundamental difference between caching input and output tokens it would make sense to have a single price for caching any type of token.</p>
+<p>If they continue with the same pricing model they would likely need to add something akin to a <code>cache_retention_per_1M_tokens</code>. let’s assume this would be at the same 0.25x input token price it is currently.</p>
 <p>so for Fable 5 this would be <code>$10.00 * 0.25 = $2.50</code> per 1M tok</p>
-<pre data-filename="Claude Fable 5"><code>output + cache WRITE tax + cache READ input = LIKELY cost of output tokens
+<pre data-filename="Claude Fable 5"><code>output + cache WRITE fee + cache READ input = LIKELY cost of output tokens
 $50.00 + $2.50           + $1.00            = $53.50 / 1M tokens
 
 $62.50 - $53.50 = $9.00 saved per 1M output tokens
 $53.50 / $62.50 = 0.856 =&gt; 14.4% savings</code></pre>
-<p>Not quite as good as the 18.4% from <a href="#how-much-money-would-this-save">above</a> but still a free ~15% savings.</p>
-<h2 id="what-about-the-final-assistant-message-at-the-end-of-a-turn">what about the final assistant message at the end of a turn?</h2>
-<p>as we discussed earlier, we expect <em>every</em> assistant message with tool calls to have a follow up api request, with tool results, before the cache expiration.</p>
-<p>however eventually the loop stops and we don’t want to pay to cache those final output tokens do we?</p>
-<p>it <a href="#when-should-i-write-to-the-cache">depends</a> … on whether or not the user will send a follow up message/request before the cache retention period expries</p>
-<p>so how do we know when to cache?</p>
-<p>… we dont</p>
-<p>… but the llm does</p>
-<p><em>Notice how whether or not we want to cache depends on what the LLM decides to do</em>.</p>
-<p>If the llm calls a tool we want to cache. If the llm does not then we probably don’t since we have no guarantee of an subsequent api request that will make use of whatever we just cached.</p>
-<p>and it turns out that implementing this is pretty simple: providers can distinguish between these two cases based on the <code>stop_reason</code> for why decode ended. Cache when <code>stop_reason == "tool_use"</code> and don’t cache when <code>stop_reason in ("end_turn", "refusal")</code>.</p>
-<!-- in most scenarios the inner^[to distinguish it from _outer_ loops like [ralph](https://ghuntley.com/loop/), [/goal](https://developers.openai.com/codex/use-cases/follow-goals), and [/loop](https://code.claude.com/docs/en/scheduled-tasks#run-a-prompt-repeatedly-with-/loop)] [agent loop](#minimal-append-only-agent-loop) ends when the the model generates an api without any tool calls. -->
-<p>Notice that this doesn’t just have to apply to the proposed cache write output tokens. we can apply this conditional cache retention to all new tokens in this request.</p>
-<!-- Why stop at just output tokens? If we don't want to cache output tokens when a request emits zero tool calls then we can apply the same logic to the new input tokens we sent this request too. -->
-<p>this would be huge because it would allow callers to not request a cache write for <em>any</em> new tokens (input and output) if there aren’t any tool calls.</p>
-<!-- my understanding is that cache _retention_ happens after the generation is complete.
-because this is when the KV cache is moved from HBM into other storage.
-so theoretically providers could check if there were tool calls and _reatin_ the KV cache if there werent any -->
+<p>Not quite as good as the 18.4% from <a href="#how-much-money-would-this-save">above</a> but still a free almost 15% savings.</p>
+<h2 id="why-dont-apis-already-support-this">why don’t APIs already support this?</h2>
+<p>we don’t yet have a real answer so I will do my best to provide a plausible explanation since the simplest explanation is usually the best one.</p>
+<blockquote>
+<p>APIs were initially <a href="#prompt-caching-was-built-for-chatbots-not-agents">built for Chat applications</a> a la ChatGPT</p>
+</blockquote>
+<p>there are 3 primary LLM API formats: OpenAI’s <a href="https://developers.openai.com/api/reference/chat-completions/overview">Chat Completions</a>, OpenAI’s <a href="https://developers.openai.com/api/reference/responses/overview">Responses</a>, and Anthropic’s <a href="https://platform.claude.com/docs/en/api/messages">Messages</a>. Other providers may have their own format (e.g. Gemini) but they usually have an API that is compatible with either Chat Completions or Messages.</p>
+<p>these APIs were designed in the era of chatbot applications like ChatGPT. and when you have APIs with a lot of users it becomes almost <a href="https://xkcd.com/1172/">impossible to change</a> them. lucky for us, both Chat Completions and Responses use implicit caching so those providers should be able to support this without any changes to the api.</p>
+<p>a more speculative reason could be due to lack of incentive. this ‘feature’ would lead to both lower margins<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a> and increased memory usage during a <a href="https://en.wikipedia.org/wiki/2025%E2%80%93present_global_memory_supply_shortage">shortage</a>.</p>
+<p>providers could be in a <a href="https://en.wikipedia.org/wiki/Prisoner%27s_dilemma">prisoner’s dilemma</a> situation where the current equilibrium is optimal. until one lab defects by adding this to their API to capture market share, forcing everyone else to follow. Ultimately leaving everyone with lower margins and less memory.</p>
+<p>It is practically guaranteed that their internal inference engines<a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a> for RL and internal API use already do this since this is a literal <a href="https://nonint.com/2023/11/05/compute-multipliers/">compute multiplier</a>. There is just not enough of an incentive to update the external API since nobody else’s API supports it and this doesn’t impact internal LLM usage.</p>
+<!-- Anthropic seems to be doing all they can to dampen demand: increased prices^[fable is 2x the cost of opus], staggered releases,   -->
+<!-- however, since demand is for intelligence seems to be elastic this efficiency gain may just lead to higher total token usage than before. -->
+<!-- While it is possible that providers already do this under the hood but since that would be a PR nightmare I doubt it. -->
+<h1 id="why-did-i-write-this">why did I write this?</h1>
+<p>my goal with writing this is not to point blame at any lab or provider, nobody is at fault here. I wrote this simply because I want faster and cheaper tokens so that I can get more out of my 5hr and weekly limits.</p>
+<p>and apparently you can <a href="https://x.com/levelsio/status/2039729463403909567">just tweet and people will fix things</a>.</p>
+<p>I also wanted to get some reps in to practice my writing and technical communication.</p>
+<p>ty for reading. I hope you learned something about LLM APIs, KV cache retention, and inference.</p>
 <h1 id="appendix">appendix</h1>
+<h2 id="what-about-the-final-assistant-message-at-the-end-of-a-turn">what about the final assistant message at the end of a turn?</h2>
+<p>as we discussed earlier, we expect <em>every</em> assistant message with tool calls to have a follow up API request, with tool results, before the cache <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching#ttl-support">expiration</a>.</p>
+<p>however eventually there are no more tool calls and the agent loop stops. what should we do with those output<a href="#fn12" class="footnote-ref" id="fnref12" role="doc-noteref"><sup>12</sup></a> tokens? should we cache them too?</p>
+<p>if the session gets a follow up request within the <a href="https://developers.openai.com/api/docs/guides/prompt-caching#prompt-cache-retention">next 5 minutes</a> that reuses those tokens even once then <a href="#when-should-i-write-to-the-cache">it is worth it to cache</a>.</p>
+<p>so how do we know if we will get a follow up request?</p>
+<p>we don’t … but the application or harness might.</p>
+<p>If this session has an active <a href="https://developers.openai.com/codex/use-cases/follow-goals"><code>/goal</code></a> or <a href="https://code.claude.com/docs/en/scheduled-tasks#run-a-prompt-repeatedly-with-/loop"><code>/loop</code></a> running then the harness knows it will reuse these tokens immediately.</p>
+<p>But if not the application could try to predict<a href="#fn13" class="footnote-ref" id="fnref13" role="doc-noteref"><sup>13</sup></a> whether or not the user will follow up before the cache expires.</p>
+<p>I am sure there will be many more opportunities for similar harness/inference co-design as both continue to evolve.</p>
 <!-- ## history of prompt caching APIs -->
 <h2 id="evolution-of-llm-api-usage">evolution of LLM API usage</h2>
 <p>I don’t believe that prompt caching APIs are purposely built to charge you twice for the current most common usage pattern (append-only agentic inference). The issue is that <em>common usage patterns have shifted significantly</em> since the APIs were first designed.</p>
-<h2 id="prompt-caching-was-built-for-chatbots-not-agents">prompt caching was built for chatbots, not agents<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a></h2>
-<p>prompt caching APIs were initially designed for chat applications (e.g ChatGPT) where it allowed users of the api to reuse the cache for the system message across chats for all users.</p>
+<h2 id="prompt-caching-was-built-for-chatbots-not-agents">prompt caching was built for chatbots, not agents<a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a></h2>
+<p>prompt caching APIs were initially designed for chat applications (e.g ChatGPT) where it allowed users of the API to reuse the cache for the system message across chats for all users.</p>
 <figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>
 legend
@@ -786,7 +789,7 @@ another chat can reuse the cached prompt prefix (e.g. the shared system message
 </figcaption>
 </figure>
 <h3 id="multi-turn-conversations-what-if-the-user-asks-a-follow-up-question">multi-turn conversations: what if the user asks a follow up question?</h3>
-<p>prompt caching works alright for this as well. but tbh we could have seen this issue back then. both SGLang and vLLm did.</p>
+<p>prompt caching works alright for this as well. but tbh we could have seen this issue back then. both SGLang and vLLM did.</p>
 <figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>
 legend
@@ -881,24 +884,24 @@ result 2
 since the assistant message wasn’t cached after the first result you have to pay <em>cache write</em> input price for tokens you <strong>already paid full output price</strong> for
 </figcaption>
 </figure>
-<p>notice that for each request after the first we are writing the Assistant message from the previous turn to the cache.</p>
+<p>notice that each request after the first writes the assistant message from the previous turn to the cache.</p>
 <h3 id="when-should-i-write-to-the-cache">when should I write to the cache?</h3>
 <blockquote>
 <p>if you use the cache <em>even once</em> it is worth the price</p>
 </blockquote>
 <p>cache_write = 1.25 x input cache_read = 0.1 x input</p>
-<p>so if you write 1000 tokens to the cache you pay for 1250 tokens then on next api call, with the same prefix, you get a cache hit and read all those 1000 cached tokens at the price of 100 tokens. so you paid for the equivalent of 1350 input tokens.</p>
-<p>however if you don’t cache you pay regular price for 1000 tokens then if you make a request with the same prefix you pay regular price <em>again</em> for 1000 tokens. so on the <em>second</em> request you already paid more that if you had cached. not to mention that caching also improves api response time as well.</p>
+<p>so if you write 1000 tokens to the cache you pay for 1250 tokens then on next API call, with the same prefix, you get a cache hit and read all those 1000 cached tokens at the price of 100 tokens. so you paid for the equivalent of 1350 input tokens.</p>
+<p>however if you don’t cache you pay regular price for 1000 tokens then if you make a request with the same prefix you pay regular price <em>again</em> for 1000 tokens. so on the <em>second</em> request you already paid more than if you had cached. not to mention that caching also improves API response time as well.</p>
 <!-- TODO: I could draw some graph here with probability of reusing the prefix to see where phase change is -->
 <p>my takeaway from this is:</p>
 <blockquote>
-<p>if you are going to make another llm api call with the same prompt prefix, in the next 5 minutes, you should write that prefix to cache</p>
+<p>if you are going to make another LLM API call with the same prompt prefix, in the next 5 minutes, you should write that prefix to cache</p>
 </blockquote>
-<p>in vanilla<a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a> multi-turn conversation it is unrealistic to predict whether or not the user will ask a follow up question ex ante so builders on the api either always or never pay the cache write cost depending on their apps usage patterns.</p>
-<p>notice how with the shift from vanilla multi-turn conversations to agent loops it actually got easier to predict whether or not we will reuse the cache: if the assistant calls a tool in its reponse then we know that we will reuse the cache in the very next request. This is why builders now <em>always</em> pay the cache write cost.</p>
+<p>in vanilla<a href="#fn15" class="footnote-ref" id="fnref15" role="doc-noteref"><sup>15</sup></a> multi-turn conversation it is unrealistic to predict whether or not the user will ask a follow up question ex ante so builders on the API either always or never pay the cache write cost depending on their apps usage patterns.</p>
+<p>notice how with the shift from vanilla multi-turn conversations to agent loops it actually got easier to predict whether or not the cache will be reused: if the assistant calls a tool in its response then the harness knows it will reuse the cache in the very next request. This is why builders now <em>always</em> pay the cache write cost.</p>
 <h2 id="minimal-append-only-agent-loop">minimal append-only agent loop</h2>
 <pre class="python"><code>messages: list[Message] = [
-    SystemMessage(content=&quot;You are a helpful assistant.&quot;),
+    SystemMessage(content=&quot;You report the weather.&quot;),
     UserMessage(content=&quot;What is the weather in Tokyo?&quot;),
 ]
 
@@ -918,20 +921,25 @@ while True:
 <hr />
 <ol>
 <li id="fn1"><p>except for the final message with no tool calls<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>this is not just Anthropic, OpenAI, Google, etc have the same issue as well<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>output tokens that contain tool calls that must be executed and returned on the next request<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4"><p>we are abstracting some small details a little bit by looking at this on the level of messages. however llms work on tokens so the line between prefill and decode actually cuts across assistant messages</p>
+<li id="fn2"><p>output tokens that contain tool calls that must be executed and returned on the next request<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>we are abstracting some small details a little bit by looking at this on the level of messages. however LLMs work on tokens so the line between prefill and decode actually cuts across assistant messages</p>
 <pre><code>                   prefill | decode
 ...&lt;/tool_result&gt;&lt;assistant&gt;The tool returned ... &lt;/assistant&gt;</code></pre>
-<p>notice how the chat template tokens for the start of the assistant message (shown here as just <code>&lt;assistant&gt;</code>, but can look like <code>&lt;|im_start|&gt;ASSISTANT&lt;|im_sep|&gt;</code> where <code>im</code> stands for imaginary monologue) and the <em>first</em> token within the assistant message are generated during prefill.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5"><p>the prompt prefix cache is not 1 block per message. instead it is split into fixed size blocks (e.g 16 tokens) that often do not split cleanly on message boundaries as shown in my diagrams. I show the kv cache blocks on the message level here for simplicity. since theoretically the blocks <em>could</em> all land on the message boundaries if each message had length, in tokens, of an exact multiple of the block size.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn6"><p>SGLang’s <a href="https://www.lmsys.org/blog/2024-01-17-sglang/">RadixAttention</a> retains the KV cache for <strong>both prompts and generation results</strong> in a radix tree, and reuses them when a later prompt shares the prefix. Their tree diagram shows the assistant ‘answer’ becoming reusable cache for the next turn.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn7"><p>vLLM’s <a href="https://docs.vllm.ai/en/stable/design/prefix_caching/">automatic prefix caching</a> similarly caches KV blocks of entire requests and reuses them when a new request has the same prefix.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn8"><p>we may have to recompute the final few tokens that aren’t part of a complete cache block<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<p>notice how the chat template tokens for the start of the assistant message (shown here as just <code>&lt;assistant&gt;</code>, but can look like <code>&lt;|im_start|&gt;ASSISTANT&lt;|im_sep|&gt;</code> where <code>im</code> stands for imaginary monologue) and the <em>first</em> token within the assistant message are generated during prefill.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>the prompt prefix cache is not 1 block per message. instead it is split into fixed size blocks (e.g 16 tokens) that often do not split cleanly on message boundaries as shown in my diagrams. I show the KV cache blocks on the message level here for simplicity. since theoretically the blocks <em>could</em> all land on the message boundaries if each message had length, in tokens, of an exact multiple of the block size.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>SGLang’s <a href="https://www.lmsys.org/blog/2024-01-17-sglang/">RadixAttention</a> retains the KV cache for <strong>both prompts and generation results</strong> in a radix tree, and reuses them when a later prompt shares the prefix. Their tree diagram shows the assistant ‘answer’ becoming reusable cache for the next turn.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>vLLM’s <a href="https://docs.vllm.ai/en/stable/design/prefix_caching/">automatic prefix caching</a> similarly caches KV blocks of entire requests and reuses them when a new request has the same prefix.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>this is an estimate since the true cost depends on how many more times we reuse these tokens on subsequent requests before compaction. However the incremental cost will be identical since both will be getting cache read price after the second request<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>the inference engine may have to recompute the final few tokens that aren’t part of a complete cache block<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn9"><p>OpenAI and Gemini don’t charge you extra for ‘cache write’ tokens because all input tokens are treated like cache write tokens. I wish they gave us actual cache write numbers in the <code>usage</code> obj of the response.</p>
-<p>related: imo when reading anthropic’s pricing you should only read the cache write price for input tokens. because that is what you will actually be paying. their input pricing number can be misleading since ~all of tokens during an agent loop are either cache reads or cache writes. you are almost <em>never</em> paying the headline input token price.<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn10"><p>its not x but y<a href="#fnref10" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn11"><p>no tools<a href="#fnref11" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<p>related: imo when reading Anthropic’s pricing you should only read the cache write price for input tokens. because that is what you will actually be paying. their input pricing number can be misleading since ~all tokens during an agent loop are either cache reads or cache writes. you are almost <em>never</em> paying the headline input token price.<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn10"><p>LLM API margins are reportedly <a href="https://www.seangoedecke.com/ai-inference-is-obviously-profitable/">70-80%</a> so they can afford it<a href="#fnref10" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn11"><p>see vLLM and SGLang<a href="#fnref11" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn12"><p>Notice that this doesn’t just have to apply to the proposed cache write output tokens. we can apply this conditional cache retention to all new tokens in this request.</p>
+<p>this would be huge because it would allow callers to not request a cache write for <em>any</em> new tokens (input and output) if there aren’t any tool calls.<a href="#fnref12" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn13"><p>providers could even use different levels in their inference cluster’s memory hierarchy for storing KV cache blocks depending on the expected delay until their inference engine receives the following request<a href="#fnref13" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn14"><p>it’s not x but y<a href="#fnref14" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn15"><p>no tools<a href="#fnref15" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </aside>
 <hr />

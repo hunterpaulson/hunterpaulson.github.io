@@ -21,6 +21,124 @@ a collection of animations I made in reverse chronological order
 
 ---
 
+## 2026-07-04 - [prompt cache writes in an agent loop](/blog/cache-write-output-tokens/)
+
+<section class="art-section art-section--graph">
+<div id="cache-write-context-current-animation" class="llm-context-animation mono-graph-animation" data-interval="1600" data-media-export-id="cache-write-context-current">
+<figure class="llm-context-diagram llm-context-diagram--token-costs llm-context-animation__legend" aria-label="cache context animation legend">
+<figcaption>legend</figcaption>
+<div class="llm-context-legend">
+<p><span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>written to cache;</span> <span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span> <span><span class="llm-context-key llm-context-key--new"></span>new this step;</span></p>
+</div>
+</figure>
+
+<figure class="llm-context-diagram llm-context-diagram--token-costs mono-graph-animation__frame" aria-label="current API cache behavior frame one request one">
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">request 1</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--system cache-write is-new">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--user cache-write is-new">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>the API caller pays to cache user prompt along with the system message and tools since they will be resued in all following requests</figcaption>
+</figure>
+
+<figure class="llm-context-diagram llm-context-diagram--token-costs mono-graph-animation__frame" aria-label="current API cache behavior frame two result one">
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">result 1</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--system cache-write">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--user cache-write">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-new">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-new">
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Tokyo&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>only input tokens are written to the prompt cache even though all messages will be in the prefix of the next request</figcaption>
+</figure>
+
+<figure class="llm-context-diagram llm-context-diagram--token-costs mono-graph-animation__frame" aria-label="current API cache behavior frame three request two">
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">request 2</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--system cache-read">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--user cache-read">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--assistant cache-write is-new is-danger">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-call cache-write is-new is-danger">
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Tokyo&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-result cache-write is-new">
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">Cloudy</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>API caller _pays again_ to cache tokens that they **just paid full output price** for</figcaption>
+</figure>
+
+<figure class="llm-context-diagram llm-context-diagram--token-costs mono-graph-animation__frame" aria-label="current API cache behavior frame four result two">
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">result 2</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--system cache-read">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--user cache-read">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--assistant cache-write">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-call cache-write">
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Tokyo&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-result cache-write">
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">Cloudy</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-new">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">The weather in Tokyo is <strong>Cloudy</strong></span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>the agent loop ends when LLM stops calling tools</figcaption>
+</figure>
+</div>
+</section>
+
+---
+
 ## 2026-05-08 - matrix rain
 
 <section class="art-section">

@@ -2,6 +2,8 @@
 title: LLM API providers are charging you _twice_ for output tokens
 date: 2026-07-04
 description: once during generation and then again during cache write for the following request
+social-image: /assets/blog/cache-write-output-tokens/figures/cache-write-kv-current-pair-with-legend.png
+social-image-alt: KV cache diagram showing current APIs retaining input token KVs while generated output token KVs are not retained across requests.
 toc: true
 toc-title: Contents
 toc-depth: 2
@@ -9,12 +11,11 @@ canonical-url: "https://hunterpaulson.dev/blog/cache-write-output-tokens/"
 og-type: "article"
 site-name: "hunter paulson"
 social-description: "once during generation and then again during cache write for the following request"
-social-image-alt: "ASCII black hole animation from Hunter Paulson's personal website."
-social-image-height: 769
-social-image-type: "image/gif"
-social-image-url: "https://hunterpaulson.dev/assets/social/home-blackhole.gif"
-social-image-width: 769
-social-title: "LLM API providers are charging you _twice_ for output tokens | hunter paulson"
+social-image-height: 699
+social-image-type: "image/png"
+social-image-url: "https://hunterpaulson.dev/assets/blog/cache-write-output-tokens/figures/cache-write-kv-current-pair-with-legend.png"
+social-image-width: 848
+social-title: "LLM API providers are charging you twice for output tokens | hunter paulson"
 twitter-card: "summary_large_image"
 article-published-time: "2026-07-04"
 ---
@@ -37,7 +38,7 @@ This worked fine for chatbots ([see appendix](#prompt-caching-was-built-for-chat
 
 Let's walk through a minimal example of what this looks like from the perspective of someone using Anthropic's [Fable 5](https://platform.claude.com/docs/en/about-claude/models/introducing-claude-fable-5-and-claude-mythos-5) through the API. This looks identical for OpenAI and Gemini APIs just with different pricing.
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-context-legend-current" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>legend</figcaption>
 <div class="llm-context-legend">
 <span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write;</span>
@@ -47,7 +48,7 @@ Let's walk through a minimal example of what this looks like from the perspectiv
 </div>
 </figure>
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-context-current-request-1" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -97,7 +98,7 @@ Let's walk through a minimal example of what this looks like from the perspectiv
 <figcaption>initial request _only retains input tokens_ in the prompt cache even though all messages will be in prefix of next request</figcaption>
 </figure>
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
+<figure id="cache-write-context-current-request-2" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -211,7 +212,7 @@ Just like they retain the KV cache blocks for input tokens, providers can **reta
 
 Let's take a look at what goes on under the hood with the prompt prefix cache for our two requests in the example above.
 
-<figure class="llm-cache-visual" aria-label="legend for token and KV cache diagrams">
+<figure id="cache-write-kv-legend" class="llm-cache-visual" aria-label="legend for token and KV cache diagrams">
 <figcaption>legend</figcaption>
 <div class="llm-cache-legend">
 <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--input"></span>input token</span>
@@ -224,7 +225,7 @@ Let's take a look at what goes on under the hood with the prompt prefix cache fo
 
 ### request 1:
 
-<figure class="llm-cache-visual">
+<figure id="cache-write-kv-current-request-1" class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
 <section class="llm-token-group">
@@ -260,7 +261,7 @@ Let's take a look at what goes on under the hood with the prompt prefix cache fo
 
 ### request 2:
 
-<figure class="llm-cache-visual">
+<figure id="cache-write-kv-current-request-2" class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
 <section class="llm-token-group">
@@ -338,7 +339,7 @@ Then on the next request (request 2) all KV blocks from request 1 will be in the
 
 ### request 1:
 
-<figure class="llm-cache-visual">
+<figure id="cache-write-kv-retained-request-1" class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
 <section class="llm-token-group">
@@ -374,7 +375,7 @@ Then on the next request (request 2) all KV blocks from request 1 will be in the
 
 ### request 2:
 
-<figure class="llm-cache-visual">
+<figure id="cache-write-kv-retained-request-2" class="llm-cache-visual">
 <div class="llm-cache-scroll">
 <div class="llm-token-sequence">
 <section class="llm-token-group">
@@ -428,7 +429,7 @@ Notice how there is no longer any overlap between prefill and decode across requ
 
 If API providers retain output tokens in the prompt prefix cache then users only have to pay **cache read** price for every subsequent request that contains them.
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-context-legend-retained" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>legend</figcaption>
 <div class="llm-context-legend">
 <span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write & new this step;</span>
@@ -437,7 +438,7 @@ If API providers retain output tokens in the prompt prefix cache then users only
 </div>
 </figure>
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-context-retained-request-1" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -487,7 +488,7 @@ If API providers retain output tokens in the prompt prefix cache then users only
 <figcaption>Now assistant message and tool call are retained in prompt prefix cache</figcaption>
 </figure>
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
+<figure id="cache-write-context-retained-request-2" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -756,7 +757,7 @@ I don't believe that prompt caching APIs are purposely built to charge you twice
 
 prompt caching APIs were initially designed for chat applications (e.g ChatGPT) where it allowed users of the API to reuse the cache for the system message across chats for all users.
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-chatbot-legend-single-turn" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>legend</figcaption>
 <div class="llm-context-legend">
 <span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write;</span>
@@ -768,7 +769,7 @@ prompt caching APIs were initially designed for chat applications (e.g ChatGPT) 
 
 ### Chat 1:
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-chatbot-single-turn" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -815,7 +816,7 @@ prompt caching APIs were initially designed for chat applications (e.g ChatGPT) 
 
 could be the same user or a different user
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-chatbot-shared-prefix" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -863,7 +864,7 @@ could be the same user or a different user
 
 prompt caching works alright for this as well. but tbh we could have seen this issue back then. both SGLang and vLLM did.
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-agent-loop-legend" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
 <figcaption>legend</figcaption>
 <div class="llm-context-legend">
 <span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write;</span>
@@ -873,7 +874,7 @@ prompt caching works alright for this as well. but tbh we could have seen this i
 </div>
 </figure>
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-agent-loop-request-1" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -916,7 +917,7 @@ prompt caching works alright for this as well. but tbh we could have seen this i
 <!-- <figcaption>initial request _only retains input tokens_ in the prompt cache even though all messages will be prefix of next request</figcaption> -->
 </figure>
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
+<figure id="cache-write-agent-loop-request-2" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">

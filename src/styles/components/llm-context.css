@@ -135,6 +135,11 @@
   align-self: start;
 }
 
+.llm-context-grid--single {
+  grid-template-columns: minmax(var(--llm-context-panel-width), var(--llm-context-panel-width));
+  min-width: var(--llm-context-panel-width);
+}
+
 .llm-context-panel {
   display: grid;
   align-content: start;
@@ -356,6 +361,36 @@
 .llm-context-diagram--token-costs .llm-context-message.is-new.cache-read {
   box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read);
   padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+}
+
+.llm-context-animation {
+  --llm-context-panel-width: 44ch;
+}
+
+.llm-context-animation .llm-context-diagram {
+  --llm-context-panel-width: 44ch;
+}
+
+.llm-context-animation .llm-context-animation__legend {
+  margin: 0 auto;
+}
+
+.llm-context-animation .mono-graph-animation__viewport {
+  justify-items: center;
+}
+
+.llm-context-animation .llm-context-scroll {
+  width: max-content;
+  max-width: none;
+}
+
+.llm-context-animation .mono-graph-animation__frame {
+  width: max-content;
+  max-width: none;
+}
+
+.llm-context-animation .mono-graph-animation__caption-frame {
+  align-self: end;
 }
 
 .llm-context-diagram--token-costs .llm-context-message.is-new.cache-write {

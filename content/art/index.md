@@ -11,6 +11,14 @@ a collection of animations I made in reverse chronological order
 
 ---
 
+## 2026-07-04 - [prompt cache writes in an agent loop](/blog/cache-write-output-tokens/)
+
+<section class="art-section art-section--graph">
+{{ include "content/includes/animations/cache-write-context-current.html" }}
+</section>
+
+---
+
 ## 2026-05-08 - matrix rain
 
 <section class="art-section">

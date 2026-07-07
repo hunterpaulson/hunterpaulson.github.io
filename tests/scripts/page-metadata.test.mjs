@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   buildPageMetadata,
   injectPageMetadata,
+  markdownToPlainText,
   parseFrontMatter,
   readImageMetadata,
   resolveContentRoute,
@@ -73,6 +74,46 @@ test("buildPageMetadata creates absolute social URLs and image dimensions", asyn
   assert.equal(metadata["twitter-card"], "summary_large_image");
 
   await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+test("buildPageMetadata strips markdown from social metadata", async () => {
+  const tempRoot = await makeTempSite();
+  const inputPath = path.join(tempRoot, "content", "blog", "post", "index.md");
+  const markdown = [
+    "---",
+    "title: LLM API providers are charging you _twice_ for output tokens",
+    "date: 2026-07-04",
+    "description: once during `generation` and then again during cache write",
+    "social-image: /assets/social/card.gif",
+    "social-image-alt: Diagram of **cache writes**.",
+    "---",
+    "",
+    "# LLM API providers are charging you _twice_ for output tokens",
+  ].join("\n");
+
+  const metadata = buildPageMetadata(inputPath, markdown, {
+    rootDirectory: tempRoot,
+    siteUrl: "https://example.com/",
+  });
+
+  assert.equal(
+    metadata["social-title"],
+    "LLM API providers are charging you twice for output tokens | hunter paulson",
+  );
+  assert.equal(
+    metadata["social-description"],
+    "once during generation and then again during cache write",
+  );
+  assert.equal(metadata["social-image-alt"], "Diagram of cache writes.");
+
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+test("markdownToPlainText handles common inline markdown", () => {
+  assert.equal(
+    markdownToPlainText("see [prompt _caching_](https://example.com) and `usage`"),
+    "see prompt caching and usage",
+  );
 });
 
 test("injectPageMetadata preserves frontmatter and adds derived fields", () => {

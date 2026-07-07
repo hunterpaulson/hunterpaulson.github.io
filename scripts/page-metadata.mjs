@@ -119,11 +119,29 @@ function formatPageTitle({ route, title, date }) {
     return DEFAULT_SITE_NAME;
   }
 
+  const plainTitle = markdownToPlainText(title);
   if (route === "/" || !date) {
-    return `${DEFAULT_SITE_NAME} | ${title}`;
+    return `${DEFAULT_SITE_NAME} | ${plainTitle}`;
   }
 
-  return `${title} | ${DEFAULT_SITE_NAME}`;
+  return `${plainTitle} | ${DEFAULT_SITE_NAME}`;
+}
+
+export function markdownToPlainText(value) {
+  return String(value)
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/([*_~]{1,3})([^*_~]+)\1/g, "$2")
+    .replace(/\\([\\`*_\[\]{}()#+\-.!])/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function resolveLocalAssetPath(assetUrl, rootDirectory) {
@@ -213,7 +231,7 @@ export function buildPageMetadata(inputPath, markdown, options = {}) {
   const siteUrl = normalizeSiteUrl(options.siteUrl ?? process.env.SITE_URL);
   const frontMatter = parseFrontMatter(markdown).data;
   const route = resolveContentRoute(inputPath, rootDirectory);
-  const description = frontMatter.description || DEFAULT_DESCRIPTION;
+  const description = markdownToPlainText(frontMatter.description || DEFAULT_DESCRIPTION);
   const socialImage = frontMatter["social-image"] || DEFAULT_SOCIAL_IMAGE;
   const imageMetadata = readImageMetadata(socialImage, rootDirectory);
   const isArticle = Boolean(frontMatter.date) && route.startsWith("/blog/") && route !== "/blog/";
@@ -223,17 +241,17 @@ export function buildPageMetadata(inputPath, markdown, options = {}) {
     "description": description,
     "og-type": frontMatter["og-type"] || (isArticle ? "article" : "website"),
     "site-name": DEFAULT_SITE_NAME,
-    "social-description": frontMatter["social-description"] || description,
-    "social-image-alt": frontMatter["social-image-alt"] || DEFAULT_SOCIAL_IMAGE_ALT,
+    "social-description": markdownToPlainText(frontMatter["social-description"] || description),
+    "social-image-alt": markdownToPlainText(frontMatter["social-image-alt"] || DEFAULT_SOCIAL_IMAGE_ALT),
     "social-image-height": imageMetadata?.height ?? "",
     "social-image-type": imageMetadata?.type ?? "",
     "social-image-url": toAbsoluteUrl(socialImage, siteUrl),
     "social-image-width": imageMetadata?.width ?? "",
-    "social-title": frontMatter["social-title"] || formatPageTitle({
+    "social-title": markdownToPlainText(frontMatter["social-title"] || formatPageTitle({
       date: frontMatter.date,
       route,
       title: frontMatter.title,
-    }),
+    })),
     "twitter-card": frontMatter["twitter-card"] || "summary_large_image",
     ...(isArticle ? { "article-published-time": frontMatter.date } : {}),
   };

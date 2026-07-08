@@ -333,7 +333,6 @@ Then on the next request (request 2) all KV blocks from request 1 will be in the
 <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--output"></span>output token</span>
 <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--write"></span>cache write retained</span>
 <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--read"></span>cache read</span>
-<span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--not-retained"></span>not retained</span>
 </div>
 </figure>
 

@@ -342,6 +342,14 @@ assistant and tool call KVs that weren’t retained from the previous request ar
 </blockquote>
 <p>Instead of discarding the KVs for output tokens providers can just retain their blocks with the rest of the prompt prefix cache at the end of request 1.</p>
 <p>Then on the next request (request 2) all KV blocks from request 1 will be in the prompt prefix cache, saving the inference engine from recomputing anything during prefill.</p>
+<figure id="cache-write-kv-legend" class="llm-cache-visual" aria-label="legend for token and KV cache diagrams">
+<figcaption>
+legend
+</figcaption>
+<div class="llm-cache-legend">
+<p><span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--input"></span>input token</span> <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--output"></span>output token</span> <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--write"></span>cache write retained</span> <span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--read"></span>cache read</span></p>
+</div>
+</figure>
 <h3 id="request-1-1">request 1:</h3>
 <figure id="cache-write-kv-retained-request-1" class="llm-cache-visual">
 <div class="llm-cache-scroll">

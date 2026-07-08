@@ -6,7 +6,7 @@ social-image: /assets/blog/cache-write-output-tokens/social/cache-write-kv-curre
 social-image-alt: KV cache diagram showing current APIs retaining input token KVs while generated output token KVs are not retained across requests.
 toc: true
 toc-title: Contents
-toc-depth: 2
+toc-depth: 1
 canonical-url: "https://hunterpaulson.dev/blog/cache-write-output-tokens/"
 og-type: "article"
 site-name: "hunter paulson"
@@ -336,6 +336,16 @@ If this sounds redundant that's because it is. There is nothing preventing them 
 Instead of discarding the KVs for output tokens providers can just retain their blocks with the rest of the prompt prefix cache at the end of request 1.
 
 Then on the next request (request 2) all KV blocks from request 1 will be in the prompt prefix cache, saving the inference engine from recomputing anything during prefill.
+
+<figure id="cache-write-kv-legend" class="llm-cache-visual" aria-label="legend for token and KV cache diagrams">
+<figcaption>legend</figcaption>
+<div class="llm-cache-legend">
+<span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--input"></span>input token</span>
+<span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--output"></span>output token</span>
+<span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--write"></span>cache write retained</span>
+<span class="llm-cache-legend-item"><span class="llm-cache-swatch llm-cache-swatch--read"></span>cache read</span>
+</div>
+</figure>
 
 ### request 1:
 

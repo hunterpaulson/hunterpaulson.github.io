@@ -31,7 +31,169 @@ function socialOutputPath(slug, fileName) {
   return `assets/blog/${slug}/social/${fileName}`;
 }
 
+function setupSidecarComposite({
+  exportRootId = "media-sidecar-export-root",
+  leftSelector,
+  legendSelector,
+  rightSelector,
+  panelWidth = "40ch",
+  targetWidthPx = null,
+  paddingPx = 24,
+}) {
+  return async function setup({ page }) {
+    await page.evaluate((options) => {
+      document.querySelector(`#${options.exportRootId}`)?.remove();
+
+      const documentStyle = getComputedStyle(document.documentElement);
+      let background = documentStyle.backgroundColor;
+      if (!background || background === "rgba(0, 0, 0, 0)" || background === "transparent") {
+        background = documentStyle.getPropertyValue("--background-color").trim() || "#001b0d";
+      }
+
+      const root = document.createElement("div");
+      root.id = options.exportRootId;
+      Object.assign(root.style, {
+        position: "absolute",
+        left: "0",
+        top: "0",
+        zIndex: "2147483647",
+        background,
+        padding: `${options.paddingPx}px`,
+        display: "grid",
+        gridTemplateColumns: "max-content max-content",
+        columnGap: "48px",
+        alignItems: "start",
+        width: "max-content",
+        boxSizing: "border-box",
+        isolation: "isolate",
+        overflow: "hidden",
+      });
+
+      const pairWidth = "calc((var(--llm-context-panel-width) * 2) + 2ch)";
+
+      function prepareClone(copy) {
+        copy.removeAttribute("id");
+        copy.querySelectorAll("[id]").forEach((child) => child.removeAttribute("id"));
+        copy.style.setProperty("--llm-context-panel-width", options.panelWidth);
+        Object.assign(copy.style, {
+          margin: "0",
+          width: pairWidth,
+          maxWidth: "none",
+        });
+
+        copy.querySelectorAll(".llm-context-scroll").forEach((node) => {
+          Object.assign(node.style, {
+            width: "max-content",
+            maxWidth: "none",
+            overflow: "visible",
+          });
+        });
+
+        copy.querySelectorAll(".llm-context-grid--pair").forEach((node) => {
+          Object.assign(node.style, {
+            gridTemplateColumns: "repeat(2, var(--llm-context-panel-width))",
+            width: pairWidth,
+            minWidth: pairWidth,
+          });
+        });
+
+        copy.querySelectorAll("figcaption").forEach((node) => {
+          Object.assign(node.style, {
+            width: pairWidth,
+            maxWidth: pairWidth,
+          });
+        });
+
+        return copy;
+      }
+
+      function clone(selector) {
+        const node = document.querySelector(selector);
+        if (!node) {
+          throw new Error(`missing selector ${selector}`);
+        }
+        return prepareClone(node.cloneNode(true));
+      }
+
+      const leftColumn = document.createElement("div");
+      leftColumn.style.setProperty("--llm-context-panel-width", options.panelWidth);
+      Object.assign(leftColumn.style, {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        alignItems: "stretch",
+        width: pairWidth,
+        minWidth: pairWidth,
+      });
+
+      const leftFigure = clone(options.leftSelector);
+      const legend = clone(options.legendSelector);
+      const rightFigure = clone(options.rightSelector);
+      leftColumn.append(leftFigure, legend);
+      root.append(leftColumn, rightFigure);
+      document.body.append(root);
+
+      const leftWidth = leftColumn.getBoundingClientRect().width;
+      const rightWidth = rightFigure.getBoundingClientRect().width;
+      if (Number.isFinite(options.targetWidthPx) && options.targetWidthPx > 0) {
+        const gap = options.targetWidthPx - (options.paddingPx * 2) - leftWidth - rightWidth;
+        root.style.columnGap = `${Math.max(0, gap)}px`;
+        root.style.width = `${options.targetWidthPx}px`;
+      }
+
+      const rightHeight = rightFigure.getBoundingClientRect().height;
+      leftColumn.style.height = `${rightHeight}px`;
+    }, {
+      exportRootId,
+      leftSelector,
+      legendSelector,
+      panelWidth,
+      rightSelector,
+      targetWidthPx,
+      paddingPx,
+    });
+  };
+}
+
 export const MEDIA_PRESETS = {
+  "cache-write-context-current-sidecar-png": {
+    description: "Cache write output tokens current context sidecar image",
+    kind: "png",
+    outputPath: socialOutputPath(
+      "cache-write-output-tokens",
+      "cache-write-context-current-sidecar-legend.png",
+    ),
+    pagePath: "/blog/cache-write-output-tokens/",
+    selector: "#cache-write-social-export-root",
+    setup: setupSidecarComposite({
+      exportRootId: "cache-write-social-export-root",
+      leftSelector: "#cache-write-context-current-request-1",
+      legendSelector: "#cache-write-context-legend-current",
+      rightSelector: "#cache-write-context-current-request-2",
+      panelWidth: "40ch",
+      targetWidthPx: 1696,
+    }),
+    viewport: { width: 1800, height: 1000 },
+  },
+  "cache-write-context-retained-sidecar-png": {
+    description: "Cache write output tokens retained context sidecar image",
+    kind: "png",
+    outputPath: socialOutputPath(
+      "cache-write-output-tokens",
+      "cache-write-context-retained-sidecar-legend.png",
+    ),
+    pagePath: "/blog/cache-write-output-tokens/",
+    selector: "#cache-write-social-export-root",
+    setup: setupSidecarComposite({
+      exportRootId: "cache-write-social-export-root",
+      leftSelector: "#cache-write-context-retained-request-1",
+      legendSelector: "#cache-write-context-legend-retained",
+      rightSelector: "#cache-write-context-retained-request-2",
+      panelWidth: "40ch",
+      targetWidthPx: 1696,
+    }),
+    viewport: { width: 1800, height: 1000 },
+  },
   "matrix-rain-gif": {
     description: "Matrix digital rain animation GIF",
     durationMs: 6000,

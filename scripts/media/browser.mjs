@@ -6,6 +6,13 @@ export function browserExecutableCandidates(
   platform = process.platform,
   homeDirectory = os.homedir(),
 ) {
+  const pathCandidates = pathExecutableCandidates([
+    "chromium",
+    "chromium-browser",
+    "google-chrome",
+    "google-chrome-stable",
+    "msedge",
+  ]);
   const envCandidates = [
     process.env.MEDIA_EXPORT_BROWSER,
     process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -23,6 +30,7 @@ export function browserExecutableCandidates(
 
     return [
       ...envCandidates,
+      ...pathCandidates,
       ...appCandidates.map((candidate) => path.join("/Applications", candidate)),
       ...appCandidates.map((candidate) => path.join(homeDirectory, "Applications", candidate)),
     ];
@@ -31,6 +39,7 @@ export function browserExecutableCandidates(
   if (platform === "linux") {
     return [
       ...envCandidates,
+      ...pathCandidates,
       "/usr/bin/google-chrome",
       "/usr/bin/google-chrome-stable",
       "/usr/bin/chromium",
@@ -46,6 +55,7 @@ export function browserExecutableCandidates(
 
     return [
       ...envCandidates,
+      ...pathCandidates,
       path.join(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
       path.join(programFilesX86, "Google", "Chrome", "Application", "chrome.exe"),
       path.join(localAppData, "Google", "Chrome", "Application", "chrome.exe"),
@@ -58,6 +68,20 @@ export function browserExecutableCandidates(
   }
 
   return envCandidates;
+}
+
+function pathExecutableCandidates(executableNames, pathValue = process.env.PATH || "") {
+  const pathDirectories = pathValue.split(path.delimiter).filter(Boolean);
+  const candidates = [];
+  for (const directory of pathDirectories) {
+    for (const executableName of executableNames) {
+      candidates.push(path.join(directory, executableName));
+      if (process.platform === "win32" && !executableName.endsWith(".exe")) {
+        candidates.push(path.join(directory, `${executableName}.exe`));
+      }
+    }
+  }
+  return candidates;
 }
 
 export function resolveBrowserExecutable(

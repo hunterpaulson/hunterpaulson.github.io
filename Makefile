@@ -10,6 +10,7 @@ INCLUDES=$(shell find $(CONTENT_DIR)/includes -type f 2>/dev/null)
 EXPAND_INCLUDES=scripts/expand-markdown-includes.mjs
 PREPARE_MARKDOWN=scripts/prepare-markdown-page.mjs
 PAGE_METADATA=scripts/page-metadata.mjs
+PANDOC_TOC_FLAG=scripts/pandoc-toc-flag.mjs
 
 HOME=$(wildcard $(CONTENT_DIR)/*.md)
 SECTIONS=$(wildcard $(CONTENT_DIR)/*/index.md)
@@ -90,9 +91,9 @@ $(HTML_SECTIONS): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE
 	@prepared_md="$(DIST_DIR)/.markdown/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none --toc -s $(CSS_ARGS) -Vversion=v$(VERSION) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE) --no-highlight
 
 # Blog posts - use date from frontmatter
-$(HTML_BLOGS): $(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile
+$(HTML_BLOGS): $(DIST_DIR)/blog/%/index.html: $(CONTENT_DIR)/blog/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(PANDOC_TOC_FLAG) $(INCLUDES) Makefile
 	@mkdir -p $(dir $@)
-	@prepared_md="$(DIST_DIR)/.markdown/blog/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none -s $(CSS_ARGS) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE) --no-highlight
+	@toc_arg="$$(bun $(PANDOC_TOC_FLAG) "$<")"; prepared_md="$(DIST_DIR)/.markdown/blog/$*.md"; mkdir -p "$$(dirname "$$prepared_md")"; bun $(PREPARE_MARKDOWN) "$<" "$$prepared_md"; pandoc --wrap=none $$toc_arg -s $(CSS_ARGS) -i "$$prepared_md" -o "$@" --template=$(TEMPLATE) --no-highlight
 
 # Nested section pages (agent-harness/context-window/index.md -> dist/agent-harness/context-window/index.html)
 $(HTML_NESTED_INDEX_PAGES): $(DIST_DIR)/%/index.html: $(CONTENT_DIR)/%/index.md $(TEMPLATE) $(EXPAND_INCLUDES) $(PREPARE_MARKDOWN) $(PAGE_METADATA) $(INCLUDES) Makefile

@@ -59,6 +59,18 @@ h2 {
   /* text-transform: uppercase; */
 }
 
+nav[role="doc-toc"] > h2 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1rem;
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height);
+}
+
+nav[role="doc-toc"] > h2 + ul {
+  margin-top: 0;
+}
+
 hr {
   position: relative;
   display: block;
@@ -105,25 +117,37 @@ em {
   color: var(--accent-secondary);
 }
 
-sub {
-  position: relative;
-  display: inline-block;
-  margin: 0;
-  vertical-align: sub;
-  line-height: 0;
-  width: calc(1ch / 0.75);
-  font-size: .75rem;
-}
-
+sub,
 sup {
   position: relative;
   display: inline-block;
   margin: 0;
+  width: auto;
+  min-width: calc(1ch / 0.75);
+  line-height: 0;
+  font-size: .75rem;
+}
+
+sub {
+  vertical-align: baseline;
+  bottom: -0.25em;
+}
+
+sup {
   vertical-align: baseline;
   top: -0.25em;
-  line-height: 0;
-  width: calc(1ch / 0.75);
-  font-size: .75rem;
+}
+
+a.footnote-ref {
+  margin: 0;
+}
+
+a.footnote-ref sup {
+  min-width: 0;
+  font-size: 1rem;
+  top: -0.35em;
+  transform: scale(0.75);
+  transform-origin: left center;
 }
 
 table {

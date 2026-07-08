@@ -42,7 +42,7 @@ a collection of animations I made in reverse chronological order
 <p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write is-new">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -61,13 +61,13 @@ a collection of animations I made in reverse chronological order
 <p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-call is-new">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Tokyo&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -86,16 +86,16 @@ a collection of animations I made in reverse chronological order
 <p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write is-new is-danger">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-write is-new is-danger">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Tokyo&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write is-new">
-<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">Cloudy</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -114,19 +114,19 @@ a collection of animations I made in reverse chronological order
 <p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Tokyo?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-write">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Tokyo&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write">
-<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">Cloudy</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">The weather in Tokyo is <strong>Cloudy</strong></span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">It&apos;s <em>hot</em> in Phoenix right now</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>

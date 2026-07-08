@@ -324,7 +324,7 @@ During inference, Key and Value vectors (KVs) are generated for every token. KVs
 
 After decode is complete (because LLM completed a tool call) blocks^[the prompt prefix cache is not 1 block per message. instead it is split into fixed size blocks (e.g 16 tokens) that often do not split cleanly on message boundaries as shown in my diagrams. I show the KV cache blocks on the message level here for simplicity. since theoretically the blocks _could_ all land on the message boundaries if each message had length, in tokens, of an exact multiple of the block size.] of KVs are _retained_ in cache so they can be reused, instead of recomputed, during the subsequent request.
 
-However only KV blocks for input tokens are _retained_, meaning that output tokens from request 1 must be `recomputed` during prefill stage of request 2.
+However only KV blocks for input tokens are _retained_, meaning that KVs for output tokens from request 1 must be `recomputed` during prefill stage of request 2.
 
 If this sounds redundant that's because it is. There is nothing preventing them from retaining the KV blocks for the output tokens too. In fact this is exactly what the open source inference engines [SGLang](https://github.com/sgl-project/sglang)^[SGLang’s [RadixAttention](https://www.lmsys.org/blog/2024-01-17-sglang/) retains the KV cache for **both prompts and generation results** in a radix tree, and reuses them when a later prompt shares the prefix. Their tree diagram shows the assistant 'answer' becoming reusable cache for the next turn.] and [vLLM](https://github.com/vllm-project/vllm)^[vLLM’s [automatic prefix caching](https://docs.vllm.ai/en/stable/design/prefix_caching/) similarly caches KV blocks of entire requests and reuses them when a new request has the same prefix.] do.
 
@@ -650,7 +650,7 @@ response = client.messages.create(
     ####################################
     cache_control={ # existing automatic caching param
         "cache_output": True, # new, indicates to cache output
-        "type": "ephemeral", # or e.g. "intelligent" to only retain cache if stop_reason == "tool_use"
+        "type": "ephemeral",
         "ttl": "5m"
     },
     ####################################

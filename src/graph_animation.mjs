@@ -16,6 +16,14 @@ export function initializeGraphAnimations({
     if (frames.length === 0) {
       return;
     }
+    const frameCaptions = frames.map((frame) => {
+      if (typeof frame.querySelector !== "function") {
+        return "";
+      }
+      const caption = frame.querySelector(":scope > figcaption");
+      return caption ? caption.innerHTML : "";
+    });
+    const hasFrameCaptions = frameCaptions.some((caption) => caption.trim() !== "");
 
     animation.dataset.animationReady = "true";
 
@@ -23,6 +31,20 @@ export function initializeGraphAnimations({
     viewport.className = "mono-graph-animation__viewport";
     frames[0].before(viewport);
     frames.forEach((frame) => viewport.appendChild(frame));
+
+    const caption = hasFrameCaptions ? root.createElement("div") : null;
+    const captionFrames = [];
+    if (caption) {
+      caption.className = "mono-graph-animation__caption";
+      frameCaptions.forEach((frameCaption) => {
+        const captionFrame = root.createElement("div");
+        captionFrame.className = "mono-graph-animation__caption-frame";
+        captionFrame.innerHTML = frameCaption;
+        caption.appendChild(captionFrame);
+        captionFrames.push(captionFrame);
+      });
+      viewport.after(caption);
+    }
 
     const controls = root.createElement("div");
     controls.className = "mono-graph-animation__controls";
@@ -43,7 +65,7 @@ export function initializeGraphAnimations({
     status.setAttribute("aria-live", "polite");
 
     controls.append(previousButton, playButton, nextButton, status);
-    viewport.after(controls);
+    (caption || viewport).after(controls);
 
     const prefersReducedMotion = windowObject.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const intervalMs = Number.parseInt(animation.dataset.interval || "1400", 10);
@@ -62,6 +84,11 @@ export function initializeGraphAnimations({
         const isActive = frameIndex === activeIndex;
         frame.classList.toggle("is-active", isActive);
         frame.setAttribute("aria-hidden", isActive ? "false" : "true");
+      });
+      captionFrames.forEach((captionFrame, frameIndex) => {
+        const isActive = frameIndex === activeIndex;
+        captionFrame.classList.toggle("is-active", isActive);
+        captionFrame.setAttribute("aria-hidden", isActive ? "false" : "true");
       });
       playButton.textContent = isPlaying ? "pause" : "play";
       status.textContent = `${activeIndex + 1}/${frames.length}`;

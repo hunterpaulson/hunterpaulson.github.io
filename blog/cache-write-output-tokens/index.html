@@ -50,7 +50,14 @@
 </table>
 <nav id="TOC" role="doc-toc">
 <h2 id="toc-title">Contents</h2>
-
+<ul class="incremental">
+<li><a href="#llm-api-providers-are-charging-you-twice-for-output-tokens" id="toc-llm-api-providers-are-charging-you-twice-for-output-tokens">LLM API providers are charging you <em>twice</em> for output tokens</a></li>
+<li><a href="#it-doesnt-have-to-be-this-way" id="toc-it-doesnt-have-to-be-this-way">it doesn’t have to be this way</a></li>
+<li><a href="#how-it-should-look" id="toc-how-it-should-look">how it should look</a></li>
+<li><a href="#how-can-api-providers-support-this" id="toc-how-can-api-providers-support-this">how can API providers support this?</a></li>
+<li><a href="#why-did-i-write-this" id="toc-why-did-i-write-this">why did I write this?</a></li>
+<li><a href="#appendix" id="toc-appendix">appendix</a></li>
+</ul>
 </nav>
 <h1 id="llm-api-providers-are-charging-you-twice-for-output-tokens">LLM API providers are charging you <em>twice</em> for output tokens</h1>
 <p>Under agentic inference patterns current APIs charge you twice for output tokens. Once when they are generated, at output price, and again when they are written to the prompt prefix cache, at cache write price, on the subsequent API call.</p>
@@ -333,7 +340,7 @@ assistant and tool call KVs that weren’t retained from the previous request ar
 </figure>
 <p>During inference, Key and Value vectors (KVs) are generated for every token. KVs for input tokens are generated all at once during prefill. And the K and V for each output token is generated one at a time during autoregressive decode<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>.</p>
 <p>After decode is complete (because LLM completed a tool call) blocks<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a> of KVs are <em>retained</em> in cache so they can be reused, instead of recomputed, during the subsequent request.</p>
-<p>However only KV blocks for input tokens are <em>retained</em>, meaning that output tokens from request 1 must be <code>recomputed</code> during prefill stage of request 2.</p>
+<p>However only KV blocks for input tokens are <em>retained</em>, meaning that KVs for output tokens from request 1 must be <code>recomputed</code> during prefill stage of request 2.</p>
 <p>If this sounds redundant that’s because it is. There is nothing preventing them from retaining the KV blocks for the output tokens too. In fact this is exactly what the open source inference engines <a href="https://github.com/sgl-project/sglang">SGLang</a><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> and <a href="https://github.com/vllm-project/vllm">vLLM</a><a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a> do.</p>
 <h1 id="how-it-should-look">how it should look</h1>
 <!-- > Never refill tokens you just `decoded`. -->
@@ -641,7 +648,7 @@ response = client.messages.create(
     ####################################
     cache_control={ # existing automatic caching param
         &quot;cache_output&quot;: True, # new, indicates to cache output
-        &quot;type&quot;: &quot;ephemeral&quot;, # or e.g. &quot;intelligent&quot; to only retain cache if stop_reason == &quot;tool_use&quot;
+        &quot;type&quot;: &quot;ephemeral&quot;,
         &quot;ttl&quot;: &quot;5m&quot;
     },
     ####################################

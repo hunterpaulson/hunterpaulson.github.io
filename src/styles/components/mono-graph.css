@@ -173,6 +173,28 @@
   pointer-events: auto;
 }
 
+.mono-graph-animation__frame > figcaption {
+  display: none;
+}
+
+.mono-graph-animation__caption {
+  display: grid;
+  margin-top: 0;
+  color: var(--text-color);
+  font-style: italic;
+  text-align: center;
+}
+
+.mono-graph-animation__caption-frame {
+  grid-area: 1 / 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mono-graph-animation__caption-frame.is-active {
+  opacity: 1;
+}
+
 .mono-graph-animation__controls {
   display: flex;
   flex-wrap: wrap;

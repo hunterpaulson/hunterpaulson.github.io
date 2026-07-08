@@ -50,7 +50,7 @@ Let's walk through a minimal example of what this looks like from the perspectiv
 </div>
 <div class="llm-context-message llm-context-message--user cache-write is-new">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 </div>
@@ -65,18 +65,18 @@ Let's walk through a minimal example of what this looks like from the perspectiv
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant is-new">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span>
+<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span>
 <span class="llm-context-message-cost">$50.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-call is-new">
 <span class="llm-context-message-label">tool call(s)</span>
 <span class="llm-context-message-body">\<tool name=get_weather></span>
-<span class="llm-context-message-body">\<param name=city>Tokyo\</param></span>
+<span class="llm-context-message-body">\<param name=city>Phoenix\</param></span>
 <span class="llm-context-message-body">\</tool></span>
 <span class="llm-context-message-cost">$50.00 / 1M</span>
 </div>
@@ -100,24 +100,24 @@ Let's walk through a minimal example of what this looks like from the perspectiv
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write is-new is-danger">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span>
+<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-write is-new is-danger">
 <span class="llm-context-message-label">tool call(s)</span>
 <span class="llm-context-message-body">\<tool name=get_weather></span>
-<span class="llm-context-message-body">\<param name=city>Tokyo\</param></span>
+<span class="llm-context-message-body">\<param name=city>Phoenix\</param></span>
 <span class="llm-context-message-body">\</tool></span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write is-new">
 <span class="llm-context-message-label">tool result(s)</span>
-<span class="llm-context-message-body">Cloudy</span>
+<span class="llm-context-message-body">hot</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 </div>
@@ -132,29 +132,29 @@ Let's walk through a minimal example of what this looks like from the perspectiv
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span>
+<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-write">
 <span class="llm-context-message-label">tool call(s)</span>
 <span class="llm-context-message-body">\<tool name=get_weather></span>
-<span class="llm-context-message-body">\<param name=city>Tokyo\</param></span>
+<span class="llm-context-message-body">\<param name=city>Phoenix\</param></span>
 <span class="llm-context-message-body">\</tool></span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write">
 <span class="llm-context-message-label">tool result(s)</span>
-<span class="llm-context-message-body">Cloudy</span>
+<span class="llm-context-message-body">hot</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant is-new">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">The weather in Tokyo is **Cloudy**</span>
+<span class="llm-context-message-body">It&apos;s <em>hot</em> in Phoenix right now</span>
 <span class="llm-context-message-cost">$50.00 / 1M</span>
 </div>
 </div>
@@ -450,7 +450,7 @@ If API providers retain output tokens in the prompt prefix cache then users only
 </div>
 <div class="llm-context-message llm-context-message--user cache-write is-new">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 </div>
@@ -465,18 +465,18 @@ If API providers retain output tokens in the prompt prefix cache then users only
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write is-new">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span>
+<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span>
 <span class="llm-context-message-cost">$50.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-write is-new">
 <span class="llm-context-message-label">tool call(s)</span>
 <span class="llm-context-message-body">\<tool name=get_weather></span>
-<span class="llm-context-message-body">\<param name=city>Tokyo\</param></span>
+<span class="llm-context-message-body">\<param name=city>Phoenix\</param></span>
 <span class="llm-context-message-body">\</tool></span>
 <span class="llm-context-message-cost">$50.00 / 1M</span>
 </div>
@@ -500,24 +500,24 @@ If API providers retain output tokens in the prompt prefix cache then users only
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-read is-benefit">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span>
+<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-read is-benefit">
 <span class="llm-context-message-label">tool call(s)</span>
 <span class="llm-context-message-body">\<tool name=get_weather></span>
-<span class="llm-context-message-body">\<param name=city>Tokyo\</param></span>
+<span class="llm-context-message-body">\<param name=city>Phoenix\</param></span>
 <span class="llm-context-message-body">\</tool></span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write is-new">
 <span class="llm-context-message-label">tool result(s)</span>
-<span class="llm-context-message-body">Cloudy</span>
+<span class="llm-context-message-body">hot</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 </div>
@@ -532,29 +532,29 @@ If API providers retain output tokens in the prompt prefix cache then users only
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
 <span class="llm-context-message-label">user message</span>
-<span class="llm-context-message-body">what is the weather in Tokyo?</span>
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-read">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Tokyo</span>
+<span class="llm-context-message-body">I'll use my get_weather tool to get the weather in Phoenix</span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-read">
 <span class="llm-context-message-label">tool call(s)</span>
 <span class="llm-context-message-body">\<tool name=get_weather></span>
-<span class="llm-context-message-body">\<param name=city>Tokyo\</param></span>
+<span class="llm-context-message-body">\<param name=city>Phoenix\</param></span>
 <span class="llm-context-message-body">\</tool></span>
 <span class="llm-context-message-cost">$1.00 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write">
 <span class="llm-context-message-label">tool result(s)</span>
-<span class="llm-context-message-body">Cloudy</span>
+<span class="llm-context-message-body">hot</span>
 <span class="llm-context-message-cost">$12.50 / 1M</span>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write is-new">
 <span class="llm-context-message-label">assistant message</span>
-<span class="llm-context-message-body">The weather in Tokyo is **Cloudy**</span>
+<span class="llm-context-message-body">It&apos;s <em>hot</em> in Phoenix right now</span>
 <span class="llm-context-message-cost">$50.00 / 1M</span>
 </div>
 </div>
@@ -1012,7 +1012,7 @@ notice how with the shift from vanilla multi-turn conversations to agent loops i
 ```python
 messages: list[Message] = [
     SystemMessage(content="You report the weather."),
-    UserMessage(content="What is the weather in Tokyo?"),
+    UserMessage(content="What is the weather in Phoenix?"),
 ]
 
 while True:

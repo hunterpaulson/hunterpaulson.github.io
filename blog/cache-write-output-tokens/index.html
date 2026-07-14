@@ -52,8 +52,8 @@
 <h2 id="toc-title">Contents</h2>
 <ul class="incremental">
 <li><a href="#llm-api-providers-are-charging-you-twice-for-output-tokens" id="toc-llm-api-providers-are-charging-you-twice-for-output-tokens">LLM API providers are charging you <em>twice</em> for output tokens</a></li>
-<li><a href="#it-doesnt-have-to-be-this-way" id="toc-it-doesnt-have-to-be-this-way">it doesn’t have to be this way</a></li>
-<li><a href="#how-it-should-look" id="toc-how-it-should-look">how it should look</a></li>
+<li><a href="#kvs-for-output-tokens-dont-have-to-be-computed-twice" id="toc-kvs-for-output-tokens-dont-have-to-be-computed-twice">KVs for output tokens don’t have to be computed twice</a></li>
+<li><a href="#how-inference-should-look-within-an-agent-loop" id="toc-how-inference-should-look-within-an-agent-loop">how inference should look within an agent loop</a></li>
 <li><a href="#how-can-api-providers-support-this" id="toc-how-can-api-providers-support-this">how can API providers support this?</a></li>
 <li><a href="#why-did-i-write-this" id="toc-why-did-i-write-this">why did I write this?</a></li>
 <li><a href="#appendix" id="toc-appendix">appendix</a></li>
@@ -179,7 +179,7 @@ since the assistant message and tool call weren’t cached after output you have
 <!-- Say you prompt `claude-fable-5` in Claude Code to see why it is burning through your limit so fast. -->
 <h2 id="how-much-are-we-actually-paying-for-output-tokens">how much are we actually paying for output tokens?</h2>
 <blockquote>
-<p>~<strong>16-25%</strong> more than advertised</p>
+<p>~<strong>20-25%</strong> more than advertised</p>
 </blockquote>
 <p>Naively, if we are paying output price upon generation and then cache write input price on the next request then we can just add up their costs to get an estimate of how much we are really paying for ‘agentic output tokens’<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
 <pre data-filename="Claude Fable 5"><code>output + cache WRITE input = cost of &#39;agentic output tokens&#39;
@@ -187,11 +187,11 @@ $50.00 + $12.50            = $62.50 / 1M tokens
 
 $62.50 / $50.00 = 1.25 =&gt; 25% more than advertised output price</code></pre>
 <pre data-filename="GPT 5.6 Sol"><code>output + cache WRITE input = cost of &#39;agentic output tokens&#39;
-$30.00 + $5.00             = $35.00 / 1M tokens
+$30.00 + $6.25             = $36.25 / 1M tokens
 
-$35.00 / $30.00 = 1.1667 =&gt; 16.67% more than advertised output price</code></pre>
+$36.25 / $30.00 = 1.2083 =&gt; 20.83% more than advertised output price</code></pre>
 <p>note: we have to pay for every token in every request, so ‘agentic output tokens’ will always have some cost for each request. However, as we will see, that cost should be at <strong>cache read</strong> pricing, not <em>cache write</em> which is <a href="https://developers.openai.com/api/docs/pricing">10</a>-<a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pricing">12.5</a>x more expensive.</p>
-<h1 id="it-doesnt-have-to-be-this-way">it doesn’t have to be this way</h1>
+<h1 id="kvs-for-output-tokens-dont-have-to-be-computed-twice">KVs for output tokens don’t have to be computed twice</h1>
 <p>From the perspective of the prompt prefix cache there is no difference between input and output tokens, it is all just tokens.</p>
 <p>Just like they retain the KV cache blocks for input tokens, providers can <strong>retain the KV cache blocks created during generation</strong> so we no longer have to pay for cache write on the next call.</p>
 <p>Let’s take a look at what goes on under the hood with the prompt prefix cache for our two requests in the example above.</p>
@@ -342,7 +342,7 @@ assistant and tool call KVs that weren’t retained from the previous request ar
 <p>After decode is complete (because LLM completed a tool call) blocks<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a> of KVs are <em>retained</em> in cache so they can be reused, instead of recomputed, during the subsequent request.</p>
 <p>However only KV blocks for input tokens are <em>retained</em>, meaning that KVs for output tokens from request 1 must be <code>recomputed</code> during prefill stage of request 2.</p>
 <p>If this sounds redundant that’s because it is. There is nothing preventing them from retaining the KV blocks for the output tokens too. In fact this is exactly what the open source inference engines <a href="https://github.com/sgl-project/sglang">SGLang</a><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> and <a href="https://github.com/vllm-project/vllm">vLLM</a><a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a> do.</p>
-<h1 id="how-it-should-look">how it should look</h1>
+<h1 id="how-inference-should-look-within-an-agent-loop">how inference should look within an agent loop</h1>
 <!-- > Never refill tokens you just `decoded`. -->
 <blockquote>
 <p>Never <code>prefill</code> tokens you just <code>decoded</code></p>
@@ -603,7 +603,7 @@ On the next request input assistant message and tool call are charged at cache <
 <p>Notice how now API users only pay full price for new input or output tokens the first time they appear. From then on they are always ‘cache read input tokens’.</p>
 <h2 id="how-much-money-would-this-save">how much money would this save?</h2>
 <blockquote>
-<p>~<strong>12.9-18.4%</strong> on output tokens, depending on the provider.</p>
+<p>~<strong>15.9-18.4%</strong> on output tokens, depending on the provider.</p>
 </blockquote>
 <p>Now that we understand how prompt prefix caching should work let’s estimate how much this would save API users<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>.</p>
 <pre data-filename="Claude Fable 5"><code>output + cache WRITE input = CURRENT cost of output tokens
@@ -615,13 +615,13 @@ $50.00 + $1.00             = $51.00 / 1M tokens
 $62.50 - $51.00 = $11.50 extra per 1M output tokens
 $51.00 / $62.50 = 0.816 =&gt; 18.4% savings</code></pre>
 <pre data-filename="GPT 5.6 Sol"><code>output + cache WRITE input = CURRENT cost of output tokens
-$30.00 + $5.00             = $35.00 / 1M tokens
+$30.00 + $6.25             = $36.25 / 1M tokens
 
 output + cache READ  input = IDEAL   cost of output tokens
 $30.00 + $0.50             = $30.50 / 1M tokens
 
-$35.00 - $30.50 = $4.50 extra per 1M output tokens
-$30.50 / $35.00 = 0.871 =&gt; 12.9% savings</code></pre>
+$36.25 - $30.50 = $5.75 extra per 1M output tokens
+$30.50 / $36.25 = 0.841 =&gt; 15.9% savings</code></pre>
 <h2 id="this-improves-performance-too">this improves performance too</h2>
 <!-- The purpose of the prompt prefix cache isn't just to save money. Its primary purpose is to reduce the amount of precious compute that needs to be done for every request.
 Running GPUs costs money so saving a even a few FLOPs^[FLoating point OPerations, the total number of adds and multiplies.] per request can lower response time as well as cost. -->

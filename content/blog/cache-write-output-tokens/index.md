@@ -173,7 +173,7 @@ For every token generated before the last API request in the agent loop you pay 
 
 ## how much are we actually paying for output tokens?
 
-> ~**16-25%** more than advertised
+> ~**20-25%** more than advertised
 
 Naively, if we are paying output price upon generation and then cache write input price on the next request then we can just add up their costs to get an estimate of how much we are really paying for 'agentic output tokens'^[output tokens that contain tool calls that must be executed and returned on the next request].
 
@@ -186,14 +186,14 @@ $62.50 / $50.00 = 1.25 => 25% more than advertised output price
 
 ```{filename="GPT 5.6 Sol"}
 output + cache WRITE input = cost of 'agentic output tokens'
-$30.00 + $5.00             = $35.00 / 1M tokens
+$30.00 + $6.25             = $36.25 / 1M tokens
 
-$35.00 / $30.00 = 1.1667 => 16.67% more than advertised output price
+$36.25 / $30.00 = 1.2083 => 20.83% more than advertised output price
 ```
 
 note: we have to pay for every token in every request, so 'agentic output tokens' will always have some cost for each request. However, as we will see, that cost should be at **cache read** pricing, not _cache write_ which is [10](https://developers.openai.com/api/docs/pricing)-[12.5](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pricing)x more expensive.
 
-# it doesn't have to be this way
+# KVs for output tokens don't have to be computed twice
 
 From the perspective of the prompt prefix cache there is no difference between input and output tokens, it is all just tokens.
 
@@ -317,7 +317,7 @@ However only KV blocks for input tokens are _retained_, meaning that KVs for out
 
 If this sounds redundant that's because it is. There is nothing preventing them from retaining the KV blocks for the output tokens too. In fact this is exactly what the open source inference engines [SGLang](https://github.com/sgl-project/sglang)^[SGLang’s [RadixAttention](https://www.lmsys.org/blog/2024-01-17-sglang/) retains the KV cache for **both prompts and generation results** in a radix tree, and reuses them when a later prompt shares the prefix. Their tree diagram shows the assistant 'answer' becoming reusable cache for the next turn.] and [vLLM](https://github.com/vllm-project/vllm)^[vLLM’s [automatic prefix caching](https://docs.vllm.ai/en/stable/design/prefix_caching/) similarly caches KV blocks of entire requests and reuses them when a new request has the same prefix.] do.
 
-# how it should look
+# how inference should look within an agent loop
 
 <!-- > Never refill tokens you just `decoded`. -->
 > Never `prefill` tokens you just `decoded`
@@ -568,7 +568,7 @@ Notice how now API users only pay full price for new input or output tokens the 
 
 ## how much money would this save?
 
-> ~**12.9-18.4%** on output tokens, depending on the provider.
+> ~**15.9-18.4%** on output tokens, depending on the provider.
 
 Now that we understand how prompt prefix caching should work let's estimate how much this would save API users^[this is an estimate since the true cost depends on how many more times we reuse these tokens on subsequent requests before compaction. However the incremental cost will be identical since both will be getting cache read price after the second request].
 
@@ -586,13 +586,13 @@ $51.00 / $62.50 = 0.816 => 18.4% savings
 
 ```{filename="GPT 5.6 Sol"}
 output + cache WRITE input = CURRENT cost of output tokens
-$30.00 + $5.00             = $35.00 / 1M tokens
+$30.00 + $6.25             = $36.25 / 1M tokens
 
 output + cache READ  input = IDEAL   cost of output tokens
 $30.00 + $0.50             = $30.50 / 1M tokens
 
-$35.00 - $30.50 = $4.50 extra per 1M output tokens
-$30.50 / $35.00 = 0.871 => 12.9% savings
+$36.25 - $30.50 = $5.75 extra per 1M output tokens
+$30.50 / $36.25 = 0.841 => 15.9% savings
 ```
 
 ## this improves performance too

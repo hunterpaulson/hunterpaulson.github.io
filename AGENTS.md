@@ -11,14 +11,12 @@ this means that we really only have 2 headers. h1 takes up 2 lines, h2 takes up 
 ## build system
 
 ```bash
-npm install      # install local dev dependencies for a fresh worktree
-npm run dev      # start vite dev server with auto-rebuild (http://localhost:5173)
-npm run build    # run make to generate dist/
-npm test         # run all tests (node auto-discovers nested test files)
+bun install      # install local dev dependencies for a fresh worktree
+bun run dev      # build every page into .dev-dist/ and serve it at http://localhost:5173
+bun run build    # cleanly build only status: published pages into dist/
+bun test         # run all tests (node auto-discovers nested test files)
 make clean       # remove dist/ directory
 ```
-
-`bun run dev` also works after dependencies are installed because it uses the local `node_modules/.bin/vite` binary from the `vite` dev dependency.
 
 the build uses **pandoc** to convert `content/**/*.md` -> `dist/**/*.html` using `content/template.html`. vite watches for changes to content/, src/*.css, makefile, and blackhole*.c files, automatically runs `make`, and triggers browser reload.
 

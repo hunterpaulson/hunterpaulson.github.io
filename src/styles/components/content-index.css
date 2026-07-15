@@ -1,0 +1,21 @@
+.content-tree,
+.content-tree * {
+  margin-top: 0;
+}
+
+.content-tree__row {
+  display: flex;
+  margin: 0;
+  line-height: var(--line-height);
+}
+
+.content-tree__branches {
+  flex: 0 0 auto;
+  color: var(--text-color-alt);
+  white-space: pre;
+}
+
+.content-tree__directory-name {
+  color: var(--text-color);
+  font-weight: var(--font-weight-normal);
+}

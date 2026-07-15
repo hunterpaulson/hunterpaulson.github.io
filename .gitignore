@@ -9,6 +9,7 @@ pnpm-debug.log*
 # Vite / build cache
 .vite/
 dist/
+.dev-dist/
 
 # Python / uv environment artifacts
 .venv/

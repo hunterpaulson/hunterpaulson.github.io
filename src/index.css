@@ -12,6 +12,7 @@
 @import "./styles/components/ascii-animations.css";
 @import "./styles/components/mono-graph.css";
 @import "./styles/components/mono-chart.css";
+@import "./styles/components/content-index.css";
 @import "./styles/components/art.css";
 @import "./styles/components/agent-context.css";
 @import "./styles/components/llm-context.css";

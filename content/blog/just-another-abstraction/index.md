@@ -1,5 +1,6 @@
 ---
 title: just another abstraction
+status: published
 date: 2026-03-08
 description: coding agents are like compilers.
 social-image: /assets/blog/just-another-abstraction/social/edit-distance-abstraction.gif

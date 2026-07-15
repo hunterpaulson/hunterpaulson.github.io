@@ -9,33 +9,6 @@ const BLOG_INDEX_PATH = path.join(BLOG_CONTENT_DIR, "index.md");
 const START_MARKER = "<!-- BLOG-POSTS:START -->";
 const END_MARKER = "<!-- BLOG-POSTS:END -->";
 
-function parseFrontMatter(text) {
-  const lines = text.split(/\r?\n/);
-  if (lines[0]?.trim() !== "---") {
-    return {};
-  }
-
-  const data = {};
-  for (let i = 1; i < lines.length; i += 1) {
-    const line = lines[i];
-    if (line.trim() === "---") {
-      break;
-    }
-    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (!match) {
-      continue;
-    }
-    const [, key, rawValue] = match;
-    let value = rawValue.trim();
-    if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    data[key] = value;
-  }
-
-  return data;
-}
-
 function parseDateValue(rawDate) {
   if (!rawDate) {
     return { time: 0, display: "" };
@@ -48,52 +21,29 @@ function parseDateValue(rawDate) {
   return { time: parsed.getTime(), display: iso };
 }
 
-function parseBooleanValue(rawValue, fallback) {
-  if (rawValue === undefined || rawValue === null || rawValue === "") {
-    return fallback;
-  }
+async function readPosts() {
+  const { createContentManifest } = await import("./content-manifest.mjs");
+  const pages = createContentManifest(ROOT_DIR);
+  const posts = pages
+    .filter((page) => {
+      const parts = page.relativeSourcePath.split("/");
+      return parts.length === 3
+        && parts[0] === "blog"
+        && parts[2] === "index.md"
+        && page.status === "published"
+        && page.listed;
+    })
+    .map((page) => {
+      const slug = page.relativeSourcePath.split("/")[1];
+      const { time, display } = parseDateValue(page.frontMatter.date);
 
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (["true", "1", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-  if (["false", "0", "no", "off"].includes(normalized)) {
-    return false;
-  }
-
-  return fallback;
-}
-
-function readPosts() {
-  const entries = fs.readdirSync(BLOG_CONTENT_DIR, { withFileTypes: true });
-  const posts = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const slug = entry.name;
-    const postPath = path.join(BLOG_CONTENT_DIR, slug, "index.md");
-    if (!fs.existsSync(postPath)) {
-      continue;
-    }
-
-    const content = fs.readFileSync(postPath, "utf8");
-    const frontMatter = parseFrontMatter(content);
-
-    const title = frontMatter.title || slug;
-    const { time, display } = parseDateValue(frontMatter.date);
-    const listed = parseBooleanValue(frontMatter.listed, true);
-
-    posts.push({
-      slug,
-      title,
-      time,
-      listed,
-      dateDisplay: display || "????-??-??",
+      return {
+        dateDisplay: display || "????-??-??",
+        slug,
+        time,
+        title: page.title,
+      };
     });
-  }
 
   return posts.sort((a, b) => {
     if (a.time !== b.time) {
@@ -123,8 +73,8 @@ function injectListing(indexContent, listingLines) {
   return `${before}${listingBlock}${after}`;
 }
 
-function main() {
-  const posts = readPosts().filter((post) => post.listed);
+async function main() {
+  const posts = await readPosts();
   const listingLines = posts.map(
     (post) => `- ${post.dateDisplay} — [${post.title}](/blog/${post.slug}/)`
   );
@@ -139,9 +89,7 @@ function main() {
   fs.writeFileSync(BLOG_INDEX_PATH, updatedContent);
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
-}
+});

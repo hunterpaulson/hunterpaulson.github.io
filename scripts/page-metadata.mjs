@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { parseFrontMatter, resolveContentRoute } from "./content-page.mjs";
+
+export { parseFrontMatter, resolveContentRoute } from "./content-page.mjs";
+
 export const DEFAULT_SITE_NAME = "hunter paulson";
 export const DEFAULT_SITE_URL = "https://hunterpaulson.dev";
 export const DEFAULT_DESCRIPTION = "Hunter Paulson's personal website for writing, art, projects, and experiments in computer science.";
@@ -11,94 +15,6 @@ const FRONT_MATTER_DELIMITER = "---";
 
 function normalizeSiteUrl(siteUrl) {
   return (siteUrl || DEFAULT_SITE_URL).replace(/\/+$/, "");
-}
-
-function stripMatchingQuotes(value) {
-  if (value.length < 2) {
-    return value;
-  }
-
-  const first = value[0];
-  const last = value[value.length - 1];
-  if ((first === "\"" && last === "\"") || (first === "'" && last === "'")) {
-    return value.slice(1, -1);
-  }
-
-  return value;
-}
-
-export function parseFrontMatter(markdown) {
-  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
-  if (lines[0]?.trim() !== FRONT_MATTER_DELIMITER) {
-    return {
-      closeIndex: -1,
-      data: {},
-      hasFrontMatter: false,
-      lines,
-    };
-  }
-
-  const data = {};
-  let closeIndex = -1;
-
-  for (let index = 1; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (line.trim() === FRONT_MATTER_DELIMITER) {
-      closeIndex = index;
-      break;
-    }
-
-    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (!match) {
-      continue;
-    }
-
-    const [, key, rawValue] = match;
-    data[key] = stripMatchingQuotes(rawValue.trim());
-  }
-
-  if (closeIndex === -1) {
-    return {
-      closeIndex: -1,
-      data: {},
-      hasFrontMatter: false,
-      lines,
-    };
-  }
-
-  return {
-    closeIndex,
-    data,
-    hasFrontMatter: true,
-    lines,
-  };
-}
-
-export function resolveContentRoute(inputPath, rootDirectory = process.cwd()) {
-  const contentDirectory = path.join(rootDirectory, "content");
-  const relativePath = path.relative(contentDirectory, path.resolve(inputPath));
-
-  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
-    throw new Error(`content path must be inside ${contentDirectory}: ${inputPath}`);
-  }
-
-  const routeParts = relativePath.split(path.sep);
-  const fileName = routeParts.at(-1);
-  if (!fileName?.endsWith(".md")) {
-    throw new Error(`content path must be a markdown file: ${inputPath}`);
-  }
-
-  if (fileName === "index.md") {
-    const directoryParts = routeParts.slice(0, -1);
-    if (directoryParts.length === 0) {
-      return "/";
-    }
-
-    return `/${directoryParts.join("/")}/`;
-  }
-
-  const stem = fileName.slice(0, -3);
-  return `/${[...routeParts.slice(0, -1), `${stem}.html`].join("/")}`;
 }
 
 export function toAbsoluteUrl(value, siteUrl = DEFAULT_SITE_URL) {

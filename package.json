@@ -6,7 +6,7 @@
   "main": "src/index.css",
   "scripts": {
     "dev": "vite",
-    "build": "make",
+    "build": "make clean && make SITE_MODE=production DIST_DIR=dist",
     "audit:grid": "bun scripts/grid-audit.mjs",
     "export:media": "bun scripts/export-media.mjs",
     "export:art": "bun scripts/export-media.mjs all-gifs",

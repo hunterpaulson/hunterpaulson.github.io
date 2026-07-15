@@ -1,5 +1,6 @@
 ---
 title: blog
+status: published
 description: Writing by Hunter Paulson on software, systems, agents, and learning in public.
 ---
 

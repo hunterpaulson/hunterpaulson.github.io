@@ -1,5 +1,6 @@
 ---
 title: art
+status: published
 author: Hunter Paulson
 lang: en
 description: ASCII animations by Hunter Paulson.

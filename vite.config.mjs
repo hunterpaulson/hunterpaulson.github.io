@@ -5,7 +5,9 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
-const DIST_ROOT = path.join(ROOT, 'dist');
+const DEVELOPMENT_DIST_DIR = '.dev-dist';
+const DEVELOPMENT_DIST_ROOT = path.join(ROOT, DEVELOPMENT_DIST_DIR);
+const PRODUCTION_DIST_ROOT = path.join(ROOT, 'dist');
 const WATCH_PATHS = [
   path.join(ROOT, 'content'),
   path.join(ROOT, 'src'),
@@ -55,7 +57,7 @@ function decodePathname(requestUrl) {
   }
 }
 
-function isKnownHtmlRoute(requestUrl) {
+function isKnownHtmlRoute(requestUrl, distRoot) {
   const pathname = decodePathname(requestUrl);
   const relativePath = pathname.replace(/^\/+/, '');
 
@@ -72,15 +74,15 @@ function isKnownHtmlRoute(requestUrl) {
   }
 
   return candidates.some((candidate) => {
-    const absolutePath = path.resolve(DIST_ROOT, candidate);
-    if (!absolutePath.startsWith(DIST_ROOT)) {
+    const absolutePath = path.resolve(distRoot, candidate);
+    if (!absolutePath.startsWith(distRoot)) {
       return false;
     }
     return fs.existsSync(absolutePath);
   });
 }
 
-function createNotFoundRedirectPlugin() {
+function createNotFoundRedirectPlugin(distRoot) {
   return {
     name: 'dev-404-redirect',
     configureServer(server) {
@@ -107,7 +109,7 @@ function createNotFoundRedirectPlugin() {
           return next();
         }
 
-        if (isKnownHtmlRoute(requestUrl)) {
+        if (isKnownHtmlRoute(requestUrl, distRoot)) {
           return next();
         }
 
@@ -143,6 +145,11 @@ function createPandocWatcher() {
         const started = Date.now();
         const child = spawn('make', {
           cwd: ROOT,
+          env: {
+            ...process.env,
+            DIST_DIR: DEVELOPMENT_DIST_DIR,
+            SITE_MODE: 'development',
+          },
           stdio: 'inherit',
         });
 
@@ -201,14 +208,18 @@ function createPandocWatcher() {
   };
 }
 
-export default defineConfig({
-  appType: 'mpa',
-  root: 'dist',
-  server: {
-    fs: {
-      strict: false,
-      allow: ['..'],
+export default defineConfig(({ isPreview }) => {
+  const distRoot = isPreview ? PRODUCTION_DIST_ROOT : DEVELOPMENT_DIST_ROOT;
+
+  return {
+    appType: 'mpa',
+    root: distRoot,
+    server: {
+      fs: {
+        strict: false,
+        allow: ['..'],
+      },
     },
-  },
-  plugins: [createPandocWatcher(), createNotFoundRedirectPlugin()],
+    plugins: [createPandocWatcher(), createNotFoundRedirectPlugin(distRoot)],
+  };
 });

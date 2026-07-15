@@ -40,6 +40,7 @@ test("resolveContentRoute maps content files to production routes", () => {
   assert.equal(resolveContentRoute("/site/content/404.md", rootDirectory), "/404.html");
   assert.equal(resolveContentRoute("/site/content/art/index.md", rootDirectory), "/art/");
   assert.equal(resolveContentRoute("/site/content/blog/post/index.md", rootDirectory), "/blog/post/");
+  assert.equal(resolveContentRoute("/site/content/blog/post/notes.md", rootDirectory), "/blog/post/notes/");
 });
 
 test("buildPageMetadata creates absolute social URLs and image dimensions", async () => {

@@ -4,57 +4,11 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
-const CONTENT_DIR = path.join(ROOT_DIR, "content");
-const DIST_DIR = path.join(ROOT_DIR, "dist");
+const DIST_DIR = path.resolve(ROOT_DIR, process.env.DIST_DIR || "dist");
 const SITEMAP_PATH = path.join(DIST_DIR, "sitemap.xml");
 const ROBOTS_PATH = path.join(DIST_DIR, "robots.txt");
 const ROBOT_FRAME_PATH = path.join(ROOT_DIR, "assets", "blackhole_frame_robot.txt");
 const SITE_URL = (process.env.SITE_URL || "https://hunterpaulson.dev").replace(/\/+$/, "");
-
-function parseFrontMatter(text) {
-  const lines = text.split(/\r?\n/);
-  if (lines[0]?.trim() !== "---") {
-    return {};
-  }
-
-  const data = {};
-  for (let i = 1; i < lines.length; i += 1) {
-    const line = lines[i];
-    if (line.trim() === "---") {
-      break;
-    }
-
-    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (!match) {
-      continue;
-    }
-
-    const [, key, rawValue] = match;
-    let value = rawValue.trim();
-    if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    data[key] = value;
-  }
-
-  return data;
-}
-
-function parseBooleanValue(rawValue, fallback) {
-  if (rawValue === undefined || rawValue === null || rawValue === "") {
-    return fallback;
-  }
-
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (["true", "1", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-  if (["false", "0", "no", "off"].includes(normalized)) {
-    return false;
-  }
-
-  return fallback;
-}
 
 function escapeXml(value) {
   return value
@@ -65,84 +19,21 @@ function escapeXml(value) {
     .replace(/'/g, "&apos;");
 }
 
-function readPageFrontMatter(filePath) {
-  const content = fs.readFileSync(filePath, "utf8");
-  return parseFrontMatter(content);
-}
+async function collectPages() {
+  const { contentPagesForMode, createContentManifest } = await import("./content-manifest.mjs");
+  const mode = process.env.SITE_MODE || "production";
 
-function shouldIncludeInSitemap(filePath) {
-  const frontMatter = readPageFrontMatter(filePath);
-  return !parseBooleanValue(frontMatter.noindex, false);
-}
-
-function relativeMarkdownUrl(relativePath) {
-  const normalizedPath = relativePath.split(path.sep).join("/");
-  if (normalizedPath === "index.md") {
-    return "/";
-  }
-  if (normalizedPath.endsWith("/index.md")) {
-    return `/${normalizedPath.slice(0, -"/index.md".length)}/`;
-  }
-  return `/${normalizedPath.slice(0, -".md".length)}.html`;
-}
-
-function isBuildableMarkdownPage(relativePath) {
-  const parts = relativePath.split(path.sep);
-  return parts.length === 1 || parts[parts.length - 1] === "index.md";
-}
-
-function listMarkdownPages(directory = CONTENT_DIR) {
-  const entries = fs.readdirSync(directory, { withFileTypes: true });
-  const pages = [];
-
-  for (const entry of entries) {
-    const filePath = path.join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      if (filePath === path.join(CONTENT_DIR, "includes")) {
-        continue;
-      }
-      pages.push(...listMarkdownPages(filePath));
-      continue;
-    }
-
-    if (!entry.isFile() || !entry.name.endsWith(".md")) {
-      continue;
-    }
-
-    const relativePath = path.relative(CONTENT_DIR, filePath);
-    if (!isBuildableMarkdownPage(relativePath)) {
-      continue;
-    }
-
-    pages.push({
-      filePath,
-      relativeUrl: relativeMarkdownUrl(relativePath),
-    });
-  }
-
-  return pages;
-}
-
-function collectPages() {
-  const allPages = listMarkdownPages();
-
-  const byUrl = new Map();
-  for (const page of allPages) {
-    byUrl.set(page.relativeUrl, page);
-  }
-
-  return Array.from(byUrl.values())
-    .filter((page) => shouldIncludeInSitemap(page.filePath))
-    .sort((a, b) => a.relativeUrl.localeCompare(b.relativeUrl));
+  return contentPagesForMode(createContentManifest(ROOT_DIR), mode)
+    .filter((page) => !page.noindex)
+    .sort((left, right) => left.route.localeCompare(right.route));
 }
 
 function buildSitemapXml(pages) {
   const urlLines = [];
 
   for (const page of pages) {
-    const absoluteUrl = `${SITE_URL}${page.relativeUrl}`;
-    const lastmod = fs.statSync(page.filePath).mtime.toISOString();
+    const absoluteUrl = `${SITE_URL}${page.route}`;
+    const lastmod = fs.statSync(page.absoluteSourcePath).mtime.toISOString();
 
     urlLines.push("  <url>");
     urlLines.push(`    <loc>${escapeXml(absoluteUrl)}</loc>`);
@@ -193,21 +84,19 @@ function buildRobotsTxt() {
   return lines.join("\n");
 }
 
-function writeSitemapFiles() {
+async function writeSitemapFiles() {
   fs.mkdirSync(DIST_DIR, { recursive: true });
 
-  const pages = collectPages();
+  const pages = await collectPages();
   fs.writeFileSync(SITEMAP_PATH, buildSitemapXml(pages));
   fs.writeFileSync(ROBOTS_PATH, buildRobotsTxt());
 }
 
-function main() {
-  writeSitemapFiles();
+async function main() {
+  await writeSitemapFiles();
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
-}
+});

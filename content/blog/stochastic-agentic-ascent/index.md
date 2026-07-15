@@ -1,5 +1,6 @@
 ---
 title: stochastic agentic ascent
+status: published
 date: 2026-03-15
 description: coding agents are like optimizers.
 social-image: /assets/blog/stochastic-agentic-ascent/social/stochastic-agentic-ascent.gif

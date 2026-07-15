@@ -1,7 +1,7 @@
-import { registerMediaExport } from "./blog/shared/media_export.mjs";
-import { attachViewportAnimationLifecycle } from "./blog/shared/viewport_animation_lifecycle.mjs";
+import { registerMediaExport } from "../blog/shared/media_export.mjs";
+import { attachViewportAnimationLifecycle } from "../blog/shared/viewport_animation_lifecycle.mjs";
 
-export function initializeGraphAnimations({
+export function initializeFrameAnimations({
   root = document,
   windowObject = window,
 } = {}) {

@@ -1,5 +1,6 @@
 ---
 title: LLM API providers are charging you _twice_ for output tokens
+status: published
 date: 2026-07-04
 description: once during generation and then again during cache write for the following request
 social-image: /assets/blog/cache-write-output-tokens/social/cache-write-kv-current-pair-with-legend.png

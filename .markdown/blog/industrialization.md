@@ -1,5 +1,6 @@
 ---
 title: industrialization of software
+status: published
 date: 2026-02-16
 description: coding agents are like tractors.
 social-image: /assets/blog/industrialization/social/tractors-farming-code.gif

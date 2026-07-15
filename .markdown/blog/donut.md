@@ -1,5 +1,6 @@
 ---
 title: donut.js
+status: published
 date: 2025-10-15
 description: A tiny JavaScript donut rendered in monospace.
 social-image: /assets/blog/donut/social/donut-js.gif

@@ -1,5 +1,6 @@
 ---
 title: computer scientist
+status: published
 lang: en
 description: Hunter Paulson's personal website for writing, art, projects, and experiments in computer science.
 canonical-url: "https://hunterpaulson.dev/"

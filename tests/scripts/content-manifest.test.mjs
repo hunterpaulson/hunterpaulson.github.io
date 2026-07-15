@@ -86,7 +86,6 @@ test("local content index links both draft and published pages", async () => {
   const markdown = renderContentIndex(createContentManifest(rootDirectory));
 
   assert.match(markdown, /title: content/);
-  assert.match(markdown, /content-index: true/);
   assert.match(markdown, /## DRAFT/);
   assert.match(markdown, /class="content-tree__directory-name" href="\/blog\/draft-post\/"/);
   assert.match(markdown, />draft-post\/<\/a>/);

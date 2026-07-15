@@ -143,7 +143,6 @@ export function renderContentIndex(manifest) {
     "---",
     "title: content",
     "noindex: true",
-    "content-index: true",
     "---",
     "",
     "# content",

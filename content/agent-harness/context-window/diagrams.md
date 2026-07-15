@@ -1,7 +1,5 @@
 ---
 title: context window diagram preview
-listed: false
-noindex: true
 date: 2026-03-07
 ---
 

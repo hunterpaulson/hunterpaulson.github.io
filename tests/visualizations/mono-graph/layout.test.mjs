@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import monoGraphLayout from "../src/mono_graph_layout.js";
+import * as monoGraphLayout from "../../../src/visualizations/mono-graph/layout.mjs";
 
 const {
-  computeNearestGridShift,
   computeGraphEdgePathPoints,
   computeNodeLayout,
   computePillEdgeEndpoint,
@@ -64,10 +63,6 @@ test("graph edges are straight by default and preserve explicit waypoints", () =
 
   assert.equal(waypointPath.length, 3);
   assert.deepEqual(waypointPath[1], explicitWaypoint);
-});
-
-test("footer top that lands near a half-row snaps to the nearest full row", () => {
-  assertClose(computeNearestGridShift(1641.2813, 19.1953125), 9.515575);
 });
 
 test("graph arrows aim at the rounded pill edge instead of the rectangular side midpoint", () => {

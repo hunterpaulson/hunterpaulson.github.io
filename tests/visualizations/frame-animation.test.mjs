@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { initializeGraphAnimations } from "../src/graph_animation.mjs";
+import { initializeFrameAnimations } from "../../src/visualizations/frame-animation.mjs";
 
 class FakeClassList {
   constructor() {
@@ -120,7 +120,7 @@ function activeFrameIndex(frames) {
   return frames.findIndex((frame) => frame.classList.contains("is-active"));
 }
 
-function createGraphAnimationFixture() {
+function createFrameAnimationFixture() {
   const document = new FakeDocument();
   const animation = document.createElement("div");
   animation.className = "mono-graph-animation";
@@ -134,7 +134,7 @@ function createGraphAnimationFixture() {
 
   const windowObject = createFakeWindow();
 
-  initializeGraphAnimations({ root: document, windowObject });
+  initializeFrameAnimations({ root: document, windowObject });
 
   const [viewport] = animation.querySelectorAll(".mono-graph-animation__viewport");
   const [controls] = animation.querySelectorAll(".mono-graph-animation__controls");
@@ -151,8 +151,8 @@ function createGraphAnimationFixture() {
   };
 }
 
-test("graph animation keeps playing when scroll places the pointer over the viewport", () => {
-  const { frames, viewport, windowObject } = createGraphAnimationFixture();
+test("frame animation keeps playing when scroll places the pointer over the viewport", () => {
+  const { frames, viewport, windowObject } = createFrameAnimationFixture();
 
   assert.equal(activeFrameIndex(frames), 0);
 
@@ -162,8 +162,8 @@ test("graph animation keeps playing when scroll places the pointer over the view
   assert.equal(activeFrameIndex(frames), 1);
 });
 
-test("graph animation keeps playing while focused", () => {
-  const { frames, viewport, windowObject } = createGraphAnimationFixture();
+test("frame animation keeps playing while focused", () => {
+  const { frames, viewport, windowObject } = createFrameAnimationFixture();
 
   assert.equal(activeFrameIndex(frames), 0);
 
@@ -174,7 +174,7 @@ test("graph animation keeps playing while focused", () => {
 });
 
 test("manual frame navigation pauses until play is pressed", () => {
-  const { frames, nextButton, playButton, windowObject } = createGraphAnimationFixture();
+  const { frames, nextButton, playButton, windowObject } = createFrameAnimationFixture();
 
   nextButton.dispatchEvent(new Event("click"));
   assert.equal(activeFrameIndex(frames), 1);

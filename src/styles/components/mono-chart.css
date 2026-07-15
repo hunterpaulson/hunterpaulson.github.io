@@ -1,0 +1,161 @@
+.mono-chart {
+  --mono-chart-cell-width: var(--measured-ch, 1ch);
+  --mono-chart-cell-height: var(--measured-row, var(--line-height));
+  --chart-cols: 48;
+  --chart-rows: 18;
+  --mono-chart-pad-left: 8;
+  --mono-chart-pad-right: 4;
+  --mono-chart-pad-top: 2;
+  --mono-chart-pad-bottom: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-chart-cell-height);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mono-chart::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+
+.mono-chart > figcaption {
+  margin-top: 0;
+  line-height: var(--mono-chart-cell-height);
+}
+
+.mono-chart__canvas {
+  position: relative;
+  width: calc(
+    (var(--chart-cols) * var(--mono-chart-cell-width)) +
+    ((var(--mono-chart-pad-left) + var(--mono-chart-pad-right)) * var(--mono-chart-cell-width))
+  );
+  height: calc(
+    (var(--chart-rows) * var(--mono-chart-cell-height)) +
+    ((var(--mono-chart-pad-top) + var(--mono-chart-pad-bottom)) * var(--mono-chart-cell-height))
+  );
+  margin: 0 auto;
+}
+
+.mono-chart__canvas > *,
+.mono-chart__canvas p {
+  margin: 0;
+}
+
+.mono-chart__svg,
+.mono-chart__labels {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mono-chart__labels {
+  pointer-events: none;
+}
+
+.mono-chart__axis,
+.mono-chart__series,
+.mono-chart__point,
+.mono-chart__guide,
+.mono-chart__arrow,
+.mono-chart__area {
+  display: none;
+}
+
+.mono-chart__path,
+.mono-chart__axis-path,
+.mono-chart__guide-path,
+.mono-chart__arrow-path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--border-thickness);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+}
+
+.mono-chart__guide-path {
+  color: var(--text-color-alt);
+  stroke-dasharray: 6 6;
+}
+
+.mono-chart__path--dashed,
+.mono-chart__arrow-path--dashed {
+  stroke-dasharray: 6 6;
+}
+
+.mono-chart__point-mark {
+  fill: var(--background-color);
+  stroke: currentColor;
+  stroke-width: var(--border-thickness);
+  vector-effect: non-scaling-stroke;
+}
+
+.mono-chart__area-rect {
+  fill: color-mix(in srgb, currentColor 18%, transparent);
+  stroke: currentColor;
+  stroke-width: var(--border-thickness);
+  vector-effect: non-scaling-stroke;
+}
+
+.mono-chart__area-rect--outline {
+  fill: none;
+}
+
+.mono-chart__label {
+  position: absolute;
+  display: block;
+  margin: 0;
+  line-height: var(--mono-chart-cell-height);
+  white-space: pre;
+  font-weight: var(--font-weight-medium);
+}
+
+.mono-chart__label--halo {
+  background: var(--background-color);
+  box-shadow: 0 0 0 0.15ch var(--background-color);
+}
+
+.mono-chart__label--generated {
+  z-index: 1;
+}
+
+.mono-chart__axis-label {
+  color: var(--text-color);
+  font-weight: var(--font-weight-bold);
+}
+
+.mono-chart__series--accent,
+.mono-chart__point--accent,
+.mono-chart__axis--accent,
+.mono-chart__guide--accent,
+.mono-chart__arrow--accent,
+.mono-chart__area--accent,
+.mono-chart__label--accent,
+.mono-chart__path--accent {
+  color: var(--accent-primary);
+}
+
+.mono-chart__series--warm,
+.mono-chart__point--warm,
+.mono-chart__axis--warm,
+.mono-chart__guide--warm,
+.mono-chart__arrow--warm,
+.mono-chart__area--warm,
+.mono-chart__label--warm,
+.mono-chart__path--warm {
+  color: var(--accent-secondary);
+}
+
+.mono-chart__series--muted,
+.mono-chart__point--muted,
+.mono-chart__axis--muted,
+.mono-chart__guide--muted,
+.mono-chart__arrow--muted,
+.mono-chart__area--muted,
+.mono-chart__label--muted,
+.mono-chart__path--muted {
+  color: var(--text-color-alt);
+}

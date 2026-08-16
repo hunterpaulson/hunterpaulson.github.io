@@ -346,23 +346,14 @@ static void pix_ray(const BHSceneParams *params, int sample_x, int sample_y,
   v0[3] = nph / (params->robs * (s > 1e-12 ? s : 1e-12));
 }
 
-static void resolve_background(BHSample *sample, BHSampleKind kind,
-                               double theta, double phi) {
+static void resolve_terminal(BHSample *sample, BHRayTerminalKind kind,
+                             double theta, double phi) {
   const float resolved_phi =
       (float)fmod(phi + 1000.0 * M_PI * 2.0, 2.0 * M_PI);
-  if (sample->kind == BH_SAMPLE_DISK) {
-    sample->background_kind = (uint32_t)kind;
-    if (kind == BH_SAMPLE_SKY) {
-      sample->background_a = (float)theta;
-      sample->background_b = resolved_phi;
-    }
-    return;
-  }
-
-  sample->kind = (uint32_t)kind;
-  if (kind == BH_SAMPLE_SKY) {
-    sample->a = (float)theta;
-    sample->b = resolved_phi;
+  sample->terminal_kind = (uint32_t)kind;
+  if (kind == BH_TERMINAL_SKY) {
+    sample->background_a = (float)theta;
+    sample->background_b = resolved_phi;
   }
 }
 
@@ -377,6 +368,7 @@ static BHSample trace_sample(const BHSceneParams *params, int sample_x,
     v_prev[i] = v[i];
   }
   const double h0 = 0.5, rh = 2.0 * Mbh;
+  const double escape_radius = fmax(1.2 * params->robs, rout + 10.0 * Mbh);
   double rmin = x[1];
   for (int step = 0; step < 5000; ++step) {
     double h = h0;
@@ -391,23 +383,23 @@ static BHSample trace_sample(const BHSceneParams *params, int sample_x,
       rmin = x[1];
     }
     if (x[1] <= 1.001 * rh) {
-      resolve_background(&sample, BH_SAMPLE_HORIZON, 0.0, 0.0);
+      resolve_terminal(&sample, BH_TERMINAL_HORIZON, 0.0, 0.0);
       return sample;
     }
-    if (x[1] > 1.2 * params->robs && step > 10) {
+    if (x[1] > escape_radius && step > 10) {
       if (rmin < 3.0 * Mbh) {
-        resolve_background(&sample, BH_SAMPLE_HORIZON, 0.0, 0.0);
+        resolve_terminal(&sample, BH_TERMINAL_HORIZON, 0.0, 0.0);
       } else {
-        resolve_background(&sample, BH_SAMPLE_SKY, x[2], x[3]);
+        resolve_terminal(&sample, BH_TERMINAL_SKY, x[2], x[3]);
       }
       return sample;
     }
-    if (sample.kind != BH_SAMPLE_DISK &&
-        (th_prev - M_PI / 2.0) * (x[2] - M_PI / 2.0) <= 0.0) {
+    if ((th_prev - M_PI / 2.0) * (x[2] - M_PI / 2.0) <= 0.0) {
       double f = (M_PI / 2.0 - th_prev) / (x[2] - th_prev + 1e-15);
       double rhit = x_prev[1] + f * (x[1] - x_prev[1]);
       double phit = x_prev[3] + f * (x[3] - x_prev[3]);
-      if (rhit >= rin && rhit <= rout) {
+      if (rhit >= rin && rhit <= rout &&
+          sample.disk_layer_count < BH_MAX_DISK_LAYERS) {
         double vh[4];
         for (int i = 0; i < 4; i++) {
           vh[i] = v_prev[i] + f * (v[i] - v_prev[i]);
@@ -435,10 +427,11 @@ static BHSample trace_sample(const BHSceneParams *params, int sample_x,
         }
         const double phi = fmod(phit + 1000.0 * M_PI * 2, 2 * M_PI);
         const double positive_g = g > 0 ? g : 0;
-        sample.kind = BH_SAMPLE_DISK;
-        sample.a = (float)rhit;
-        sample.b = (float)phi;
-        sample.base =
+        BHDiskLayer *layer =
+            &sample.disk_layers[sample.disk_layer_count++];
+        layer->radius = (float)rhit;
+        layer->phi = (float)phi;
+        layer->base =
             (float)(pow(rhit, -emiss_p) * pow(positive_g, 3.0) *
                     bh_ring_emissivity(params, rhit, phi));
       }
@@ -450,9 +443,9 @@ static BHSample trace_sample(const BHSceneParams *params, int sample_x,
     }
   }
   if (rmin < 3.0 * Mbh) {
-    resolve_background(&sample, BH_SAMPLE_HORIZON, 0.0, 0.0);
+    resolve_terminal(&sample, BH_TERMINAL_HORIZON, 0.0, 0.0);
   } else {
-    resolve_background(&sample, BH_SAMPLE_SKY, x[2], x[3]);
+    resolve_terminal(&sample, BH_TERMINAL_SKY, x[2], x[3]);
   }
   return sample;
 }
@@ -477,9 +470,10 @@ float bh_compute_norm_scale(const BHSceneParams *params, const BHSample *map) {
   float norm_scale = 1e-12f;
   const size_t count = bh_sample_count(params);
   for (size_t i = 0; i < count; i++) {
-    if (map[i].kind == BH_SAMPLE_DISK) {
-      if (map[i].base > norm_scale) {
-        norm_scale = map[i].base;
+    for (uint32_t layer_index = 0;
+         layer_index < map[i].disk_layer_count; layer_index++) {
+      if (map[i].disk_layers[layer_index].base > norm_scale) {
+        norm_scale = map[i].disk_layers[layer_index].base;
       }
     }
   }
@@ -644,25 +638,27 @@ void bh_generate_ascii_frame(const BHSceneParams *params, const BHSample *map,
           const BHSample *sample =
               &map[(size_t)map_y * (size_t)sample_width + (size_t)map_x];
           float brightness = 0.0f;
-          if (sample->kind == BH_SAMPLE_DISK) {
+          float transmittance = 1.0f;
+          for (uint32_t layer_index = 0;
+               layer_index < sample->disk_layer_count; layer_index++) {
+            const BHDiskLayer *layer = &sample->disk_layers[layer_index];
             const BHDiskAppearance appearance = bh_disk_appearance(
-                params, sample->base, norm_scale, sample->a, sample->b,
+                params, layer->base, norm_scale, layer->radius, layer->phi,
                 phase);
-            float background = 0.0f;
-            if (sample->background_kind == BH_SAMPLE_SKY) {
-              background = sky_value(sample->background_a,
-                                     sample->background_b, phase);
-            }
-            const float visible_background =
-                (1.0f - appearance.opacity) * background;
-            brightness = fminf(1.0f, appearance.emission + visible_background);
-            disk_peak = fmaxf(disk_peak, appearance.emission);
-            sky_peak = fmaxf(sky_peak, visible_background);
-          } else if (sample->kind == BH_SAMPLE_SKY) {
-            brightness = sky_value(sample->a, sample->b, phase);
-            sky_peak = fmaxf(sky_peak, brightness);
+            const float visible_emission =
+                transmittance * appearance.emission;
+            brightness += visible_emission;
+            disk_peak = fmaxf(disk_peak, visible_emission);
+            transmittance *= 1.0f - appearance.opacity;
           }
-          values[region] = brightness;
+          if (sample->terminal_kind == BH_TERMINAL_SKY) {
+            const float visible_sky =
+                transmittance * sky_value(sample->background_a,
+                                          sample->background_b, phase);
+            brightness += visible_sky;
+            sky_peak = fmaxf(sky_peak, visible_sky);
+          }
+          values[region] = fminf(1.0f, brightness);
         }
       }
       int use_braille =

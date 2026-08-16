@@ -16,6 +16,8 @@
 
 import { codepointsToFrame } from "../src/art/blackhole_runtime.mjs";
 
+export const SAMPLE_BYTES = 80;
+
 // Check WebGPU support
 export function isWebGPUSupported() {
   return typeof navigator !== 'undefined' && 'gpu' in navigator;
@@ -255,10 +257,10 @@ export class BlackHoleGPU {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // Six phase-independent disk layers plus their resolved backgrounds.
+    // Each sub-cell ray stores its ordered disk crossings and terminal sky/horizon.
     this.hitMapBuffer = this.device.createBuffer({
       label: 'Sample Map',
-      size: sampleCount * 32,
+      size: sampleCount * SAMPLE_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     });
 

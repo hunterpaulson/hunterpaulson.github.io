@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { packGlyphs, selectGlyphs } from "../../assets/blackhole_gpu.js";
+import {
+  packGlyphs,
+  SAMPLE_BYTES,
+  selectGlyphs,
+} from "../../assets/blackhole_gpu.js";
 
 const catalog = JSON.parse(await readFile(
   new URL("../../assets/blackhole_glyphs.json", import.meta.url),
@@ -10,6 +14,7 @@ const catalog = JSON.parse(await readFile(
 ));
 
 test("GPU glyph buffer uses the generated catalog without duplicating a ramp", () => {
+  assert.equal(SAMPLE_BYTES, 80);
   const ascii = selectGlyphs(catalog, "ascii");
   const all = selectGlyphs(catalog, "ascii-braille");
   const contours = selectGlyphs(catalog, "contour-stars");

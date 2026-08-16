@@ -80,13 +80,15 @@ int main(void) {
   for (int y = 0; y < sample_height; y++) {
     for (int x = 0; x < sample_width; x++) {
       BHSample *sample = &map[y * sample_width + x];
-      if (sample->kind != BH_SAMPLE_DISK) {
+      if (sample->disk_layer_count == 0) {
         continue;
       }
-      if (x < sample_width / 2) {
-        left_base += sample->base;
-      } else {
-        right_base += sample->base;
+      for (uint32_t layer = 0; layer < sample->disk_layer_count; layer++) {
+        if (x < sample_width / 2) {
+          left_base += sample->disk_layers[layer].base;
+        } else {
+          right_base += sample->disk_layers[layer].base;
+        }
       }
     }
   }
@@ -167,9 +169,10 @@ test("native, WebGPU, WASM, and browser callers expose one orbital simulation", 
     assert.match(source, /wake_width/);
     assert.match(source, /spiral/);
     assert.match(source, /disk_appearance/);
-    assert.match(source, /background_kind/);
+    assert.match(source, /terminal_kind/);
+    assert.match(source, /disk_layers/);
   }
-  assert.match(gpuSource, /sampleCount \* 32/);
+  assert.match(gpuSource, /sampleCount \* SAMPLE_BYTES/);
   assert.match(wasmSource, /bh_generate_ascii_frame/);
   assert.match(runtimeSource, /BLACKHOLE_WASM_INIT_PARAMETER_TYPES/);
   for (const caller of [browserSource, measurementSource]) {

@@ -9,11 +9,10 @@ extern "C" {
 #endif
 
 typedef enum {
-  BH_SAMPLE_EMPTY = 0,
-  BH_SAMPLE_DISK = 1,
-  BH_SAMPLE_SKY = 2,
-  BH_SAMPLE_HORIZON = 3,
-} BHSampleKind;
+  BH_TERMINAL_UNRESOLVED = 0,
+  BH_TERMINAL_SKY = 1,
+  BH_TERMINAL_HORIZON = 2,
+} BHRayTerminalKind;
 
 typedef enum {
   BH_GLYPH_SET_ASCII = 0,
@@ -22,15 +21,21 @@ typedef enum {
   BH_GLYPH_SET_CONTOUR_STARS = 3,
 } BHGlyphSet;
 
+#define BH_MAX_DISK_LAYERS 4u
+
 typedef struct {
-  float a;    // disk radius or final sky theta
-  float b;    // disk azimuth or final sky phi
+  float radius;
+  float phi;
   float base; // phase-independent disk brightness
-  uint32_t kind;
-  float background_a; // final sky theta when a disk layer is present
-  float background_b; // final sky phi when a disk layer is present
-  uint32_t background_kind;
   uint32_t _padding;
+} BHDiskLayer;
+
+typedef struct {
+  BHDiskLayer disk_layers[BH_MAX_DISK_LAYERS];
+  float background_a; // final sky theta
+  float background_b; // final sky phi
+  uint32_t terminal_kind;
+  uint32_t disk_layer_count;
 } BHSample;
 
 typedef struct {

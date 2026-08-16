@@ -15,6 +15,9 @@
  */
 
 import { codepointsToFrame } from "../src/art/blackhole_runtime.mjs";
+import { createSpiralMatterField } from "../src/art/blackhole_matter.mjs";
+
+export const SAMPLE_BYTES = 80;
 
 // Check WebGPU support
 export function isWebGPUSupported() {
@@ -66,6 +69,7 @@ export class BlackHoleGPU {
     this.readbackBuffer = null;
     this.glyphBuffer = null;
     this.normalizationBuffer = null;
+    this.matterBuffer = null;
     this.bindGroup = null;
     
     this.width = 80;
@@ -79,6 +83,7 @@ export class BlackHoleGPU {
     this.featureScales = [1, 1, 1, 1, 1, 1];
     this.brailleFeatureScales = [1, 1, 1, 1, 1, 1];
     this.glyphMode = 0;
+    this.matterField = null;
     
     // Default parameters
     this.params = {
@@ -117,6 +122,7 @@ export class BlackHoleGPU {
     glyphSet = "braille-stars",
     sampleCount = 6,
     ringProfile = {},
+    matterField = null,
   ) {
     if (!isWebGPUSupported()) {
       throw new Error('WebGPU is not supported in this browser');
@@ -131,6 +137,11 @@ export class BlackHoleGPU {
     Object.assign(this.params, ringProfile);
     this.sampleColumns = sampleCount === 1 ? 1 : 2;
     this.sampleRows = sampleCount === 1 ? 1 : (sampleCount === 4 ? 2 : 3);
+    const initialMatter = matterField ?? createSpiralMatterField({ width, height });
+    if (initialMatter.length !== width * height) {
+      throw new RangeError("matter field size does not match the render grid");
+    }
+    this.matterField = new Float32Array(initialMatter);
 
     const glyphCatalogUrl = new URL('./blackhole_glyphs.json', import.meta.url);
     const glyphCatalog = await fetch(glyphCatalogUrl).then((response) => {
@@ -255,10 +266,10 @@ export class BlackHoleGPU {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // Six phase-independent disk layers plus their resolved backgrounds.
+    // Each sub-cell ray stores its ordered disk crossings and terminal sky/horizon.
     this.hitMapBuffer = this.device.createBuffer({
       label: 'Sample Map',
-      size: sampleCount * 32,
+      size: sampleCount * SAMPLE_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     });
 
@@ -274,6 +285,13 @@ export class BlackHoleGPU {
       size: 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
+
+    this.matterBuffer = this.device.createBuffer({
+      label: 'Initial Matter Field',
+      size: pixelCount * 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(this.matterBuffer, 0, this.matterField);
 
     // Storage buffer for output characters (4 bytes per pixel for u32)
     this.outputBuffer = this.device.createBuffer({
@@ -315,6 +333,7 @@ export class BlackHoleGPU {
         { binding: 2, resource: { buffer: this.outputBuffer } },
         { binding: 3, resource: { buffer: this.glyphBuffer } },
         { binding: 4, resource: { buffer: this.normalizationBuffer } },
+        { binding: 5, resource: { buffer: this.matterBuffer } },
       ],
     });
   }
@@ -499,6 +518,14 @@ export class BlackHoleGPU {
     this.updateParams({ inc_deg, robs, roll_deg });
   }
 
+  setMatterField(field) {
+    if (field.length !== this.width * this.height) {
+      throw new RangeError("matter field size does not match the render grid");
+    }
+    this.matterField.set(field);
+    this.device.queue.writeBuffer(this.matterBuffer, 0, this.matterField);
+  }
+
   /**
    * Cleanup GPU resources
    */
@@ -509,6 +536,7 @@ export class BlackHoleGPU {
     if (this.readbackBuffer) this.readbackBuffer.destroy();
     if (this.glyphBuffer) this.glyphBuffer.destroy();
     if (this.normalizationBuffer) this.normalizationBuffer.destroy();
+    if (this.matterBuffer) this.matterBuffer.destroy();
     this.device = null;
     this.adapter = null;
   }
@@ -529,6 +557,7 @@ export async function createBlackHoleGPU(
   glyphSet,
   sampleCount,
   ringProfile,
+  matterField,
 ) {
   const bh = new BlackHoleGPU();
   await bh.init(
@@ -541,6 +570,7 @@ export async function createBlackHoleGPU(
     glyphSet,
     sampleCount,
     ringProfile,
+    matterField,
   );
   return bh;
 }

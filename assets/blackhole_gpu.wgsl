@@ -12,10 +12,15 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
 const PI: f32 = 3.14159265358979323846;
+const SQRT_2: f32 = 1.4142135623730951;
 const Mbh: f32 = 1.0;  // Black hole mass (geometric units: G = c = 1)
 const rin: f32 = 6.0;   // Inner edge of accretion disk (ISCO for Schwarzschild)
-const rout: f32 = 40.0; // Outer edge of accretion disk
+const rout: f32 = 40.0; // Outer edge of the default spiral and ring profile
+const matter_support_rout: f32 = rout * SQRT_2;
 const emiss_p: f32 = 2.0; // Emission power law exponent
+const max_disk_layers: u32 = 4u;
+const terminal_sky: u32 = 1u;
+const terminal_horizon: u32 = 2u;
 
 // Scene parameters - uniforms that can change every frame
 struct SceneParams {
@@ -46,15 +51,19 @@ struct SceneParams {
     ring_irregularity: f32,
 }
 
-struct Sample {
-    a: f32,    // disk radius or final sky theta
-    b: f32,    // disk azimuth or final sky phi
+struct DiskLayer {
+    radius: f32,
+    phi: f32,
     base: f32, // phase-independent disk brightness
-    kind: u32,
+    _padding: u32,
+}
+
+struct Sample {
+    disk_layers: array<DiskLayer, 4>,
     background_a: f32,
     background_b: f32,
-    background_kind: u32,
-    _padding: u32,
+    terminal_kind: u32,
+    disk_layer_count: u32,
 }
 
 struct RingBand {
@@ -81,6 +90,7 @@ struct Normalization {
 @group(0) @binding(2) var<storage, read_write> output_chars: array<u32>;
 @group(0) @binding(3) var<storage, read> glyphs: array<Glyph>;
 @group(0) @binding(4) var<storage, read_write> normalization: Normalization;
+@group(0) @binding(5) var<storage, read> matter_field: array<f32>;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SCHWARZSCHILD METRIC
@@ -360,22 +370,48 @@ fn ring_mul(r: f32, phi: f32) -> f32 {
     return params.ring_floor + (peak - params.ring_floor) * t;
 }
 
-fn smooth_window(distance: f32) -> f32 {
-    let value = max(0.0, 1.0 - abs(distance));
-    return value * value * (3.0 - 2.0 * value);
-}
-
-fn wrap_angle(angle: f32) -> f32 {
-    return angle - 2.0 * PI * floor((angle + PI) / (2.0 * PI));
-}
-
-fn angular_lobe(angle: f32, half_width: f32) -> f32 {
-    return smooth_window(wrap_angle(angle) / half_width);
-}
-
 fn readable_orbital_phase(radius: f32, phi: f32, phase: f32) -> f32 {
     let angular_speed = min(1.6, pow(12.0 / radius, 1.5));
     return phi + phase * angular_speed;
+}
+
+fn matter_density(radius: f32, phi: f32) -> f32 {
+    let source_phi = readable_orbital_phase(radius, phi, params.phase);
+    let projected_phi = source_phi - 0.5 * PI;
+    let editor_scale = radius / rout;
+    let normalized_x = 0.5 + 0.5 * editor_scale * cos(projected_phi);
+    let normalized_y = 0.5 - 0.5 * editor_scale * sin(projected_phi);
+    if (normalized_x < 0.0 || normalized_x > 1.0 ||
+        normalized_y < 0.0 || normalized_y > 1.0) {
+        return 0.0;
+    }
+    let grid_x = clamp(
+        normalized_x * f32(params.width) - 0.5,
+        0.0,
+        f32(params.width - 1u),
+    );
+    let grid_y = clamp(
+        normalized_y * f32(params.height) - 0.5,
+        0.0,
+        f32(params.height - 1u),
+    );
+    let x0 = u32(floor(grid_x));
+    let y0 = u32(floor(grid_y));
+    let x1 = min(x0 + 1u, params.width - 1u);
+    let y1 = min(y0 + 1u, params.height - 1u);
+    let tx = grid_x - f32(x0);
+    let ty = grid_y - f32(y0);
+    let top = mix(
+        matter_field[y0 * params.width + x0],
+        matter_field[y0 * params.width + x1],
+        tx,
+    );
+    let bottom = mix(
+        matter_field[y1 * params.width + x0],
+        matter_field[y1 * params.width + x1],
+        tx,
+    );
+    return clamp(mix(top, bottom, ty), 0.0, 1.0);
 }
 
 fn disk_appearance(base: f32, norm_scale: f32, r: f32, phi: f32) -> vec2<f32> {
@@ -384,21 +420,14 @@ fn disk_appearance(base: f32, norm_scale: f32, r: f32, phi: f32) -> vec2<f32> {
         return vec2<f32>(0.0);
     }
     let toned = pow(normalized, params.gamma_c);
-    let radius = clamp(r, rin, rout);
-    let radial_position = (radius - rin) / (rout - rin);
-    let radial_opacity = clamp(ring_mul(radius, phi), 0.0, 1.0);
-    let readable_phi = readable_orbital_phase(radius, phi, params.phase);
-    let inner_emphasis = 1.0 - radial_position;
-    let inner_area = inner_emphasis * inner_emphasis;
-    let ridge_width = 0.36 + 0.48 * inner_area;
-    let wake_width = 0.95 + 0.30 * inner_emphasis;
-    let angle = wrap_angle(readable_phi + 7.5 * radial_position - 0.45);
-    let ridge = angular_lobe(angle, ridge_width);
-    let wake = 0.48 * angular_lobe(angle - 0.62, wake_width);
-    let spiral = max(ridge, wake);
+    let radius = clamp(r, rin, matter_support_rout);
+    let ring_radius = min(rout, radius);
+    let radial_position = (ring_radius - rin) / (rout - rin);
+    let radial_opacity = clamp(ring_mul(ring_radius, phi), 0.0, 1.0);
+    let density = matter_density(radius, phi);
     let highlight = 0.90 - 0.15 * radial_position;
-    let emission = spiral * (0.72 * toned + highlight * (1.0 - toned));
-    let appearance = vec2<f32>(emission, radial_opacity * spiral);
+    let emission = density * (0.72 * toned + highlight * (1.0 - toned));
+    let appearance = vec2<f32>(emission, radial_opacity * density);
 
     return clamp(appearance, vec2<f32>(0.0), vec2<f32>(1.0));
 }
@@ -436,17 +465,20 @@ fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
     
     let h0 = 0.5;  // Base step size
     let rh = 2.0 * Mbh;  // Event horizon radius
+    let escape_radius = max(1.2 * params.robs, matter_support_rout + 10.0 * Mbh);
     var rmin = x[1];
     
     var sample: Sample;
-    sample.a = 0.0;
-    sample.b = 0.0;
-    sample.base = 0.0;
-    sample.kind = 0u;
+    for (var layer_index = 0u; layer_index < max_disk_layers; layer_index++) {
+        sample.disk_layers[layer_index].radius = 0.0;
+        sample.disk_layers[layer_index].phi = 0.0;
+        sample.disk_layers[layer_index].base = 0.0;
+        sample.disk_layers[layer_index]._padding = 0u;
+    }
     sample.background_a = 0.0;
     sample.background_b = 0.0;
-    sample.background_kind = 0u;
-    sample._padding = 0u;
+    sample.terminal_kind = 0u;
+    sample.disk_layer_count = 0u;
     
     // March the ray through spacetime
     for (var step = 0; step < 5000; step++) {
@@ -465,34 +497,20 @@ fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
         
         // Check if ray fell into black hole
         if (x[1] <= 1.001 * rh) {
-            if (sample.kind == 1u) {
-                sample.background_kind = 3u;
-            } else {
-                sample.kind = 3u;
-            }
+            sample.terminal_kind = terminal_horizon;
             sample_map[idx] = sample;
             return;
         }
         
-        // Check if ray escaped to infinity
-        if (x[1] > 1.2 * params.robs && step > 10) {
+        // Check if the ray reached the exterior sky sphere
+        if (x[1] > escape_radius && step > 10) {
             if (rmin < 3.0 * Mbh) {
-                if (sample.kind == 1u) {
-                    sample.background_kind = 3u;
-                } else {
-                    sample.kind = 3u;
-                }
+                sample.terminal_kind = terminal_horizon;
             } else {
                 let sky_phi = (x[3] + 1000.0 * PI * 2.0) % (2.0 * PI);
-                if (sample.kind == 1u) {
-                    sample.background_kind = 2u;
-                    sample.background_a = x[2];
-                    sample.background_b = sky_phi;
-                } else {
-                    sample.kind = 2u;
-                    sample.a = x[2];
-                    sample.b = sky_phi;
-                }
+                sample.terminal_kind = terminal_sky;
+                sample.background_a = x[2];
+                sample.background_b = sky_phi;
             }
             sample_map[idx] = sample;
             return;
@@ -505,15 +523,15 @@ fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
         // We detect when the ray crosses this plane by checking sign change.
         // ═══════════════════════════════════════════════════════════════════
         
-        if (sample.kind != 1u &&
-            (th_prev - PI / 2.0) * (x[2] - PI / 2.0) <= 0.0) {
+        if ((th_prev - PI / 2.0) * (x[2] - PI / 2.0) <= 0.0) {
             // Linear interpolation to find exact crossing point
             let f = (PI / 2.0 - th_prev) / (x[2] - th_prev + 1e-15);
             let rhit = x_prev[1] + f * (x[1] - x_prev[1]);
             let phit = x_prev[3] + f * (x[3] - x_prev[3]);
             
             // Check if hit is within disk bounds
-            if (rhit >= rin && rhit <= rout) {
+            if (rhit >= rin && rhit <= matter_support_rout &&
+                sample.disk_layer_count < max_disk_layers) {
                 // Interpolate velocity at hit point
                 let vh = v_prev + f * (v - v_prev);
                 
@@ -559,11 +577,16 @@ fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 if (!is_finite(g)) { g = 0.0; }
                 
                 let phi = (phit + 1000.0 * PI * 2.0) % (2.0 * PI);
-                sample.kind = 1u;
-                sample.a = rhit;
-                sample.b = phi;
-                sample.base = pow(rhit, -emiss_p) * pow(max(g, 0.0), 3.0) * ring_mul(rhit, phi);
-                atomicMax(&normalization.max_bits, bitcast<u32>(sample.base));
+                let layer_index = sample.disk_layer_count;
+                sample.disk_layers[layer_index].radius = rhit;
+                sample.disk_layers[layer_index].phi = phi;
+                sample.disk_layers[layer_index].base =
+                    pow(rhit, -emiss_p) * pow(max(g, 0.0), 3.0) * ring_mul(rhit, phi);
+                sample.disk_layer_count += 1u;
+                atomicMax(
+                    &normalization.max_bits,
+                    bitcast<u32>(sample.disk_layers[layer_index].base),
+                );
             }
         }
         
@@ -574,22 +597,12 @@ fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     
     if (rmin < 3.0 * Mbh) {
-        if (sample.kind == 1u) {
-            sample.background_kind = 3u;
-        } else {
-            sample.kind = 3u;
-        }
+        sample.terminal_kind = terminal_horizon;
     } else {
         let sky_phi = (x[3] + 1000.0 * PI * 2.0) % (2.0 * PI);
-        if (sample.kind == 1u) {
-            sample.background_kind = 2u;
-            sample.background_a = x[2];
-            sample.background_b = sky_phi;
-        } else {
-            sample.kind = 2u;
-            sample.a = x[2];
-            sample.b = sky_phi;
-        }
+        sample.terminal_kind = terminal_sky;
+        sample.background_a = x[2];
+        sample.background_b = sky_phi;
     }
     sample_map[idx] = sample;
 }
@@ -692,23 +705,25 @@ fn render_ascii(@builtin(global_invocation_id) global_id: vec3<u32>) {
             let map_y = cell_y * params.sample_rows + sample_y;
             let sample = sample_map[map_y * sample_width + map_x];
             var brightness = 0.0;
-            if (sample.kind == 1u) {
+            var transmittance = 1.0;
+            for (var layer_index = 0u;
+                 layer_index < sample.disk_layer_count; layer_index++) {
+                let layer = sample.disk_layers[layer_index];
                 let appearance = disk_appearance(
-                    sample.base, norm_scale, sample.a, sample.b,
+                    layer.base, norm_scale, layer.radius, layer.phi,
                 );
-                var background = 0.0;
-                if (sample.background_kind == 2u) {
-                    background = sky_value(sample.background_a, sample.background_b);
-                }
-                let visible_background = (1.0 - appearance.y) * background;
-                brightness = min(1.0, appearance.x + visible_background);
-                disk_peak = max(disk_peak, appearance.x);
-                sky_peak = max(sky_peak, visible_background);
-            } else if (sample.kind == 2u) {
-                brightness = sky_value(sample.a, sample.b);
-                sky_peak = max(sky_peak, brightness);
+                let visible_emission = transmittance * appearance.x;
+                brightness += visible_emission;
+                disk_peak = max(disk_peak, visible_emission);
+                transmittance *= 1.0 - appearance.y;
             }
-            values[region] = brightness;
+            if (sample.terminal_kind == terminal_sky) {
+                let visible_sky = transmittance *
+                    sky_value(sample.background_a, sample.background_b);
+                brightness += visible_sky;
+                sky_peak = max(sky_peak, visible_sky);
+            }
+            values[region] = min(1.0, brightness);
         }
     }
 

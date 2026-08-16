@@ -1,3 +1,10 @@
+#bh,
+.blackhole-frame {
+  font-family: "Blackhole JetBrains Mono", "Blackhole Braille", monospace;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
 #farming-field {
   overflow: hidden;
   white-space: pre;

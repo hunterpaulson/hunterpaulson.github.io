@@ -14,6 +14,8 @@
  * - Bind Groups: Collections of resources (buffers, textures) for a shader
  */
 
+import { codepointsToFrame } from "../src/art/blackhole_runtime.mjs";
+
 // Check WebGPU support
 export function isWebGPUSupported() {
   return typeof navigator !== 'undefined' && 'gpu' in navigator;
@@ -22,6 +24,36 @@ export function isWebGPUSupported() {
 /**
  * BlackHoleGPU - Main class for GPU-accelerated black hole rendering
  */
+export function selectGlyphs(catalog, glyphSet) {
+  if (glyphSet === "contour-stars") {
+    const contourCodepoints = new Set(catalog.sets.contourAscii);
+    return catalog.glyphs.filter(({ codepoint, family }) =>
+      family === "braille" || contourCodepoints.has(codepoint));
+  }
+  return glyphSet === "ascii-braille" || glyphSet === "braille-stars"
+    ? catalog.glyphs
+    : catalog.glyphs.filter(({ family }) => family === "ascii");
+}
+
+export function packGlyphs(glyphs) {
+  const bytesPerGlyph = 48;
+  const data = new ArrayBuffer(glyphs.length * bytesPerGlyph);
+  const view = new DataView(data);
+  for (let glyphIndex = 0; glyphIndex < glyphs.length; glyphIndex += 1) {
+    const glyph = glyphs[glyphIndex];
+    const offset = glyphIndex * bytesPerGlyph;
+    for (let region = 0; region < 6; region += 1) {
+      view.setFloat32(offset + region * 4, glyph.regions[region], true);
+    }
+    for (let region = 0; region < 4; region += 1) {
+      view.setFloat32(offset + 24 + region * 4, glyph.regions2x2[region], true);
+    }
+    view.setFloat32(offset + 40, glyph.coverage, true);
+    view.setUint32(offset + 44, glyph.codepoint, true);
+  }
+  return data;
+}
+
 export class BlackHoleGPU {
   constructor() {
     this.device = null;
@@ -32,11 +64,21 @@ export class BlackHoleGPU {
     this.hitMapBuffer = null;
     this.outputBuffer = null;
     this.readbackBuffer = null;
+    this.glyphBuffer = null;
+    this.normalizationBuffer = null;
     this.bindGroup = null;
     
     this.width = 80;
     this.height = 52;
     this.needsRetrace = true;
+    this.sampleColumns = 2;
+    this.sampleRows = 3;
+    this.glyphs = [];
+    this.featureScale = 1;
+    this.brailleFeatureScale = 1;
+    this.featureScales = [1, 1, 1, 1, 1, 1];
+    this.brailleFeatureScales = [1, 1, 1, 1, 1, 1];
+    this.glyphMode = 0;
     
     // Default parameters
     this.params = {
@@ -45,8 +87,13 @@ export class BlackHoleGPU {
       roll_deg: 0.0,
       phi_obs: 0.0,
       FOVx_deg: 60.0,
-      gamma_c: 0.30,
+      gamma_c: 0.25,
       phase: 0.0,
+      ring_count: 5.0,
+      ring_fill: 0.60,
+      ring_edge: 0.04,
+      ring_floor: 0.0,
+      ring_irregularity: 0.65,
     };
   }
 
@@ -60,7 +107,17 @@ export class BlackHoleGPU {
    * 4. Create compute pipelines
    * 5. Allocate GPU buffers
    */
-  async init(width, height, inc_deg, fovx_deg, robs, roll_deg) {
+  async init(
+    width,
+    height,
+    inc_deg,
+    fovx_deg,
+    robs,
+    roll_deg,
+    glyphSet = "braille-stars",
+    sampleCount = 6,
+    ringProfile = {},
+  ) {
     if (!isWebGPUSupported()) {
       throw new Error('WebGPU is not supported in this browser');
     }
@@ -71,6 +128,37 @@ export class BlackHoleGPU {
     this.params.FOVx_deg = fovx_deg;
     this.params.robs = robs;
     this.params.roll_deg = roll_deg;
+    Object.assign(this.params, ringProfile);
+    this.sampleColumns = sampleCount === 1 ? 1 : 2;
+    this.sampleRows = sampleCount === 1 ? 1 : (sampleCount === 4 ? 2 : 3);
+
+    const glyphCatalogUrl = new URL('./blackhole_glyphs.json', import.meta.url);
+    const glyphCatalog = await fetch(glyphCatalogUrl).then((response) => {
+      if (!response.ok) {
+        throw new Error(`failed to load glyph catalog (${response.status})`);
+      }
+      return response.json();
+    });
+    this.glyphs = selectGlyphs(glyphCatalog, glyphSet);
+    const featureKey = sampleCount === 1
+      ? "scalar"
+      : sampleCount === 4 ? "regions2x2" : "regions2x3";
+    this.featureScale = glyphSet === "ascii-braille"
+      ? glyphCatalog.maxFeature.asciiBraille[featureKey]
+      : glyphCatalog.maxFeature.ascii[featureKey];
+    this.brailleFeatureScale = glyphCatalog.maxFeature.braille[featureKey];
+    const featureFamily = glyphSet === "ascii-braille" ? "asciiBraille" : "ascii";
+    const regionScales = (family) => sampleCount === 1
+      ? Array(6).fill(glyphCatalog.maxFeature[family].scalar)
+      : sampleCount === 4
+        ? [...glyphCatalog.maxFeatureByRegion[family].regions2x2, 0, 0]
+        : glyphCatalog.maxFeatureByRegion[family].regions2x3;
+    this.featureScales = regionScales(featureFamily);
+    this.brailleFeatureScales = regionScales("braille");
+    this.glyphMode = glyphSet === "ascii-braille"
+      ? 1
+      : glyphSet === "braille-stars" ? 2
+      : glyphSet === "contour-stars" ? 3 : 0;
 
     // Step 1: Get GPU adapter
     // The adapter represents a physical GPU in the system
@@ -131,8 +219,7 @@ export class BlackHoleGPU {
       },
     });
 
-    // Pipeline for ASCII rendering (converts hit data to characters)
-    // Uses bindings 0 (params), 1 (hit_map), and 2 (output_chars)
+    // Pipeline for glyph rendering (converts samples to codepoints).
     this.renderPipeline = this.device.createComputePipeline({
       label: 'Render ASCII Pipeline',
       layout: 'auto',
@@ -159,23 +246,33 @@ export class BlackHoleGPU {
    */
   async _createBuffers() {
     const pixelCount = this.width * this.height;
+    const sampleCount = pixelCount * this.sampleColumns * this.sampleRows;
 
-    // Uniform buffer for scene parameters (48 bytes, aligned to 16)
-    // Layout: width(4) + height(4) + robs(4) + theta_obs(4) + 
-    //         phi_obs(4) + FOVx(4) + FOVy(4) + roll_rad(4) +
-    //         phase(4) + gamma_c(4) + padding(8) = 48 bytes
+    // Uniform buffer for logical dimensions, sample lattice, scene, and glyph set.
     this.paramsBuffer = this.device.createBuffer({
       label: 'Scene Parameters',
-      size: 48,
+      size: 144,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // Storage buffer for hit map (32 bytes per pixel)
-    // Layout: r(4) + phi(4) + g(4) + emiss(4) + hit(4) + bg_type(4) + pad(8) = 32
+    // Six phase-independent disk layers plus their resolved backgrounds.
     this.hitMapBuffer = this.device.createBuffer({
-      label: 'Hit Map',
-      size: pixelCount * 32,
+      label: 'Sample Map',
+      size: sampleCount * 32,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+    });
+
+    this.glyphBuffer = this.device.createBuffer({
+      label: 'Glyph Features',
+      size: this.glyphs.length * 48,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(this.glyphBuffer, 0, packGlyphs(this.glyphs));
+
+    this.normalizationBuffer = this.device.createBuffer({
+      label: 'Disk Normalization',
+      size: 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 
     // Storage buffer for output characters (4 bytes per pixel for u32)
@@ -195,8 +292,7 @@ export class BlackHoleGPU {
 
     // Each pipeline with 'auto' layout infers its bind group layout from 
     // which bindings the entry point ACTUALLY USES.
-    // - trace_rays uses: params (0), hit_map (1) 
-    // - render_ascii uses: params (0), hit_map (1), output_chars (2)
+    // The trace pipeline also updates the positive-f32 maximum atomically.
     
     // Bind group for trace pipeline (only bindings 0 and 1)
     this.traceBindGroup = this.device.createBindGroup({
@@ -205,10 +301,11 @@ export class BlackHoleGPU {
       entries: [
         { binding: 0, resource: { buffer: this.paramsBuffer } },
         { binding: 1, resource: { buffer: this.hitMapBuffer } },
+        { binding: 4, resource: { buffer: this.normalizationBuffer } },
       ],
     });
 
-    // Bind group for render pipeline (all 3 bindings)
+    // Bind group for the render pipeline.
     this.renderBindGroup = this.device.createBindGroup({
       label: 'Render Bind Group',
       layout: this.renderPipeline.getBindGroupLayout(0),
@@ -216,6 +313,8 @@ export class BlackHoleGPU {
         { binding: 0, resource: { buffer: this.paramsBuffer } },
         { binding: 1, resource: { buffer: this.hitMapBuffer } },
         { binding: 2, resource: { buffer: this.outputBuffer } },
+        { binding: 3, resource: { buffer: this.glyphBuffer } },
+        { binding: 4, resource: { buffer: this.normalizationBuffer } },
       ],
     });
   }
@@ -227,8 +326,11 @@ export class BlackHoleGPU {
     Object.assign(this.params, overrides);
 
     // Check if we need to retrace (geometry changed)
-    if ('robs' in overrides || 'inc_deg' in overrides || 
-        'roll_deg' in overrides || 'FOVx_deg' in overrides) {
+    if ('robs' in overrides || 'inc_deg' in overrides ||
+        'roll_deg' in overrides || 'FOVx_deg' in overrides ||
+        'ring_count' in overrides || 'ring_fill' in overrides ||
+        'ring_edge' in overrides || 'ring_floor' in overrides ||
+        'ring_irregularity' in overrides) {
       this.needsRetrace = true;
     }
 
@@ -240,20 +342,38 @@ export class BlackHoleGPU {
 
     // Pack parameters into ArrayBuffer
     // Must match the struct layout in WGSL exactly!
-    const data = new ArrayBuffer(48);
+    const data = new ArrayBuffer(144);
     const view = new DataView(data);
     
     view.setUint32(0, this.width, true);          // width
     view.setUint32(4, this.height, true);         // height
-    view.setFloat32(8, this.params.robs, true);   // robs
-    view.setFloat32(12, theta_obs, true);         // theta_obs
-    view.setFloat32(16, this.params.phi_obs, true); // phi_obs
-    view.setFloat32(20, FOVx, true);              // FOVx
-    view.setFloat32(24, FOVy, true);              // FOVy
-    view.setFloat32(28, roll_rad, true);          // roll_rad
-    view.setFloat32(32, this.params.phase, true); // phase
-    view.setFloat32(36, this.params.gamma_c, true); // gamma_c
-    // 40-47: padding
+    view.setUint32(8, this.sampleColumns, true);
+    view.setUint32(12, this.sampleRows, true);
+    view.setFloat32(16, this.params.robs, true);
+    view.setFloat32(20, theta_obs, true);
+    view.setFloat32(24, this.params.phi_obs, true);
+    view.setFloat32(28, FOVx, true);
+    view.setFloat32(32, FOVy, true);
+    view.setFloat32(36, roll_rad, true);
+    view.setFloat32(40, this.params.phase, true);
+    view.setFloat32(44, this.params.gamma_c, true);
+    view.setUint32(48, this.glyphs.length, true);
+    view.setFloat32(52, this.featureScale, true);
+    view.setUint32(56, this.glyphMode, true);
+    view.setFloat32(60, this.brailleFeatureScale, true);
+    view.setFloat32(64, this.params.ring_count, true);
+    view.setFloat32(68, this.params.ring_fill, true);
+    view.setFloat32(72, this.params.ring_edge, true);
+    view.setFloat32(76, this.params.ring_floor, true);
+    for (let region = 0; region < 4; region += 1) {
+      view.setFloat32(80 + region * 4, this.featureScales[region], true);
+      view.setFloat32(112 + region * 4, this.brailleFeatureScales[region], true);
+    }
+    for (let region = 4; region < 6; region += 1) {
+      view.setFloat32(96 + (region - 4) * 4, this.featureScales[region], true);
+      view.setFloat32(128 + (region - 4) * 4, this.brailleFeatureScales[region], true);
+    }
+    view.setFloat32(136, this.params.ring_irregularity, true);
 
     // Upload to GPU
     // writeBuffer is synchronous - data is copied immediately
@@ -263,10 +383,10 @@ export class BlackHoleGPU {
   /**
    * Run the raytracing compute shader
    * 
-   * This traces ALL rays in parallel. With 80x52 = 4160 pixels and
-   * 16x16 = 256 threads per workgroup, we dispatch 5x4 = 20 workgroups.
+   * This traces every sub-cell ray in parallel on a 16x16 workgroup grid.
    */
   async traceRays() {
+    this.device.queue.writeBuffer(this.normalizationBuffer, 0, new Uint32Array([0]));
     // Command encoder records GPU commands for later execution
     const encoder = this.device.createCommandEncoder({
       label: 'Trace Command Encoder',
@@ -282,8 +402,8 @@ export class BlackHoleGPU {
     
     // Dispatch workgroups
     // Each workgroup is 16x16 threads, so we need ceil(width/16) x ceil(height/16)
-    const workgroupsX = Math.ceil(this.width / 16);
-    const workgroupsY = Math.ceil(this.height / 16);
+    const workgroupsX = Math.ceil((this.width * this.sampleColumns) / 16);
+    const workgroupsY = Math.ceil((this.height * this.sampleRows) / 16);
     pass.dispatchWorkgroups(workgroupsX, workgroupsY, 1);
     
     pass.end();
@@ -332,9 +452,9 @@ export class BlackHoleGPU {
   /**
    * Read the rendered ASCII frame back to CPU
    * 
-   * GPU->CPU data transfer is slow, so this is the bottleneck.
-   * We minimize it by only transferring the final characters (1 byte per pixel)
-   * rather than the full hit data (32 bytes per pixel).
+   * We transfer one u32 codepoint per cell. Keeping four bytes avoids packed
+   * storage writes and supports Unicode Braille without a second lookup. The
+   * mapAsync call is also the synchronization boundary for each frame.
    */
   async readFrame() {
     // Wait for GPU work to complete
@@ -347,17 +467,7 @@ export class BlackHoleGPU {
     // Get a view of the mapped memory
     const data = new Uint32Array(this.readbackBuffer.getMappedRange());
     
-    // Convert to string
-    let output = '';
-    for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) {
-        const charCode = data[y * this.width + x];
-        output += String.fromCharCode(charCode);
-      }
-      if (y < this.height - 1) {
-        output += '\n';
-      }
-    }
+    const output = codepointsToFrame(data, this.width, this.height);
     
     // Unmap buffer (required before next GPU operation)
     this.readbackBuffer.unmap();
@@ -397,6 +507,8 @@ export class BlackHoleGPU {
     if (this.hitMapBuffer) this.hitMapBuffer.destroy();
     if (this.outputBuffer) this.outputBuffer.destroy();
     if (this.readbackBuffer) this.readbackBuffer.destroy();
+    if (this.glyphBuffer) this.glyphBuffer.destroy();
+    if (this.normalizationBuffer) this.normalizationBuffer.destroy();
     this.device = null;
     this.adapter = null;
   }
@@ -407,9 +519,29 @@ export class BlackHoleGPU {
 }
 
 // Factory function for easy instantiation
-export async function createBlackHoleGPU(width, height, inc_deg, fovx_deg, robs, roll_deg) {
+export async function createBlackHoleGPU(
+  width,
+  height,
+  inc_deg,
+  fovx_deg,
+  robs,
+  roll_deg,
+  glyphSet,
+  sampleCount,
+  ringProfile,
+) {
   const bh = new BlackHoleGPU();
-  await bh.init(width, height, inc_deg, fovx_deg, robs, roll_deg);
+  await bh.init(
+    width,
+    height,
+    inc_deg,
+    fovx_deg,
+    robs,
+    roll_deg,
+    glyphSet,
+    sampleCount,
+    ringProfile,
+  );
   return bh;
 }
 

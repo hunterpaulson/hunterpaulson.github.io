@@ -24,11 +24,10 @@ Thumbs.db
 *.swo
 
 # Build artifacts
-blackhole
+/blackhole
 assets/blackhole_frames.txt
 
 # Misc
 .cache/
 tmp/
 __pycache__/
-

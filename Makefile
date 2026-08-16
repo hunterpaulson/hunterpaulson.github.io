@@ -1,5 +1,6 @@
 VERSION=$(shell jq -r .version package.json)
 DATE=$(shell date +%F)
+EMCC?=emcc
 
 SITE_MODE?=production
 DIST_DIR?=dist
@@ -62,20 +63,20 @@ FORCE:
 
 assets: assets/blackhole_frames.txt assets/blackhole_wasm.js
 
-assets/blackhole_frames.txt: blackhole.c blackhole_core.c blackhole_core.h Makefile
+assets/blackhole_frames.txt: blackhole.c blackhole_core.c blackhole_core.h generated/blackhole_glyphs.h Makefile
 	@mkdir -p $(dir $@)
 	cc -O3 blackhole.c blackhole_core.c -lm -o blackhole
 	./blackhole --dump $@ --frames 180
 
-assets/blackhole_wasm.js: blackhole_wasm.c blackhole_core.c blackhole_core.h Makefile
+assets/blackhole_wasm.js: blackhole_wasm.c blackhole_core.c blackhole_core.h generated/blackhole_glyphs.h Makefile
 	@mkdir -p $(dir $@)
-	emcc blackhole_wasm.c blackhole_core.c -O3 \
+	$(EMCC) blackhole_wasm.c blackhole_core.c -O3 \
 		-s MODULARIZE=1 \
 		-s EXPORT_ES6=1 \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s ENVIRONMENT=web \
-		-s EXPORTED_FUNCTIONS='["_bh_wasm_init","_bh_wasm_destroy","_bh_wasm_width","_bh_wasm_height","_bh_wasm_frame_len","_bh_wasm_generate_frame"]' \
-		-s EXPORTED_RUNTIME_METHODS='["cwrap","UTF8ToString"]' \
+		-s EXPORTED_FUNCTIONS='["_bh_wasm_init","_bh_wasm_destroy","_bh_wasm_width","_bh_wasm_height","_bh_wasm_glyph_set","_bh_wasm_frame_len","_bh_wasm_generate_frame"]' \
+		-s EXPORTED_RUNTIME_METHODS='["cwrap","HEAPU32"]' \
 		-o $@
 
 copy-assets: assets

@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "generated/blackhole_glyphs.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -16,10 +18,15 @@ static const double rin = 6.0;
 static const double rout = 40.0;
 static const double emiss_p = 2.0;
 
-static const char RAMP[] = " `,-:'_;~/\\^\"<>!=()?{}|[]#%$&@";
-
-static inline size_t bh_index(const BHSceneParams *params, int x, int y) {
+static inline size_t bh_pixel_index(const BHSceneParams *params, int x, int y) {
   return (size_t)y * (size_t)params->width + (size_t)x;
+}
+
+static inline size_t bh_sample_index(const BHSceneParams *params, int sample_x,
+                                     int sample_y) {
+  const size_t sample_width =
+      (size_t)params->width * (size_t)params->sample_columns;
+  return (size_t)sample_y * sample_width + (size_t)sample_x;
 }
 
 void bh_init_scene_params(BHSceneParams *params) {
@@ -28,12 +35,20 @@ void bh_init_scene_params(BHSceneParams *params) {
   }
   params->width = 80;
   params->height = 52;
+  params->sample_columns = 2;
+  params->sample_rows = 3;
+  params->glyph_set = BH_GLYPH_SET_BRAILLE_STARS;
   params->robs = 80.0;
   params->inc_deg = 2.0;
   params->roll_deg = 0.0;
   params->phi_obs = 0.0;
   params->FOVx = 60.0 * M_PI / 180.0;
-  params->gamma_c = 0.30;
+  params->gamma_c = 0.25;
+  params->ring_count = 5.0;
+  params->ring_fill = 0.60;
+  params->ring_edge = 0.04;
+  params->ring_floor = 0.0;
+  params->ring_irregularity = 0.65;
   bh_update_derived(params);
 }
 
@@ -47,6 +62,18 @@ void bh_update_derived(BHSceneParams *params) {
   if (params->height < 1) {
     params->height = 1;
   }
+  if (params->sample_columns < 1) {
+    params->sample_columns = 1;
+  }
+  if (params->sample_rows < 1) {
+    params->sample_rows = 1;
+  }
+  params->ring_count = fmax(1.0, fmin(16.0, params->ring_count));
+  params->ring_fill = fmax(0.05, fmin(0.95, params->ring_fill));
+  params->ring_edge = fmax(0.001, fmin(0.25, params->ring_edge));
+  params->ring_floor = fmax(0.0, fmin(1.0, params->ring_floor));
+  params->ring_irregularity =
+      fmax(0.0, fmin(1.0, params->ring_irregularity));
   params->theta_obs =
       M_PI / 2.0 - (params->inc_deg * M_PI / 180.0); // inclination
   params->FOVy =
@@ -61,45 +88,158 @@ size_t bh_pixel_count(const BHSceneParams *params) {
   return (size_t)params->width * (size_t)params->height;
 }
 
-static inline double ring_mul(double r) {
-  double clamped = r;
-  if (clamped < rin) {
-    clamped = rin;
+size_t bh_sample_count(const BHSceneParams *params) {
+  if (!params) {
+    return 0;
   }
-  if (clamped > rout) {
-    clamped = rout;
-  }
-  double s = (clamped - rin) / (rout - rin);
-  const double Nbands = 8.0;
-  const double fill_frac = 0.30;
-  const double edge_soft = 0.02;
-  const double band_floor = 0.12;
-  const double peak = 1.45;
-  double pos = Nbands * s;
-  double f = pos - floor(pos);
-  double w = edge_soft + 1e-6;
-  double t = 0.5 + 0.5 * tanh((fill_frac - f) / w);
-  return band_floor + (peak - band_floor) * t;
+  return bh_pixel_count(params) * (size_t)params->sample_columns *
+         (size_t)params->sample_rows;
 }
 
-static inline double hotspots_mul(double r, double phi, double phase) {
-  const int N = 1;
-  const double amp = 3.0;
-  const double rc = 0.5 * rout;
-  const double Rh = 0.5 * rout;
-  const double edge = 0.1 * rout;
-  double x = r * cos(phi), y = r * sin(phi);
-  double m = 1.0;
-  for (int k = 0; k < N; k++) {
-    double ang = -phase + 2.0 * M_PI * (double)k / (double)N;
-    double cx = rc * cos(ang);
-    double cy = rc * sin(ang);
-    double dx = x - cx, dy = y - cy;
-    double d = sqrt(dx * dx + dy * dy);
-    double t = 0.5 + 0.5 * tanh((Rh - d) / (edge + 1e-9));
-    m += amp * t;
+typedef struct {
+  int index;
+  int count;
+  double radial_position;
+  double start;
+  double width;
+} BHRingBand;
+
+static BHRingBand ring_band_at(const BHSceneParams *params, double r) {
+  const double clamped = fmax(rin, fmin(rout, r));
+  const double radial_position = (clamped - rin) / (rout - rin);
+  const double irregularity = params->ring_irregularity;
+  const int band_count =
+      (int)fmax(1.0, fmin(16.0, floor(params->ring_count + 0.5)));
+
+  double total_weight = 0.0;
+  for (int candidate = 0; candidate < band_count; candidate++) {
+    const double band_number = (double)(candidate + 1);
+    const double variation =
+        0.820 * sin(1.91 * band_number + 0.40) +
+        0.320 * sin(4.13 * band_number + 1.10);
+    total_weight += fmax(0.20, 1.0 + irregularity * variation);
   }
-  return m;
+
+  BHRingBand band = {
+      .index = band_count - 1,
+      .count = band_count,
+      .radial_position = radial_position,
+      .start = 0.0,
+      .width = 1.0,
+  };
+  double cursor = 0.0;
+  for (int candidate = 0; candidate < band_count; candidate++) {
+    const double band_number = (double)(candidate + 1);
+    const double variation =
+        0.820 * sin(1.91 * band_number + 0.40) +
+        0.320 * sin(4.13 * band_number + 1.10);
+    const double weight = fmax(0.20, 1.0 + irregularity * variation);
+    const double width = weight / total_weight;
+    const double next = cursor + width;
+    if (radial_position <= next || candidate == band_count - 1) {
+      band.index = candidate;
+      band.start = cursor;
+      band.width = width;
+      break;
+    }
+    cursor = next;
+  }
+  return band;
+}
+
+double bh_ring_emissivity(const BHSceneParams *params, double r, double phi) {
+  const BHRingBand ring = ring_band_at(params, r);
+  const double s = ring.radial_position;
+  const double irregularity = params->ring_irregularity;
+  const double band = (double)ring.index;
+  const double local_position = (s - ring.start) / ring.width;
+  const double azimuth_ripple =
+      irregularity *
+      (0.130 * sin(phi + 0.83 * band + 2.0 * M_PI * s) +
+       0.065 * sin(2.0 * phi - 0.37 * band - 2.0 * M_PI * s) +
+       0.030 * sin(5.0 * phi + 0.51 * band));
+  double f = local_position + azimuth_ripple;
+  f -= floor(f);
+  double fill = params->ring_fill +
+                irregularity *
+                    (0.220 * sin(2.17 * band + 0.40) +
+                     0.080 * sin(4.03 * band + 1.30) +
+                     0.100 * sin(2.0 * phi + 0.90 * band) +
+                     0.045 * sin(5.0 * phi - 0.60 * band));
+  fill = fmax(0.18, fmin(0.88, fill));
+  double edge_scale =
+      1.0 + irregularity * 0.55 * sin(3.11 * band + 0.90);
+  edge_scale = fmax(0.55, fmin(1.45, edge_scale));
+  double w = params->ring_edge * edge_scale + 1e-6;
+  double t = 0.5 + 0.5 * tanh((fill - f) / w);
+  double peak = 1.45 *
+                (1.0 + irregularity *
+                           (0.180 * sin(1.37 * band + 0.60) +
+                            0.080 * sin(3.73 * band + 1.10) +
+                            0.120 * sin(phi - 0.45 * band) +
+                            0.060 * sin(4.0 * phi + 0.35 * band)));
+  return params->ring_floor + (peak - params->ring_floor) * t;
+}
+
+static inline double smooth_window(double distance) {
+  double value = fmax(0.0, 1.0 - fabs(distance));
+  return value * value * (3.0 - 2.0 * value);
+}
+
+static inline double wrap_angle(double angle) {
+  return angle - 2.0 * M_PI * floor((angle + M_PI) / (2.0 * M_PI));
+}
+
+static inline double angular_lobe(double angle, double half_width) {
+  return smooth_window(wrap_angle(angle) / half_width);
+}
+
+static inline double readable_orbital_phase(double radius, double phi,
+                                            double phase) {
+  const double angular_speed = fmin(1.6, pow(12.0 / radius, 1.5));
+  return phi + phase * angular_speed;
+}
+
+BHDiskAppearance bh_disk_appearance(const BHSceneParams *params, double base,
+                                    double norm_scale, double r, double phi,
+                                    double phase) {
+  BHDiskAppearance appearance = {0};
+  const double gamma_c = params->gamma_c;
+  const double safe_norm = fmax(norm_scale, 1e-12);
+  const double normalized = fmax(0.0, fmin(1.0, base / safe_norm));
+  if (normalized <= 0.0) {
+    return appearance;
+  }
+  const double toned = pow(normalized, gamma_c);
+  const double radius = fmax(rin, fmin(rout, r));
+  const double radial_position = (radius - rin) / (rout - rin);
+  const double radial_opacity =
+      fmax(0.0, fmin(1.0, bh_ring_emissivity(params, radius, phi)));
+
+  const double readable_phi = readable_orbital_phase(radius, phi, phase);
+  const double inner_emphasis = 1.0 - radial_position;
+  const double inner_area = inner_emphasis * inner_emphasis;
+  const double ridge_width = 0.36 + 0.48 * inner_area;
+  const double wake_width = 0.95 + 0.30 * inner_emphasis;
+  const double angle =
+      wrap_angle(readable_phi + 7.5 * radial_position - 0.45);
+  const double ridge = angular_lobe(angle, ridge_width);
+  const double wake = 0.48 * angular_lobe(angle - 0.62, wake_width);
+  const double spiral = fmax(ridge, wake);
+  const double highlight = 0.90 - 0.15 * radial_position;
+  appearance.emission =
+      (float)(spiral * (0.72 * toned + highlight * (1.0 - toned)));
+  appearance.opacity = (float)(radial_opacity * spiral);
+
+  appearance.emission = fmaxf(0.0f, fminf(1.0f, appearance.emission));
+  appearance.opacity = fmaxf(0.0f, fminf(1.0f, appearance.opacity));
+  return appearance;
+}
+
+double bh_disk_brightness(const BHSceneParams *params, double base,
+                          double norm_scale, double r, double phi,
+                          double phase) {
+  return bh_disk_appearance(params, base, norm_scale, r, phi, phase).emission;
 }
 
 static void metric(double r, double th, double g[4][4]) {
@@ -174,10 +314,12 @@ static void rk4(double x[4], double v[4], double h) {
   }
 }
 
-static void pix_ray(const BHSceneParams *params, int px, int py, double x0[4],
-                    double v0[4]) {
-  double u = (px + 0.5) / (double)params->width - 0.5;
-  double v = (py + 0.5) / (double)params->height - 0.5;
+static void pix_ray(const BHSceneParams *params, int sample_x, int sample_y,
+                    double x0[4], double v0[4]) {
+  const int sample_width = params->width * params->sample_columns;
+  const int sample_height = params->height * params->sample_rows;
+  double u = (sample_x + 0.5) / (double)sample_width - 0.5;
+  double v = (sample_y + 0.5) / (double)sample_height - 0.5;
   double ax = u * params->FOVx;
   double ay = v * params->FOVy;
   double nr = -1.0, nth = tan(ay), nph = tan(ax);
@@ -204,12 +346,31 @@ static void pix_ray(const BHSceneParams *params, int px, int py, double x0[4],
   v0[3] = nph / (params->robs * (s > 1e-12 ? s : 1e-12));
 }
 
-static Hit trace_pixel(const BHSceneParams *params, int px, int py) {
-  Hit H;
-  H.hit = 0;
-  H.bg_type = 0;
+static void resolve_background(BHSample *sample, BHSampleKind kind,
+                               double theta, double phi) {
+  const float resolved_phi =
+      (float)fmod(phi + 1000.0 * M_PI * 2.0, 2.0 * M_PI);
+  if (sample->kind == BH_SAMPLE_DISK) {
+    sample->background_kind = (uint32_t)kind;
+    if (kind == BH_SAMPLE_SKY) {
+      sample->background_a = (float)theta;
+      sample->background_b = resolved_phi;
+    }
+    return;
+  }
+
+  sample->kind = (uint32_t)kind;
+  if (kind == BH_SAMPLE_SKY) {
+    sample->a = (float)theta;
+    sample->b = resolved_phi;
+  }
+}
+
+static BHSample trace_sample(const BHSceneParams *params, int sample_x,
+                            int sample_y) {
+  BHSample sample = {0};
   double x[4], v[4];
-  pix_ray(params, px, py, x, v);
+  pix_ray(params, sample_x, sample_y, x, v);
   double th_prev = x[2], x_prev[4], v_prev[4];
   for (int i = 0; i < 4; i++) {
     x_prev[i] = x[i];
@@ -230,20 +391,19 @@ static Hit trace_pixel(const BHSceneParams *params, int px, int py) {
       rmin = x[1];
     }
     if (x[1] <= 1.001 * rh) {
-      H.bg_type = 2;
-      return H;
+      resolve_background(&sample, BH_SAMPLE_HORIZON, 0.0, 0.0);
+      return sample;
     }
     if (x[1] > 1.2 * params->robs && step > 10) {
       if (rmin < 3.0 * Mbh) {
-        H.bg_type = 2;
-      } else if (rmin < rin) {
-        H.bg_type = 3;
+        resolve_background(&sample, BH_SAMPLE_HORIZON, 0.0, 0.0);
       } else {
-        H.bg_type = 1;
+        resolve_background(&sample, BH_SAMPLE_SKY, x[2], x[3]);
       }
-      return H;
+      return sample;
     }
-    if ((th_prev - M_PI / 2.0) * (x[2] - M_PI / 2.0) <= 0.0) {
+    if (sample.kind != BH_SAMPLE_DISK &&
+        (th_prev - M_PI / 2.0) * (x[2] - M_PI / 2.0) <= 0.0) {
       double f = (M_PI / 2.0 - th_prev) / (x[2] - th_prev + 1e-15);
       double rhit = x_prev[1] + f * (x[1] - x_prev[1]);
       double phit = x_prev[3] + f * (x[3] - x_prev[3]);
@@ -273,13 +433,14 @@ static Hit trace_pixel(const BHSceneParams *params, int px, int py) {
         if (!isfinite(g)) {
           g = 0.0;
         }
-        H.hit = 1;
-        H.bg_type = 0;
-        H.r = rhit;
-        H.phi = fmod(phit + 1000.0 * M_PI * 2, 2 * M_PI);
-        H.g = g > 0 ? g : 0;
-        H.emiss = pow(rhit, -emiss_p);
-        return H;
+        const double phi = fmod(phit + 1000.0 * M_PI * 2, 2 * M_PI);
+        const double positive_g = g > 0 ? g : 0;
+        sample.kind = BH_SAMPLE_DISK;
+        sample.a = (float)rhit;
+        sample.b = (float)phi;
+        sample.base =
+            (float)(pow(rhit, -emiss_p) * pow(positive_g, 3.0) *
+                    bh_ring_emissivity(params, rhit, phi));
       }
     }
     th_prev = x[2];
@@ -289,118 +450,231 @@ static Hit trace_pixel(const BHSceneParams *params, int px, int py) {
     }
   }
   if (rmin < 3.0 * Mbh) {
-    H.bg_type = 2;
-  } else if (rmin < rin) {
-    H.bg_type = 3;
+    resolve_background(&sample, BH_SAMPLE_HORIZON, 0.0, 0.0);
   } else {
-    H.bg_type = 1;
+    resolve_background(&sample, BH_SAMPLE_SKY, x[2], x[3]);
   }
-  return H;
+  return sample;
 }
 
-void bh_trace_map(const BHSceneParams *params, Hit *map_out) {
+void bh_trace_map(const BHSceneParams *params, BHSample *map_out) {
   if (!params || !map_out) {
     return;
   }
-  for (int y = 0; y < params->height; y++) {
-    for (int x = 0; x < params->width; x++) {
-      map_out[bh_index(params, x, y)] = trace_pixel(params, x, y);
+  const int sample_width = params->width * params->sample_columns;
+  const int sample_height = params->height * params->sample_rows;
+  for (int y = 0; y < sample_height; y++) {
+    for (int x = 0; x < sample_width; x++) {
+      map_out[bh_sample_index(params, x, y)] = trace_sample(params, x, y);
     }
   }
 }
 
-static inline double base_disk_value(const Hit *hit) {
-  double g3 = pow(hit->g, 3.0);
-  return hit->emiss * g3 * ring_mul(hit->r);
-}
-
-static inline double disk_value_with_hotspots(const Hit *hit, double phase) {
-  return base_disk_value(hit) * hotspots_mul(hit->r, hit->phi, phase);
-}
-
-double bh_compute_norm_scale(const BHSceneParams *params, const Hit *map) {
-  (void)params;
+float bh_compute_norm_scale(const BHSceneParams *params, const BHSample *map) {
   if (!map) {
     return 1.0;
   }
-  double norm_scale = 1e-12;
-  const size_t count = bh_pixel_count(params);
+  float norm_scale = 1e-12f;
+  const size_t count = bh_sample_count(params);
   for (size_t i = 0; i < count; i++) {
-    if (map[i].hit) {
-      double base = base_disk_value(&map[i]);
-      if (base > norm_scale) {
-        norm_scale = base;
+    if (map[i].kind == BH_SAMPLE_DISK) {
+      if (map[i].base > norm_scale) {
+        norm_scale = map[i].base;
       }
     }
   }
   return norm_scale;
 }
 
-static inline char sky_char(int x, int y, double phase) {
-  unsigned int h = (unsigned int)(1469598103u);
-  h ^= (unsigned int)(x * 374761393u + y * 668265263u);
+static inline uint32_t hash_sky(float theta, float phi) {
+  int32_t theta_cell = (int32_t)(theta * 200.0f);
+  int32_t phi_cell = (int32_t)(phi * 100.0f);
+  uint32_t h = 2166136261u;
+  h ^= (uint32_t)theta_cell * 374761393u;
   h *= 16777619u;
-  unsigned int r = h & 0xffffu;
-  if (r < 12000u) {
-    return '.';
-  }
-  if (r < 16000u) {
-    double tw = sin(phase * 0.60 +
-                    ((h >> 8) & 1023u) * (2.0 * M_PI / 1024.0));
-    return (tw > 0.92) ? '*' : '+';
-  }
-  if (r < 16800u) {
-    double tw =
-        sin(phase * 0.75 + (h & 1023u) * (2.0 * M_PI / 1024.0));
-    return (tw > 0.10) ? '*' : '+';
-  }
-  return ' ';
+  h ^= (uint32_t)phi_cell * 668265263u;
+  h *= 16777619u;
+  h ^= h >> 16u;
+  h *= 2246822507u;
+  h ^= h >> 13u;
+  h *= 3266489909u;
+  h ^= h >> 16u;
+  return h;
 }
 
-void bh_generate_ascii_frame(const BHSceneParams *params, const Hit *map,
-                             double phase, double norm_scale,
-                             char *out_chars) {
-  if (!params || !map || !out_chars) {
+static inline float sky_value(float theta, float phi, double phase) {
+  uint32_t hash = hash_sky(theta, phi);
+  uint32_t density = hash & 0xffffu;
+  uint32_t twinkle_hash = hash_sky(theta + 17.0f, phi + 31.0f);
+  if (density < 4000u) {
+    return 0.20f;
+  }
+  if (density < 5500u) {
+    double offset = (double)(twinkle_hash & 1023u) * (2.0 * M_PI / 1024.0);
+    return sin(phase * 0.15 + offset) > 0.5 ? 0.50f : 0.20f;
+  }
+  if (density < 6200u) {
+    double offset = (double)(twinkle_hash & 1023u) * (2.0 * M_PI / 1024.0);
+    return sin(phase * 0.20 + offset) > 0.3 ? 0.85f : 0.50f;
+  }
+  return 0.0f;
+}
+
+static int is_contour_glyph(uint32_t codepoint) {
+  for (uint32_t index = 0; index < BH_CONTOUR_ASCII_GLYPH_COUNT; index++) {
+    if (BH_CONTOUR_ASCII_CODEPOINTS[index] == codepoint) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+uint32_t bh_match_glyph(const float values[BH_GLYPH_REGION_COUNT],
+                        BHGlyphSet glyph_set) {
+  uint32_t count = glyph_set == BH_GLYPH_SET_ASCII_BRAILLE
+                       ? BH_GLYPH_COUNT
+                       : BH_ASCII_GLYPH_COUNT;
+  float best_error = INFINITY;
+  uint32_t best_codepoint = 32u;
+  for (uint32_t glyph_index = 0; glyph_index < count; glyph_index++) {
+    if (glyph_set == BH_GLYPH_SET_CONTOUR_STARS &&
+        !is_contour_glyph(BH_GLYPHS[glyph_index].codepoint)) {
+      continue;
+    }
+    float error = 0.0f;
+    for (uint32_t region = 0; region < BH_GLYPH_REGION_COUNT; region++) {
+      float difference = values[region] - BH_GLYPHS[glyph_index].regions[region];
+      error += difference * difference;
+    }
+    if (error < best_error) {
+      best_error = error;
+      best_codepoint = BH_GLYPHS[glyph_index].codepoint;
+    }
+  }
+  return best_codepoint;
+}
+
+static uint32_t match_lattice(const float values[BH_GLYPH_REGION_COUNT],
+                              const BHSceneParams *params,
+                              int use_braille) {
+  uint32_t count = use_braille
+                       ? BH_BRAILLE_GLYPH_COUNT
+                   : params->glyph_set == BH_GLYPH_SET_ASCII_BRAILLE
+                       ? BH_GLYPH_COUNT
+                       : BH_ASCII_GLYPH_COUNT;
+  const int region_count = params->sample_columns * params->sample_rows;
+  float best_error = INFINITY;
+  uint32_t best_codepoint = 32u;
+  for (uint32_t candidate = 0; candidate < count; candidate++) {
+    uint32_t glyph_index = use_braille && candidate > 0
+                               ? BH_BRAILLE_GLYPH_OFFSET + candidate
+                               : candidate;
+    if (!use_braille && params->glyph_set == BH_GLYPH_SET_CONTOUR_STARS &&
+        !is_contour_glyph(BH_GLYPHS[glyph_index].codepoint)) {
+      continue;
+    }
+    float error = 0.0f;
+    if (region_count == 1) {
+      float difference = values[0] - BH_GLYPHS[glyph_index].coverage;
+      error = difference * difference;
+    } else {
+      for (int region = 0; region < region_count; region++) {
+        float feature = region_count == 4
+                            ? BH_GLYPHS[glyph_index].regions2x2[region]
+                            : BH_GLYPHS[glyph_index].regions[region];
+        float difference = values[region] - feature;
+        error += difference * difference;
+      }
+    }
+    if (error < best_error) {
+      best_error = error;
+      best_codepoint = BH_GLYPHS[glyph_index].codepoint;
+    }
+  }
+  return best_codepoint;
+}
+
+static float glyph_feature_scale(const BHSceneParams *params, int use_braille,
+                                 int region) {
+  const int region_count = params->sample_columns * params->sample_rows;
+  if (region_count == 1) {
+    return use_braille
+               ? BH_BRAILLE_MAX_COVERAGE
+           : params->glyph_set == BH_GLYPH_SET_ASCII_BRAILLE
+               ? BH_ASCII_BRAILLE_MAX_COVERAGE
+               : BH_ASCII_MAX_COVERAGE;
+  }
+  if (region_count == 4) {
+    return use_braille
+               ? BH_BRAILLE_MAX_FEATURE_2X2_BY_REGION[region]
+           : params->glyph_set == BH_GLYPH_SET_ASCII_BRAILLE
+               ? BH_ASCII_BRAILLE_MAX_FEATURE_2X2_BY_REGION[region]
+               : BH_ASCII_MAX_FEATURE_2X2_BY_REGION[region];
+  }
+  return use_braille
+             ? BH_BRAILLE_MAX_FEATURE_2X3_BY_REGION[region]
+         : params->glyph_set == BH_GLYPH_SET_ASCII_BRAILLE
+             ? BH_ASCII_BRAILLE_MAX_FEATURE_2X3_BY_REGION[region]
+             : BH_ASCII_MAX_FEATURE_2X3_BY_REGION[region];
+}
+
+void bh_generate_ascii_frame(const BHSceneParams *params, const BHSample *map,
+                             double phase, float norm_scale,
+                             uint32_t *out_codepoints) {
+  if (!params || !map || !out_codepoints) {
     return;
   }
   if (norm_scale <= 0.0) {
     norm_scale = 1.0;
   }
-  int ramp_len = (int)sizeof(RAMP) - 1;
-  if (ramp_len < 1) {
-    ramp_len = 1;
-  }
+  const int sample_width = params->width * params->sample_columns;
   for (int y = 0; y < params->height; y++) {
     for (int x = 0; x < params->width; x++) {
-      size_t idx = bh_index(params, x, y);
-      const Hit *hit = &map[idx];
-      char ch = ' ';
-      if (hit->hit) {
-        double val = disk_value_with_hotspots(hit, phase);
-        double v = val / norm_scale;
-        if (v < 0.0) {
-          v = 0.0;
+      float values[BH_GLYPH_REGION_COUNT] = {0};
+      float disk_peak = 0.0f;
+      float sky_peak = 0.0f;
+      for (int sample_y = 0; sample_y < params->sample_rows; sample_y++) {
+        for (int sample_x = 0; sample_x < params->sample_columns; sample_x++) {
+          int region = sample_y * params->sample_columns + sample_x;
+          if (region >= (int)BH_GLYPH_REGION_COUNT) {
+            continue;
+          }
+          const int map_x = x * params->sample_columns + sample_x;
+          const int map_y = y * params->sample_rows + sample_y;
+          const BHSample *sample =
+              &map[(size_t)map_y * (size_t)sample_width + (size_t)map_x];
+          float brightness = 0.0f;
+          if (sample->kind == BH_SAMPLE_DISK) {
+            const BHDiskAppearance appearance = bh_disk_appearance(
+                params, sample->base, norm_scale, sample->a, sample->b,
+                phase);
+            float background = 0.0f;
+            if (sample->background_kind == BH_SAMPLE_SKY) {
+              background = sky_value(sample->background_a,
+                                     sample->background_b, phase);
+            }
+            const float visible_background =
+                (1.0f - appearance.opacity) * background;
+            brightness = fminf(1.0f, appearance.emission + visible_background);
+            disk_peak = fmaxf(disk_peak, appearance.emission);
+            sky_peak = fmaxf(sky_peak, visible_background);
+          } else if (sample->kind == BH_SAMPLE_SKY) {
+            brightness = sky_value(sample->a, sample->b, phase);
+            sky_peak = fmaxf(sky_peak, brightness);
+          }
+          values[region] = brightness;
         }
-        if (v > 1.0) {
-          v = 1.0;
-        }
-        double q = pow(v, params->gamma_c);
-        int idx_base = (int)(q * (ramp_len - 1));
-        if (idx_base < 0) {
-          idx_base = 0;
-        }
-        if (idx_base > ramp_len - 1) {
-          idx_base = ramp_len - 1;
-        }
-        ch = RAMP[idx_base];
-      } else if (hit->bg_type == 2) {
-        ch = ' ';
-      } else if (hit->bg_type == 3) {
-        ch = ' ';
-      } else {
-        ch = sky_char(x, y, phase);
       }
-      out_chars[idx] = ch;
+      int use_braille =
+          (params->glyph_set == BH_GLYPH_SET_BRAILLE_STARS ||
+           params->glyph_set == BH_GLYPH_SET_CONTOUR_STARS) &&
+                        sky_peak > 0.0f && sky_peak > disk_peak;
+      const int region_count = params->sample_columns * params->sample_rows;
+      for (int region = 0; region < region_count; region++) {
+        values[region] *= glyph_feature_scale(params, use_braille, region);
+      }
+      out_codepoints[bh_pixel_index(params, x, y)] =
+          match_lattice(values, params, use_braille);
     }
   }
 }

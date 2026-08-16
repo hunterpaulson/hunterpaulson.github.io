@@ -18,3 +18,20 @@
 @import "./styles/components/llm-context.css";
 @import "./styles/components/llm-cache.css";
 @import "./styles/components/diagrams.css";
+
+@font-face {
+  font-family: "Blackhole JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMonoMedium.woff") format("woff");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Blackhole Braille";
+  src: url("/assets/fonts/BlackholeBraille.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+2800-28FF;
+}

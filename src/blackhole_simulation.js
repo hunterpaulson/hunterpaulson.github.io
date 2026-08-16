@@ -1,11 +1,24 @@
 import { registerMediaExport } from "./blog/shared/media_export.mjs";
 import { attachViewportAnimationLifecycle } from "./blog/shared/viewport_animation_lifecycle.mjs";
+import {
+  BLACKHOLE_WASM_INIT_PARAMETER_TYPES,
+  blackholeWasmInitArguments,
+  codepointsToFrame,
+  formatRendererStatus,
+  resolveBlackholeOptions,
+  resolveSliderPointerIndex,
+  scheduleLiveFrame,
+} from "./art/blackhole_runtime.mjs";
 
 export async function initBlackholeSimulation({
   frameId = "bh",
   statusId = "bh-status",
   slidersId = "bh-sliders",
   vsyncCheckboxId = "bh-vsync",
+  backend,
+  glyphSet,
+  sampleCount,
+  ringProfile,
 } = {}) {
   const frameElement = document.getElementById(frameId);
   const slidersElement = document.getElementById(slidersId);
@@ -18,11 +31,18 @@ export async function initBlackholeSimulation({
 
   const width = 80;
   const height = 40;
-  const targetFps = 30;
+  const mediaExportFps = 30;
   const defaultFov = 60;
   const diskRotationSpeed = 1;
+  const resolvedOptions = resolveBlackholeOptions({
+    search: window.location.search,
+    backend,
+    glyphSet,
+    sampleCount,
+    ringProfile,
+  });
   const mediaExport = registerMediaExport({
-    fps: targetFps,
+    fps: mediaExportFps,
     loopDurationMs: ((Math.PI * 2) / diskRotationSpeed) * 1000,
   });
 
@@ -55,6 +75,7 @@ export async function initBlackholeSimulation({
   let lastSliderState = { ...sliderState };
   let focusedSlider = 0;
   let lastPointerId = null;
+  let activeSliderIndex = null;
 
   let frameCount = 0;
   let lastFpsTimestamp = performance.now();
@@ -64,6 +85,7 @@ export async function initBlackholeSimulation({
   let vsyncEnabled = vsyncCheckbox ? vsyncCheckbox.checked : true;
   let isDragging = false;
   let cleanedUp = false;
+  let frameNeedsCentering = true;
 
   let wasmModule = null;
   let wasmInit = null;
@@ -71,6 +93,8 @@ export async function initBlackholeSimulation({
   let wasmDestroy = null;
   let wasmLoaded = false;
   let detachViewportLifecycle = null;
+  let simulationControlsElement = null;
+  let restartSimButton = null;
 
   function updateStatus(message) {
     if (statusElement) {
@@ -83,6 +107,25 @@ export async function initBlackholeSimulation({
     if (overflow > 0) {
       frameElement.scrollLeft = overflow / 2;
     }
+  }
+
+  function centerRenderedFrameOnce() {
+    if (!frameNeedsCentering) {
+      return;
+    }
+    centerIfOverflow();
+    frameNeedsCentering = false;
+  }
+
+  async function loadRendererFonts() {
+    if (!document.fonts?.load) {
+      return;
+    }
+    const loads = [document.fonts.load('500 1rem "Blackhole JetBrains Mono"', "M")];
+    if (resolvedOptions.glyphSet !== "ascii") {
+      loads.push(document.fonts.load('400 1rem "Blackhole Braille"', "⣿"));
+    }
+    await Promise.all(loads);
   }
 
   function roundToStep(value, step) {
@@ -179,12 +222,19 @@ export async function initBlackholeSimulation({
   function sliderInfoFromPointer(event) {
     const { charWidth, lineHeight } = ensureMetrics();
     const rect = slidersElement.getBoundingClientRect();
-    const y = event.clientY - rect.top;
-    const totalRows = sliderDefinitions.length * 2;
-    let row = Math.floor(y / lineHeight);
-    row = Math.max(0, Math.min(totalRows - 1, row));
+    const sliderIndex = resolveSliderPointerIndex({
+      clientY: event.clientY,
+      sliderTop: rect.top,
+      lineHeight,
+      sliderCount: sliderDefinitions.length,
+      pointerId: event.pointerId,
+      activePointerId: lastPointerId,
+      activeSliderIndex,
+    });
+    if (sliderIndex === null) {
+      return null;
+    }
 
-    const sliderIndex = Math.floor(row / 2);
     const definition = sliderDefinitions[sliderIndex];
     const x = event.clientX - rect.left;
     let column = Math.floor(x / charWidth);
@@ -217,7 +267,7 @@ export async function initBlackholeSimulation({
     fpsHistory = [];
   }
 
-  function recordFps(label) {
+  function recordFps(backendName) {
     frameCount += 1;
     const now = performance.now();
 
@@ -236,7 +286,7 @@ export async function initBlackholeSimulation({
 
     const minFps = Math.min(...fpsHistory);
     const maxFps = Math.max(...fpsHistory);
-    updateStatus(`[${label}] fps: ${currentFps} (↓${minFps} ↑${maxFps})`);
+    updateStatus(formatRendererStatus(backendName, currentFps, minFps, maxFps));
   }
 
   async function initGpuRenderer() {
@@ -254,6 +304,9 @@ export async function initBlackholeSimulation({
       defaultFov,
       sliderState.distance,
       sliderState.roll,
+      resolvedOptions.glyphSet,
+      resolvedOptions.sampleCount,
+      resolvedOptions.ringProfile,
     );
 
     return gpuRenderer;
@@ -261,11 +314,11 @@ export async function initBlackholeSimulation({
 
   async function runGpuTick() {
     const elapsedSeconds = (performance.now() - animationStartTime) / 1000;
-    const phase = (elapsedSeconds * diskRotationSpeed) % (Math.PI * 2);
+    const phase = elapsedSeconds * diskRotationSpeed;
     const frame = await renderer.generateFrame(phase);
 
     frameElement.textContent = frame;
-    centerIfOverflow();
+    centerRenderedFrameOnce();
     recordFps("webgpu");
     if (!mediaExport.controller.ready) {
       mediaExport.setReady({ renderer: "webgpu" });
@@ -273,12 +326,11 @@ export async function initBlackholeSimulation({
   }
 
   function scheduleNextFrame(loopFunction) {
-    if (vsyncEnabled || isDragging) {
-      requestAnimationFrame(loopFunction);
-      return;
-    }
-
-    setTimeout(loopFunction, 0);
+    scheduleLiveFrame(loopFunction, {
+      vsync: vsyncEnabled || isDragging,
+      requestAnimationFrame: window.requestAnimationFrame.bind(window),
+      setTimeout: window.setTimeout.bind(window),
+    });
   }
 
   function startGpuLoop() {
@@ -350,7 +402,7 @@ export async function initBlackholeSimulation({
     wasmInit = wasmModule.cwrap(
       "bh_wasm_init",
       "number",
-      ["number", "number", "number", "number", "number", "number"],
+      BLACKHOLE_WASM_INIT_PARAMETER_TYPES,
     );
     wasmGenerateFrame = wasmModule.cwrap("bh_wasm_generate_frame", "number", ["number"]);
     wasmDestroy = wasmModule.cwrap("bh_wasm_destroy", "void", []);
@@ -359,15 +411,19 @@ export async function initBlackholeSimulation({
 
   function runWasmTick() {
     const elapsedSeconds = (performance.now() - animationStartTime) / 1000;
-    const phase = (elapsedSeconds * diskRotationSpeed) % (Math.PI * 2);
+    const phase = elapsedSeconds * diskRotationSpeed;
     const framePointer = wasmGenerateFrame(phase);
 
     if (!framePointer) {
       throw new Error("bh_wasm_generate_frame returned null");
     }
 
-    frameElement.textContent = wasmModule.UTF8ToString(framePointer);
-    centerIfOverflow();
+    const codepoints = wasmModule.HEAPU32.subarray(
+      framePointer >>> 2,
+      (framePointer >>> 2) + width * height,
+    );
+    frameElement.textContent = codepointsToFrame(codepoints, width, height);
+    centerRenderedFrameOnce();
     recordFps("wasm");
     if (!mediaExport.controller.ready) {
       mediaExport.setReady({ renderer: "wasm" });
@@ -407,7 +463,7 @@ export async function initBlackholeSimulation({
     }
   }
 
-  async function rebuildSceneWasm() {
+  async function rebuildSceneWasm({ restartMotion = false } = {}) {
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
 
@@ -421,21 +477,26 @@ export async function initBlackholeSimulation({
       }
     }
 
-    const initStatus = wasmInit(
+    const initStatus = wasmInit(...blackholeWasmInitArguments({
       width,
       height,
-      sliderState.incline,
-      defaultFov,
-      sliderState.distance,
-      sliderState.roll,
-    );
+      incline: sliderState.incline,
+      fov: defaultFov,
+      distance: sliderState.distance,
+      roll: sliderState.roll,
+      glyphSet: resolvedOptions.glyphSet,
+      sampleCount: resolvedOptions.sampleCount,
+      ringProfile: resolvedOptions.ringProfile,
+    }));
 
     if (initStatus !== 0) {
       throw new Error(`bh_wasm_init failed (${initStatus})`);
     }
 
     lastSliderState = { ...sliderState };
-    animationStartTime = performance.now();
+    if (restartMotion) {
+      animationStartTime = performance.now();
+    }
     runWasmTick();
     window.scrollTo(scrollX, scrollY);
     startWasmLoop();
@@ -443,18 +504,6 @@ export async function initBlackholeSimulation({
 
   function startWasmLoop() {
     stopAnimation();
-
-    if (vsyncEnabled || isDragging) {
-      animationTimer = setInterval(() => {
-        try {
-          runWasmTick();
-        } catch (error) {
-          console.error("animation tick failed", error);
-          stopAnimation();
-        }
-      }, 1000 / targetFps);
-      return;
-    }
 
     let running = true;
     animationTimer = {
@@ -470,11 +519,7 @@ export async function initBlackholeSimulation({
 
       try {
         runWasmTick();
-        if (vsyncEnabled || isDragging) {
-          startWasmLoop();
-          return;
-        }
-        setTimeout(wasmLoop, 0);
+        scheduleNextFrame(wasmLoop);
       } catch (error) {
         console.error("animation tick failed", error);
         running = false;
@@ -512,12 +557,16 @@ export async function initBlackholeSimulation({
   }
 
   function onPointerDown(event) {
+    const info = sliderInfoFromPointer(event);
+    if (!info) {
+      return;
+    }
+
     event.preventDefault();
     lastPointerId = event.pointerId;
+    activeSliderIndex = info.sliderIndex;
     isDragging = true;
     slidersElement.setPointerCapture(event.pointerId);
-
-    const info = sliderInfoFromPointer(event);
     focusedSlider = info.sliderIndex;
 
     const rawValue = info.definition.min + (info.handlePosition / (trackLength - 1)) * (info.definition.max - info.definition.min);
@@ -538,6 +587,10 @@ export async function initBlackholeSimulation({
     event.preventDefault();
 
     const info = sliderInfoFromPointer(event);
+    if (!info) {
+      return;
+    }
+
     const rawValue = info.definition.min + (info.handlePosition / (trackLength - 1)) * (info.definition.max - info.definition.min);
     const nextValue = Math.min(
       info.definition.max,
@@ -563,6 +616,7 @@ export async function initBlackholeSimulation({
     }
 
     lastPointerId = null;
+    activeSliderIndex = null;
     isDragging = false;
 
     if (!useGpu && !vsyncEnabled) {
@@ -612,6 +666,25 @@ export async function initBlackholeSimulation({
     }
   }
 
+  function restartSim() {
+    animationStartTime = performance.now();
+  }
+
+  function installSimulationControls() {
+    simulationControlsElement = document.createElement("p");
+    simulationControlsElement.className = "blackhole-sim-controls";
+
+    restartSimButton = document.createElement("button");
+    restartSimButton.type = "button";
+    restartSimButton.textContent = "restart sim";
+    restartSimButton.title = "Restart the simulation without changing the camera";
+    restartSimButton.setAttribute("aria-controls", frameId);
+    restartSimButton.addEventListener("click", restartSim);
+
+    simulationControlsElement.appendChild(restartSimButton);
+    slidersElement.insertAdjacentElement("afterend", simulationControlsElement);
+  }
+
   async function startGpuRenderer() {
     try {
       frameElement.textContent = "initializing gpu...";
@@ -635,7 +708,7 @@ export async function initBlackholeSimulation({
       useGpu = false;
       gpuRunning = false;
       resetFpsTracking();
-      await rebuildSceneWasm();
+      await rebuildSceneWasm({ restartMotion: true });
       return true;
     } catch (error) {
       mediaExport.update({ error: error.message });
@@ -670,6 +743,15 @@ export async function initBlackholeSimulation({
     slidersElement.removeEventListener("lostpointercapture", onPointerEnd);
     slidersElement.removeEventListener("keydown", onSliderKeyDown);
 
+    if (restartSimButton) {
+      restartSimButton.removeEventListener("click", restartSim);
+    }
+    if (simulationControlsElement) {
+      simulationControlsElement.remove();
+      simulationControlsElement = null;
+      restartSimButton = null;
+    }
+
     if (vsyncCheckbox) {
       vsyncCheckbox.removeEventListener("change", onVsyncChange);
     }
@@ -694,12 +776,18 @@ export async function initBlackholeSimulation({
 
   window.addEventListener("beforeunload", cleanup, { once: true });
 
+  installSimulationControls();
   renderSliders();
-  centerIfOverflow();
+  await loadRendererFonts();
 
-  const gpuSuccess = await startGpuRenderer();
-  if (!gpuSuccess) {
+  const gpuSuccess = resolvedOptions.backend === "wasm"
+    ? false
+    : await startGpuRenderer();
+  if (!gpuSuccess && resolvedOptions.backend !== "webgpu") {
     await startWasmRenderer();
+  } else if (!gpuSuccess) {
+    frameElement.textContent = "failed to load forced webgpu renderer";
+    updateStatus("[webgpu] unavailable");
   }
 
   detachViewportLifecycle = attachViewportAnimationLifecycle({

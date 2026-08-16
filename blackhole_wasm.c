@@ -14,34 +14,31 @@
 
 typedef struct {
   BHSceneParams params;
-  Hit *map;
-  char *raw_pixels;
-  char *frame_chars;
+  BHSample *map;
+  uint32_t *frame_codepoints;
   size_t pixel_count;
-  size_t frame_bytes;
-  double norm_scale;
+  size_t sample_count;
+  float norm_scale;
 } BHContext;
 
 static BHContext ctx = {0};
 
 static void bh_wasm_clear(void) {
   free(ctx.map);
-  free(ctx.raw_pixels);
-  free(ctx.frame_chars);
+  free(ctx.frame_codepoints);
   memset(&ctx, 0, sizeof(ctx));
 }
 
 static int bh_wasm_alloc_buffers(void) {
   ctx.pixel_count = bh_pixel_count(&ctx.params);
-  if (ctx.pixel_count == 0) {
+  ctx.sample_count = bh_sample_count(&ctx.params);
+  if (ctx.pixel_count == 0 || ctx.sample_count == 0) {
     return -1;
   }
-  ctx.map = (Hit *)malloc(sizeof(Hit) * ctx.pixel_count);
-  ctx.raw_pixels = (char *)malloc(ctx.pixel_count);
-  ctx.frame_bytes =
-      ctx.pixel_count + (size_t)ctx.params.height + 1; // newline per row + NUL
-  ctx.frame_chars = (char *)malloc(ctx.frame_bytes);
-  if (!ctx.map || !ctx.raw_pixels || !ctx.frame_chars) {
+  ctx.map = (BHSample *)malloc(sizeof(BHSample) * ctx.sample_count);
+  ctx.frame_codepoints =
+      (uint32_t *)malloc(sizeof(uint32_t) * ctx.pixel_count);
+  if (!ctx.map || !ctx.frame_codepoints) {
     bh_wasm_clear();
     return -2;
   }
@@ -50,7 +47,10 @@ static int bh_wasm_alloc_buffers(void) {
 
 EMSCRIPTEN_KEEPALIVE
 int bh_wasm_init(int width, int height, double inc_deg, double fovx_deg,
-                 double robs, double roll_deg) {
+                 double robs, double roll_deg, int glyph_set,
+                 int sample_count, double ring_count, double ring_fill,
+                 double ring_edge, double ring_floor,
+                 double ring_irregularity) {
   if (width <= 0 || height <= 0) {
     return -1;
   }
@@ -59,6 +59,15 @@ int bh_wasm_init(int width, int height, double inc_deg, double fovx_deg,
   bh_init_scene_params(&ctx.params);
   ctx.params.width = width;
   ctx.params.height = height;
+  ctx.params.sample_columns = sample_count == 1 ? 1 : 2;
+  ctx.params.sample_rows = sample_count == 1 ? 1 : (sample_count == 4 ? 2 : 3);
+  ctx.params.glyph_set = glyph_set == BH_GLYPH_SET_ASCII_BRAILLE
+                             ? BH_GLYPH_SET_ASCII_BRAILLE
+                         : glyph_set == BH_GLYPH_SET_CONTOUR_STARS
+                             ? BH_GLYPH_SET_CONTOUR_STARS
+                         : glyph_set == BH_GLYPH_SET_BRAILLE_STARS
+                             ? BH_GLYPH_SET_BRAILLE_STARS
+                             : BH_GLYPH_SET_ASCII;
   if (inc_deg > -89.0 && inc_deg < 89.0) {
     ctx.params.inc_deg = inc_deg;
   }
@@ -71,6 +80,11 @@ int bh_wasm_init(int width, int height, double inc_deg, double fovx_deg,
   if (roll_deg >= -90.0 && roll_deg <= 90.0) {
     ctx.params.roll_deg = roll_deg;
   }
+  ctx.params.ring_count = ring_count;
+  ctx.params.ring_fill = ring_fill;
+  ctx.params.ring_edge = ring_edge;
+  ctx.params.ring_floor = ring_floor;
+  ctx.params.ring_irregularity = ring_irregularity;
   bh_update_derived(&ctx.params);
 
   int alloc_status = bh_wasm_alloc_buffers();
@@ -93,29 +107,18 @@ EMSCRIPTEN_KEEPALIVE
 int bh_wasm_height(void) { return ctx.params.height; }
 
 EMSCRIPTEN_KEEPALIVE
-size_t bh_wasm_frame_len(void) { return ctx.frame_bytes; }
+int bh_wasm_glyph_set(void) { return ctx.params.glyph_set; }
 
 EMSCRIPTEN_KEEPALIVE
-const char *bh_wasm_generate_frame(double phase) {
-  if (!ctx.map || !ctx.raw_pixels || !ctx.frame_chars) {
+size_t bh_wasm_frame_len(void) { return ctx.pixel_count; }
+
+EMSCRIPTEN_KEEPALIVE
+const uint32_t *bh_wasm_generate_frame(double phase) {
+  if (!ctx.map || !ctx.frame_codepoints) {
     return NULL;
   }
 
   bh_generate_ascii_frame(&ctx.params, ctx.map, phase, ctx.norm_scale,
-                          ctx.raw_pixels);
-
-  const char *src = ctx.raw_pixels;
-  char *dst = ctx.frame_chars;
-  int width = ctx.params.width;
-  int height = ctx.params.height;
-  for (int y = 0; y < height; y++) {
-    memcpy(dst, src, width);
-    dst += width;
-    src += width;
-    *dst++ = '\n';
-  }
-  *dst = '\0';
-  return ctx.frame_chars;
+                          ctx.frame_codepoints);
+  return ctx.frame_codepoints;
 }
-
-

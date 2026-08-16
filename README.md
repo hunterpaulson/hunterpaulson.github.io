@@ -18,6 +18,13 @@ bun run build
 bun run test
 ```
 
+The deploy build pins Emscripten 4.0.17. When changing the black-hole C core,
+install that compiler locally and regenerate the checked-in browser module with:
+
+```bash
+bun run generate:blackhole:wasm
+```
+
 ### shared markdown includes
 
 Large shared HTML blocks can live under `content/includes/` and be reused from Markdown with:

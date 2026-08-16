@@ -13,10 +13,33 @@
 static const char *dump_path = NULL;
 static int dump_frames = 0;
 
+static void write_codepoint(FILE *out, uint32_t codepoint) {
+  unsigned char encoded[4];
+  size_t length = 0;
+  if (codepoint <= 0x7fu) {
+    encoded[length++] = (unsigned char)codepoint;
+  } else if (codepoint <= 0x7ffu) {
+    encoded[length++] = (unsigned char)(0xc0u | (codepoint >> 6u));
+    encoded[length++] = (unsigned char)(0x80u | (codepoint & 0x3fu));
+  } else if (codepoint <= 0xffffu) {
+    encoded[length++] = (unsigned char)(0xe0u | (codepoint >> 12u));
+    encoded[length++] = (unsigned char)(0x80u | ((codepoint >> 6u) & 0x3fu));
+    encoded[length++] = (unsigned char)(0x80u | (codepoint & 0x3fu));
+  } else {
+    encoded[length++] = (unsigned char)(0xf0u | (codepoint >> 18u));
+    encoded[length++] = (unsigned char)(0x80u | ((codepoint >> 12u) & 0x3fu));
+    encoded[length++] = (unsigned char)(0x80u | ((codepoint >> 6u) & 0x3fu));
+    encoded[length++] = (unsigned char)(0x80u | (codepoint & 0x3fu));
+  }
+  fwrite(encoded, 1, length, out);
+}
+
 static void write_frame(FILE *out, const BHSceneParams *params,
-                        const char *frame_chars) {
+                        const uint32_t *frame_codepoints) {
   for (int y = 0; y < params->height; y++) {
-    fwrite(frame_chars + (size_t)y * params->width, 1, params->width, out);
+    for (int x = 0; x < params->width; x++) {
+      write_codepoint(out, frame_codepoints[(size_t)y * params->width + x]);
+    }
     fputc('\n', out);
   }
 }
@@ -59,18 +82,20 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Hit *map = (Hit *)malloc(sizeof(Hit) * pixel_count);
+  size_t sample_count = bh_sample_count(&params);
+  BHSample *map = (BHSample *)malloc(sizeof(BHSample) * sample_count);
   if (!map) {
     fprintf(stderr, "failed to allocate map (%zu bytes)\n",
-            sizeof(Hit) * pixel_count);
+            sizeof(BHSample) * sample_count);
     return 1;
   }
 
   bh_trace_map(&params, map);
-  double norm_scale = bh_compute_norm_scale(&params, map);
+  float norm_scale = bh_compute_norm_scale(&params, map);
 
-  char *frame_chars = (char *)malloc(pixel_count);
-  if (!frame_chars) {
+  uint32_t *frame_codepoints =
+      (uint32_t *)malloc(sizeof(uint32_t) * pixel_count);
+  if (!frame_codepoints) {
     fprintf(stderr, "failed to allocate frame buffer (%zu bytes)\n",
             pixel_count);
     free(map);
@@ -84,25 +109,23 @@ int main(int argc, char **argv) {
     FILE *f = fopen(dump_path, "wb");
     if (!f) {
       perror("fopen dump");
-      free(frame_chars);
+      free(frame_codepoints);
       free(map);
       return 1;
     }
     for (int frame = 0; frame < dump_frames; ++frame) {
-      bh_generate_ascii_frame(&params, map, phase, norm_scale, frame_chars);
-      write_frame(f, &params, frame_chars);
+      bh_generate_ascii_frame(&params, map, phase, norm_scale,
+                              frame_codepoints);
+      write_frame(f, &params, frame_codepoints);
       if (frame != dump_frames - 1) {
         fputc('\f', f);
       }
       phase += dphase;
-      if (phase > 2 * M_PI) {
-        phase -= 2 * M_PI;
-      }
     }
     fclose(f);
     fprintf(stderr, "dumped %d frames to %s (size %dx%d)\n", dump_frames,
             dump_path, params.width, params.height);
-    free(frame_chars);
+    free(frame_codepoints);
     free(map);
     return 0;
   }
@@ -110,19 +133,15 @@ int main(int argc, char **argv) {
   printf("\x1b[2J");
   for (;;) {
     printf("\x1b[H");
-    bh_generate_ascii_frame(&params, map, phase, norm_scale, frame_chars);
-    write_frame(stdout, &params, frame_chars);
+    bh_generate_ascii_frame(&params, map, phase, norm_scale,
+                            frame_codepoints);
+    write_frame(stdout, &params, frame_codepoints);
     fflush(stdout);
     usleep(40000);
     phase += dphase;
-    if (phase > 2 * M_PI) {
-      phase -= 2 * M_PI;
-    }
   }
 
-  free(frame_chars);
+  free(frame_codepoints);
   free(map);
   return 0;
 }
-
-

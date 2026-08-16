@@ -75,7 +75,7 @@ assets/blackhole_wasm.js: blackhole_wasm.c blackhole_core.c blackhole_core.h gen
 		-s EXPORT_ES6=1 \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s ENVIRONMENT=web \
-		-s EXPORTED_FUNCTIONS='["_bh_wasm_init","_bh_wasm_destroy","_bh_wasm_width","_bh_wasm_height","_bh_wasm_glyph_set","_bh_wasm_frame_len","_bh_wasm_generate_frame"]' \
+		-s EXPORTED_FUNCTIONS='["_bh_wasm_init","_bh_wasm_destroy","_bh_wasm_width","_bh_wasm_height","_bh_wasm_glyph_set","_bh_wasm_frame_len","_bh_wasm_matter_ptr","_bh_wasm_generate_frame"]' \
 		-s EXPORTED_RUNTIME_METHODS='["cwrap","HEAPU32"]' \
 		-o $@
 

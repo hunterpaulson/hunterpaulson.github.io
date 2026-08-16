@@ -16,6 +16,7 @@ typedef struct {
   BHSceneParams params;
   BHSample *map;
   uint32_t *frame_codepoints;
+  float *matter_field;
   size_t pixel_count;
   size_t sample_count;
   float norm_scale;
@@ -26,6 +27,7 @@ static BHContext ctx = {0};
 static void bh_wasm_clear(void) {
   free(ctx.map);
   free(ctx.frame_codepoints);
+  free(ctx.matter_field);
   memset(&ctx, 0, sizeof(ctx));
 }
 
@@ -38,10 +40,15 @@ static int bh_wasm_alloc_buffers(void) {
   ctx.map = (BHSample *)malloc(sizeof(BHSample) * ctx.sample_count);
   ctx.frame_codepoints =
       (uint32_t *)malloc(sizeof(uint32_t) * ctx.pixel_count);
-  if (!ctx.map || !ctx.frame_codepoints) {
+  ctx.matter_field = (float *)malloc(sizeof(float) * ctx.pixel_count);
+  if (!ctx.map || !ctx.frame_codepoints || !ctx.matter_field) {
     bh_wasm_clear();
     return -2;
   }
+  bh_seed_spiral_matter(ctx.matter_field, ctx.params.width, ctx.params.height);
+  ctx.params.matter_field = ctx.matter_field;
+  ctx.params.matter_width = ctx.params.width;
+  ctx.params.matter_height = ctx.params.height;
   return 0;
 }
 
@@ -111,6 +118,9 @@ int bh_wasm_glyph_set(void) { return ctx.params.glyph_set; }
 
 EMSCRIPTEN_KEEPALIVE
 size_t bh_wasm_frame_len(void) { return ctx.pixel_count; }
+
+EMSCRIPTEN_KEEPALIVE
+float *bh_wasm_matter_ptr(void) { return ctx.matter_field; }
 
 EMSCRIPTEN_KEEPALIVE
 const uint32_t *bh_wasm_generate_frame(double phase) {

@@ -4,11 +4,23 @@ import {
   BLACKHOLE_WASM_INIT_PARAMETER_TYPES,
   blackholeWasmInitArguments,
   codepointsToFrame,
+  destroyRendererAfter,
   formatRendererStatus,
+  resolveBlackholeKeyboardAction,
   resolveBlackholeOptions,
   resolveSliderPointerIndex,
   scheduleLiveFrame,
 } from "./art/blackhole_runtime.mjs";
+import {
+  MATTER_HEIGHT,
+  MATTER_MAX_BRUSH_SIZE,
+  MATTER_WIDTH,
+  brushSizeFromInput,
+  createSpiralMatterField,
+  matterCellFromPointer,
+  matterFieldToText,
+  paintMatterLine,
+} from "./art/blackhole_matter.mjs";
 
 export async function initBlackholeSimulation({
   frameId = "bh",
@@ -29,8 +41,8 @@ export async function initBlackholeSimulation({
     return () => {};
   }
 
-  const width = 80;
-  const height = 40;
+  const width = MATTER_WIDTH;
+  const height = MATTER_HEIGHT;
   const mediaExportFps = 30;
   const defaultFov = 60;
   const diskRotationSpeed = 1;
@@ -67,8 +79,11 @@ export async function initBlackholeSimulation({
   let useGpu = false;
   let gpuRunning = false;
   let gpuLoopGeneration = 0;
+  let gpuTickPromise = null;
   let animationTimer = null;
-  let animationStartTime = performance.now();
+  let phaseAtLastStateChange = 0;
+  let phaseStateChangedAt = performance.now();
+  let simulationPlaying = true;
   let rebuildTimeout = null;
 
   let metrics = null;
@@ -91,15 +106,75 @@ export async function initBlackholeSimulation({
   let wasmInit = null;
   let wasmGenerateFrame = null;
   let wasmDestroy = null;
+  let wasmMatterPointer = null;
   let wasmLoaded = false;
   let detachViewportLifecycle = null;
   let simulationControlsElement = null;
+  let playPauseButton = null;
   let restartSimButton = null;
+  let drawingControlsElement = null;
+  let matterPadElement = null;
+  let clearDrawingButton = null;
+  let undoDrawingButton = null;
+  let redoDrawingButton = null;
+  let brushSizeInput = null;
+  let drawingPointerId = null;
+  let lastDrawingCell = null;
+  let brushSize = 1;
+  const draftMatter = createSpiralMatterField({ width, height });
+  const activeMatter = new Float32Array(draftMatter);
+  const drawingUndoStack = [];
+  const drawingRedoStack = [];
+  const drawingHistoryLimit = 32;
 
   function updateStatus(message) {
     if (statusElement) {
       statusElement.textContent = message;
     }
+  }
+
+  function currentSimulationPhase(now = performance.now()) {
+    if (!simulationPlaying) {
+      return phaseAtLastStateChange;
+    }
+    return phaseAtLastStateChange +
+      ((now - phaseStateChangedAt) / 1000) * diskRotationSpeed;
+  }
+
+  function resetSimulationPhase() {
+    phaseAtLastStateChange = 0;
+    phaseStateChangedAt = performance.now();
+  }
+
+  function updatePlayPauseButton() {
+    if (!playPauseButton) {
+      return;
+    }
+    setControlLabel(
+      playPauseButton,
+      simulationPlaying ? "pause" : "play",
+      "p",
+    );
+    playPauseButton.setAttribute("aria-pressed", String(!simulationPlaying));
+  }
+
+  function setControlLabel(control, text, shortcut = null) {
+    const label = document.createElement("span");
+    label.className = "blackhole-button-label";
+    const shortcutIndex = shortcut
+      ? text.toLowerCase().indexOf(shortcut.toLowerCase())
+      : -1;
+
+    if (shortcutIndex < 0) {
+      label.textContent = text;
+    } else {
+      label.append(text.slice(0, shortcutIndex));
+      const key = document.createElement("span");
+      key.className = "blackhole-shortcut-key";
+      key.textContent = text[shortcutIndex];
+      label.append(key, text.slice(shortcutIndex + 1));
+    }
+    control.replaceChildren(label);
   }
 
   function centerIfOverflow() {
@@ -307,15 +382,23 @@ export async function initBlackholeSimulation({
       resolvedOptions.glyphSet,
       resolvedOptions.sampleCount,
       resolvedOptions.ringProfile,
+      activeMatter,
     );
 
     return gpuRenderer;
   }
 
   async function runGpuTick() {
-    const elapsedSeconds = (performance.now() - animationStartTime) / 1000;
-    const phase = elapsedSeconds * diskRotationSpeed;
-    const frame = await renderer.generateFrame(phase);
+    const activeRenderer = renderer;
+    if (!activeRenderer) {
+      return;
+    }
+    const phase = currentSimulationPhase();
+    const frame = await activeRenderer.generateFrame(phase);
+
+    if (cleanedUp || renderer !== activeRenderer) {
+      return;
+    }
 
     frameElement.textContent = frame;
     centerRenderedFrameOnce();
@@ -348,11 +431,14 @@ export async function initBlackholeSimulation({
       }
 
       try {
-        await runGpuTick();
+        gpuTickPromise = runGpuTick();
+        await gpuTickPromise;
       } catch (error) {
         console.error("GPU frame failed", error);
         stopCurrentRenderer();
         return;
+      } finally {
+        gpuTickPromise = null;
       }
 
       if (!gpuRunning || currentGeneration !== gpuLoopGeneration) {
@@ -376,7 +462,7 @@ export async function initBlackholeSimulation({
   }
 
   function resumeCurrentRenderer() {
-    if (cleanedUp) {
+    if (cleanedUp || !simulationPlaying) {
       return;
     }
 
@@ -406,12 +492,21 @@ export async function initBlackholeSimulation({
     );
     wasmGenerateFrame = wasmModule.cwrap("bh_wasm_generate_frame", "number", ["number"]);
     wasmDestroy = wasmModule.cwrap("bh_wasm_destroy", "void", []);
+    wasmMatterPointer = wasmModule.cwrap("bh_wasm_matter_ptr", "number", []);
     wasmLoaded = true;
   }
 
+  function writeActiveMatterToWasm() {
+    const pointer = wasmMatterPointer?.();
+    if (!pointer) {
+      throw new Error("bh_wasm_matter_ptr returned null");
+    }
+    const heap = new Float32Array(wasmModule.HEAPU32.buffer);
+    heap.set(activeMatter, pointer >>> 2);
+  }
+
   function runWasmTick() {
-    const elapsedSeconds = (performance.now() - animationStartTime) / 1000;
-    const phase = elapsedSeconds * diskRotationSpeed;
+    const phase = currentSimulationPhase();
     const framePointer = wasmGenerateFrame(phase);
 
     if (!framePointer) {
@@ -448,11 +543,9 @@ export async function initBlackholeSimulation({
     pauseCurrentRenderer();
 
     if (renderer) {
-      try {
-        renderer.destroy();
-      } catch (_error) {
-      }
+      const rendererToDestroy = renderer;
       renderer = null;
+      destroyRendererAfter(rendererToDestroy, gpuTickPromise).catch(() => {});
     }
 
     if (wasmDestroy) {
@@ -492,18 +585,24 @@ export async function initBlackholeSimulation({
     if (initStatus !== 0) {
       throw new Error(`bh_wasm_init failed (${initStatus})`);
     }
+    writeActiveMatterToWasm();
 
     lastSliderState = { ...sliderState };
     if (restartMotion) {
-      animationStartTime = performance.now();
+      resetSimulationPhase();
     }
     runWasmTick();
     window.scrollTo(scrollX, scrollY);
-    startWasmLoop();
+    if (simulationPlaying) {
+      startWasmLoop();
+    }
   }
 
   function startWasmLoop() {
     stopAnimation();
+    if (!simulationPlaying) {
+      return;
+    }
 
     let running = true;
     animationTimer = {
@@ -538,6 +637,11 @@ export async function initBlackholeSimulation({
           roll_deg: sliderState.roll,
         });
         lastSliderState = { ...sliderState };
+        if (!simulationPlaying) {
+          runGpuTick().catch((error) => {
+            console.error("GPU still frame failed", error);
+          });
+        }
       }
       return;
     }
@@ -666,8 +770,218 @@ export async function initBlackholeSimulation({
     }
   }
 
-  function restartSim() {
-    animationStartTime = performance.now();
+  function toggleSimulationPlayback() {
+    const now = performance.now();
+    if (simulationPlaying) {
+      phaseAtLastStateChange = currentSimulationPhase(now);
+      simulationPlaying = false;
+      pauseCurrentRenderer();
+    } else {
+      phaseStateChangedAt = now;
+      simulationPlaying = true;
+      resetFpsTracking();
+      resumeCurrentRenderer();
+    }
+    updatePlayPauseButton();
+  }
+
+  async function restartSim() {
+    activeMatter.set(draftMatter);
+    resetSimulationPhase();
+    try {
+      if (useGpu && renderer) {
+        renderer.setMatterField(activeMatter);
+        if (!simulationPlaying) {
+          await runGpuTick();
+        }
+      } else if (wasmLoaded && wasmMatterPointer) {
+        writeActiveMatterToWasm();
+        if (!simulationPlaying) {
+          runWasmTick();
+        }
+      }
+    } catch (error) {
+      console.error("failed to restart blackhole simulation", error);
+    }
+  }
+
+  function renderDrawingPad() {
+    if (matterPadElement) {
+      matterPadElement.textContent = matterFieldToText(draftMatter, width, height);
+    }
+  }
+
+  function drawingCellFromPointer(event) {
+    const rect = matterPadElement.getBoundingClientRect();
+    return matterCellFromPointer({
+      clientX: event.clientX,
+      clientY: event.clientY,
+      left: rect.left - matterPadElement.scrollLeft,
+      top: rect.top,
+      charWidth: matterPadElement.scrollWidth / width,
+      lineHeight: matterPadElement.scrollHeight / height,
+      width,
+      height,
+    });
+  }
+
+  function onDrawingPointerDown(event) {
+    if (event.button !== 0 || drawingPointerId !== null) {
+      return;
+    }
+    event.preventDefault();
+    matterPadElement.focus({ preventScroll: true });
+    rememberDrawingBeforeEdit();
+    drawingPointerId = event.pointerId;
+    lastDrawingCell = drawingCellFromPointer(event);
+    matterPadElement.setPointerCapture(event.pointerId);
+    paintMatterLine(
+      draftMatter,
+      width,
+      height,
+      lastDrawingCell,
+      lastDrawingCell,
+      1,
+      brushSize,
+    );
+    renderDrawingPad();
+  }
+
+  function onDrawingPointerMove(event) {
+    if (event.pointerId !== drawingPointerId || !lastDrawingCell) {
+      return;
+    }
+    event.preventDefault();
+    const nextCell = drawingCellFromPointer(event);
+    paintMatterLine(
+      draftMatter,
+      width,
+      height,
+      lastDrawingCell,
+      nextCell,
+      1,
+      brushSize,
+    );
+    lastDrawingCell = nextCell;
+    renderDrawingPad();
+  }
+
+  function onDrawingPointerEnd(event) {
+    if (event.pointerId !== drawingPointerId) {
+      return;
+    }
+    if (event.type !== "lostpointercapture" &&
+        matterPadElement.hasPointerCapture(event.pointerId)) {
+      matterPadElement.releasePointerCapture(event.pointerId);
+    }
+    drawingPointerId = null;
+    lastDrawingCell = null;
+  }
+
+  function updateDrawingHistoryButtons() {
+    if (undoDrawingButton) {
+      undoDrawingButton.disabled = drawingUndoStack.length === 0;
+    }
+    if (redoDrawingButton) {
+      redoDrawingButton.disabled = drawingRedoStack.length === 0;
+    }
+  }
+
+  function rememberDrawingBeforeEdit() {
+    drawingUndoStack.push(new Float32Array(draftMatter));
+    if (drawingUndoStack.length > drawingHistoryLimit) {
+      drawingUndoStack.shift();
+    }
+    drawingRedoStack.length = 0;
+    updateDrawingHistoryButtons();
+  }
+
+  function undoDrawing() {
+    const previous = drawingUndoStack.pop();
+    if (!previous) {
+      return;
+    }
+    drawingRedoStack.push(new Float32Array(draftMatter));
+    draftMatter.set(previous);
+    renderDrawingPad();
+    updateDrawingHistoryButtons();
+  }
+
+  function redoDrawing() {
+    const next = drawingRedoStack.pop();
+    if (!next) {
+      return;
+    }
+    drawingUndoStack.push(new Float32Array(draftMatter));
+    draftMatter.set(next);
+    renderDrawingPad();
+    updateDrawingHistoryButtons();
+  }
+
+  function clearDrawing() {
+    if (!draftMatter.some((density) => density !== 0)) {
+      return;
+    }
+    rememberDrawingBeforeEdit();
+    draftMatter.fill(0);
+    renderDrawingPad();
+  }
+
+  function handleSimulationShortcut(event) {
+    if (event.defaultPrevented) {
+      return false;
+    }
+
+    const target = event.target;
+    const inputType = target instanceof HTMLInputElement
+      ? target.type.toLowerCase()
+      : "";
+    const inputCapturesShortcut = target instanceof HTMLInputElement &&
+      (inputType === "number"
+        ? event.metaKey || event.ctrlKey
+        : !["button", "checkbox", "radio", "range", "reset", "submit"].includes(inputType));
+    const editable = target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      inputCapturesShortcut ||
+      (target instanceof HTMLElement && target.isContentEditable);
+    const action = resolveBlackholeKeyboardAction({
+      key: event.key,
+      metaKey: event.metaKey,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
+      repeat: event.repeat,
+      editable,
+    });
+    if (!action) {
+      return false;
+    }
+
+    event.preventDefault();
+    if (action === "undo") {
+      undoDrawing();
+    } else if (action === "redo") {
+      redoDrawing();
+    } else if (action === "toggle-playback") {
+      toggleSimulationPlayback();
+    } else if (action === "restart") {
+      void restartSim();
+    } else if (action === "clear") {
+      clearDrawing();
+    } else if (action === "focus-brush") {
+      brushSizeInput.focus();
+      brushSizeInput.select();
+    }
+    return true;
+  }
+
+  function onBrushSizeChange() {
+    brushSize = brushSizeFromInput(brushSizeInput.value, brushSize);
+  }
+
+  function commitBrushSizeChange() {
+    brushSize = brushSizeFromInput(brushSizeInput.value, brushSize);
+    brushSizeInput.value = String(brushSize);
   }
 
   function installSimulationControls() {
@@ -676,13 +990,93 @@ export async function initBlackholeSimulation({
 
     restartSimButton = document.createElement("button");
     restartSimButton.type = "button";
-    restartSimButton.textContent = "restart sim";
-    restartSimButton.title = "Restart the simulation without changing the camera";
+    setControlLabel(restartSimButton, "restart sim", "r");
+    restartSimButton.title = "Restart from the drawing without changing the camera (R)";
+    restartSimButton.setAttribute("aria-keyshortcuts", "R");
     restartSimButton.setAttribute("aria-controls", frameId);
     restartSimButton.addEventListener("click", restartSim);
-
     simulationControlsElement.appendChild(restartSimButton);
+
+    playPauseButton = document.createElement("button");
+    playPauseButton.type = "button";
+    playPauseButton.className = "blackhole-play-toggle";
+    playPauseButton.title = "Pause or resume the orbital simulation (P)";
+    playPauseButton.setAttribute("aria-keyshortcuts", "P");
+    playPauseButton.setAttribute("aria-controls", frameId);
+    playPauseButton.addEventListener("click", toggleSimulationPlayback);
+    simulationControlsElement.appendChild(playPauseButton);
+
+    drawingControlsElement = document.createElement("section");
+    drawingControlsElement.className = "blackhole-drawing-controls";
+    drawingControlsElement.setAttribute("aria-label", "initial accretion disk editor");
+
+    matterPadElement = document.createElement("pre");
+    matterPadElement.id = `${frameId}-matter-pad`;
+    matterPadElement.className = "blackhole-matter-pad";
+    matterPadElement.tabIndex = 0;
+    matterPadElement.setAttribute("aria-label", "top-down accretion disk drawing pad");
+    matterPadElement.setAttribute("aria-description", "Drag to add matter. Restart the simulation to apply the drawing.");
+
+    clearDrawingButton = document.createElement("button");
+    clearDrawingButton.type = "button";
+    clearDrawingButton.className = "blackhole-drawing-actions-start";
+    setControlLabel(clearDrawingButton, "clear", "c");
+    clearDrawingButton.title = "Clear the draft drawing (C)";
+    clearDrawingButton.setAttribute("aria-keyshortcuts", "C");
+    clearDrawingButton.setAttribute("aria-controls", matterPadElement.id);
+    clearDrawingButton.addEventListener("click", clearDrawing);
+    simulationControlsElement.appendChild(clearDrawingButton);
+
+    undoDrawingButton = document.createElement("button");
+    undoDrawingButton.type = "button";
+    setControlLabel(undoDrawingButton, "undo");
+    undoDrawingButton.title = "Undo the last drawing stroke or clear (Ctrl/Command-Z)";
+    undoDrawingButton.setAttribute("aria-keyshortcuts", "Control+Z Meta+Z");
+    undoDrawingButton.setAttribute("aria-controls", matterPadElement.id);
+    undoDrawingButton.addEventListener("click", undoDrawing);
+    simulationControlsElement.appendChild(undoDrawingButton);
+
+    redoDrawingButton = document.createElement("button");
+    redoDrawingButton.type = "button";
+    setControlLabel(redoDrawingButton, "redo");
+    redoDrawingButton.title = "Redo the last undone drawing edit (Ctrl-Y or Ctrl/Command-Shift-Z)";
+    redoDrawingButton.setAttribute(
+      "aria-keyshortcuts",
+      "Control+Y Control+Shift+Z Meta+Shift+Z",
+    );
+    redoDrawingButton.setAttribute("aria-controls", matterPadElement.id);
+    redoDrawingButton.addEventListener("click", redoDrawing);
+    simulationControlsElement.appendChild(redoDrawingButton);
+
+    const brushSizeLabel = document.createElement("label");
+    brushSizeLabel.className = "blackhole-brush-size";
+    setControlLabel(brushSizeLabel, "brush", "b");
+    brushSizeInput = document.createElement("input");
+    brushSizeInput.type = "number";
+    brushSizeInput.min = "1";
+    brushSizeInput.max = String(MATTER_MAX_BRUSH_SIZE);
+    brushSizeInput.step = "2";
+    brushSizeInput.value = String(brushSize);
+    brushSizeInput.setAttribute("aria-label", "brush size in cells");
+    brushSizeInput.setAttribute("aria-keyshortcuts", "B ArrowUp ArrowDown");
+    brushSizeInput.title = "Focus with B, then use the arrow keys; odd diameter from 1 to 9 cells";
+    brushSizeInput.addEventListener("input", onBrushSizeChange);
+    brushSizeInput.addEventListener("change", commitBrushSizeChange);
+    brushSizeLabel.appendChild(brushSizeInput);
+    simulationControlsElement.appendChild(brushSizeLabel);
+
+    matterPadElement.addEventListener("pointerdown", onDrawingPointerDown);
+    matterPadElement.addEventListener("pointermove", onDrawingPointerMove);
+    matterPadElement.addEventListener("pointerup", onDrawingPointerEnd);
+    matterPadElement.addEventListener("pointercancel", onDrawingPointerEnd);
+    matterPadElement.addEventListener("lostpointercapture", onDrawingPointerEnd);
+
+    drawingControlsElement.appendChild(matterPadElement);
     slidersElement.insertAdjacentElement("afterend", simulationControlsElement);
+    simulationControlsElement.insertAdjacentElement("afterend", drawingControlsElement);
+    updatePlayPauseButton();
+    updateDrawingHistoryButtons();
+    renderDrawingPad();
   }
 
   async function startGpuRenderer() {
@@ -693,7 +1087,7 @@ export async function initBlackholeSimulation({
       useGpu = true;
       lastSliderState = { ...sliderState };
       resetFpsTracking();
-      animationStartTime = performance.now();
+      resetSimulationPhase();
       startGpuLoop();
       return true;
     } catch (error) {
@@ -735,6 +1129,7 @@ export async function initBlackholeSimulation({
     stopCurrentRenderer();
 
     window.removeEventListener("resize", onResize);
+    window.removeEventListener("keydown", handleSimulationShortcut);
     window.removeEventListener("beforeunload", cleanup);
     slidersElement.removeEventListener("pointerdown", onPointerDown);
     slidersElement.removeEventListener("pointermove", onPointerMove);
@@ -743,12 +1138,45 @@ export async function initBlackholeSimulation({
     slidersElement.removeEventListener("lostpointercapture", onPointerEnd);
     slidersElement.removeEventListener("keydown", onSliderKeyDown);
 
+    if (playPauseButton) {
+      playPauseButton.removeEventListener("click", toggleSimulationPlayback);
+    }
     if (restartSimButton) {
       restartSimButton.removeEventListener("click", restartSim);
+    }
+    if (clearDrawingButton) {
+      clearDrawingButton.removeEventListener("click", clearDrawing);
+    }
+    if (undoDrawingButton) {
+      undoDrawingButton.removeEventListener("click", undoDrawing);
+    }
+    if (redoDrawingButton) {
+      redoDrawingButton.removeEventListener("click", redoDrawing);
+    }
+    if (brushSizeInput) {
+      brushSizeInput.removeEventListener("input", onBrushSizeChange);
+      brushSizeInput.removeEventListener("change", commitBrushSizeChange);
+    }
+    if (matterPadElement) {
+      matterPadElement.removeEventListener("pointerdown", onDrawingPointerDown);
+      matterPadElement.removeEventListener("pointermove", onDrawingPointerMove);
+      matterPadElement.removeEventListener("pointerup", onDrawingPointerEnd);
+      matterPadElement.removeEventListener("pointercancel", onDrawingPointerEnd);
+      matterPadElement.removeEventListener("lostpointercapture", onDrawingPointerEnd);
+    }
+    if (drawingControlsElement) {
+      drawingControlsElement.remove();
+      drawingControlsElement = null;
+      matterPadElement = null;
+      clearDrawingButton = null;
+      undoDrawingButton = null;
+      redoDrawingButton = null;
+      brushSizeInput = null;
     }
     if (simulationControlsElement) {
       simulationControlsElement.remove();
       simulationControlsElement = null;
+      playPauseButton = null;
       restartSimButton = null;
     }
 
@@ -769,6 +1197,7 @@ export async function initBlackholeSimulation({
   slidersElement.addEventListener("lostpointercapture", onPointerEnd);
   slidersElement.addEventListener("keydown", onSliderKeyDown);
   window.addEventListener("resize", onResize);
+  window.addEventListener("keydown", handleSimulationShortcut);
 
   if (vsyncCheckbox) {
     vsyncCheckbox.addEventListener("change", onVsyncChange);

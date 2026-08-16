@@ -63,6 +63,9 @@ typedef struct {
   double ring_edge;
   double ring_floor;
   double ring_irregularity;
+  const float *matter_field;
+  int matter_width;
+  int matter_height;
 } BHSceneParams;
 
 void bh_init_scene_params(BHSceneParams *params);
@@ -70,6 +73,9 @@ void bh_update_derived(BHSceneParams *params);
 size_t bh_pixel_count(const BHSceneParams *params);
 size_t bh_sample_count(const BHSceneParams *params);
 double bh_ring_emissivity(const BHSceneParams *params, double r, double phi);
+void bh_seed_spiral_matter(float *field, int width, int height);
+double bh_matter_density(const BHSceneParams *params, double r, double phi,
+                         double phase);
 BHDiskAppearance bh_disk_appearance(const BHSceneParams *params, double base,
                                     double norm_scale, double r, double phi,
                                     double phase);

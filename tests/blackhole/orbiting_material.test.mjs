@@ -151,6 +151,7 @@ test("native, WebGPU, WASM, and browser callers expose one orbital simulation", 
     shaderSource,
     browserSource,
     runtimeSource,
+    matterSource,
     measurementSource,
   ] = await Promise.all([
     "blackhole_core.c",
@@ -159,22 +160,34 @@ test("native, WebGPU, WASM, and browser callers expose one orbital simulation", 
     "assets/blackhole_gpu.wgsl",
     "src/blackhole_simulation.js",
     "src/art/blackhole_runtime.mjs",
+    "src/art/blackhole_matter.mjs",
     "scripts/blackhole/measure-browser.mjs",
   ].map((relativePath) => readFile(path.join(repoPath, relativePath), "utf8")));
 
   for (const source of [nativeSource, shaderSource]) {
     assert.match(source, /ring_band_at/);
     assert.match(source, /readable_orbital_phase/);
-    assert.match(source, /ridge_width/);
-    assert.match(source, /wake_width/);
-    assert.match(source, /spiral/);
+    assert.match(source, /matter_density/);
     assert.match(source, /disk_appearance/);
     assert.match(source, /terminal_kind/);
     assert.match(source, /disk_layers/);
+    assert.match(source, /projected_phi/);
+    assert.match(source, /editor_scale/);
+  }
+  for (const source of [nativeSource, matterSource]) {
+    assert.match(source, /ridge_width|ridgeWidth/);
+    assert.match(source, /wake_width|wakeWidth/);
+    assert.match(source, /spiral/i);
   }
   assert.match(gpuSource, /sampleCount \* SAMPLE_BYTES/);
+  assert.match(gpuSource, /setMatterField/);
+  assert.match(shaderSource, /matter_field/);
+  assert.match(wasmSource, /bh_wasm_matter_ptr/);
   assert.match(wasmSource, /bh_generate_ascii_frame/);
   assert.match(runtimeSource, /BLACKHOLE_WASM_INIT_PARAMETER_TYPES/);
+  assert.match(browserSource, /draftMatter/);
+  assert.match(browserSource, /activeMatter\.set\(draftMatter\)/);
+  assert.match(matterSource, /MATTER_EDITOR_RADIUS/);
   for (const caller of [browserSource, measurementSource]) {
     assert.match(caller, /blackholeWasmInitArguments/);
   }

@@ -12,9 +12,11 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
 const PI: f32 = 3.14159265358979323846;
+const SQRT_2: f32 = 1.4142135623730951;
 const Mbh: f32 = 1.0;  // Black hole mass (geometric units: G = c = 1)
 const rin: f32 = 6.0;   // Inner edge of accretion disk (ISCO for Schwarzschild)
-const rout: f32 = 40.0; // Outer edge of accretion disk
+const rout: f32 = 40.0; // Outer edge of the default spiral and ring profile
+const matter_support_rout: f32 = rout * SQRT_2;
 const emiss_p: f32 = 2.0; // Emission power law exponent
 const max_disk_layers: u32 = 4u;
 const terminal_sky: u32 = 1u;
@@ -88,6 +90,7 @@ struct Normalization {
 @group(0) @binding(2) var<storage, read_write> output_chars: array<u32>;
 @group(0) @binding(3) var<storage, read> glyphs: array<Glyph>;
 @group(0) @binding(4) var<storage, read_write> normalization: Normalization;
+@group(0) @binding(5) var<storage, read> matter_field: array<f32>;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SCHWARZSCHILD METRIC
@@ -367,22 +370,48 @@ fn ring_mul(r: f32, phi: f32) -> f32 {
     return params.ring_floor + (peak - params.ring_floor) * t;
 }
 
-fn smooth_window(distance: f32) -> f32 {
-    let value = max(0.0, 1.0 - abs(distance));
-    return value * value * (3.0 - 2.0 * value);
-}
-
-fn wrap_angle(angle: f32) -> f32 {
-    return angle - 2.0 * PI * floor((angle + PI) / (2.0 * PI));
-}
-
-fn angular_lobe(angle: f32, half_width: f32) -> f32 {
-    return smooth_window(wrap_angle(angle) / half_width);
-}
-
 fn readable_orbital_phase(radius: f32, phi: f32, phase: f32) -> f32 {
     let angular_speed = min(1.6, pow(12.0 / radius, 1.5));
     return phi + phase * angular_speed;
+}
+
+fn matter_density(radius: f32, phi: f32) -> f32 {
+    let source_phi = readable_orbital_phase(radius, phi, params.phase);
+    let projected_phi = source_phi - 0.5 * PI;
+    let editor_scale = radius / rout;
+    let normalized_x = 0.5 + 0.5 * editor_scale * cos(projected_phi);
+    let normalized_y = 0.5 - 0.5 * editor_scale * sin(projected_phi);
+    if (normalized_x < 0.0 || normalized_x > 1.0 ||
+        normalized_y < 0.0 || normalized_y > 1.0) {
+        return 0.0;
+    }
+    let grid_x = clamp(
+        normalized_x * f32(params.width) - 0.5,
+        0.0,
+        f32(params.width - 1u),
+    );
+    let grid_y = clamp(
+        normalized_y * f32(params.height) - 0.5,
+        0.0,
+        f32(params.height - 1u),
+    );
+    let x0 = u32(floor(grid_x));
+    let y0 = u32(floor(grid_y));
+    let x1 = min(x0 + 1u, params.width - 1u);
+    let y1 = min(y0 + 1u, params.height - 1u);
+    let tx = grid_x - f32(x0);
+    let ty = grid_y - f32(y0);
+    let top = mix(
+        matter_field[y0 * params.width + x0],
+        matter_field[y0 * params.width + x1],
+        tx,
+    );
+    let bottom = mix(
+        matter_field[y1 * params.width + x0],
+        matter_field[y1 * params.width + x1],
+        tx,
+    );
+    return clamp(mix(top, bottom, ty), 0.0, 1.0);
 }
 
 fn disk_appearance(base: f32, norm_scale: f32, r: f32, phi: f32) -> vec2<f32> {
@@ -391,21 +420,14 @@ fn disk_appearance(base: f32, norm_scale: f32, r: f32, phi: f32) -> vec2<f32> {
         return vec2<f32>(0.0);
     }
     let toned = pow(normalized, params.gamma_c);
-    let radius = clamp(r, rin, rout);
-    let radial_position = (radius - rin) / (rout - rin);
-    let radial_opacity = clamp(ring_mul(radius, phi), 0.0, 1.0);
-    let readable_phi = readable_orbital_phase(radius, phi, params.phase);
-    let inner_emphasis = 1.0 - radial_position;
-    let inner_area = inner_emphasis * inner_emphasis;
-    let ridge_width = 0.36 + 0.48 * inner_area;
-    let wake_width = 0.95 + 0.30 * inner_emphasis;
-    let angle = wrap_angle(readable_phi + 7.5 * radial_position - 0.45);
-    let ridge = angular_lobe(angle, ridge_width);
-    let wake = 0.48 * angular_lobe(angle - 0.62, wake_width);
-    let spiral = max(ridge, wake);
+    let radius = clamp(r, rin, matter_support_rout);
+    let ring_radius = min(rout, radius);
+    let radial_position = (ring_radius - rin) / (rout - rin);
+    let radial_opacity = clamp(ring_mul(ring_radius, phi), 0.0, 1.0);
+    let density = matter_density(radius, phi);
     let highlight = 0.90 - 0.15 * radial_position;
-    let emission = spiral * (0.72 * toned + highlight * (1.0 - toned));
-    let appearance = vec2<f32>(emission, radial_opacity * spiral);
+    let emission = density * (0.72 * toned + highlight * (1.0 - toned));
+    let appearance = vec2<f32>(emission, radial_opacity * density);
 
     return clamp(appearance, vec2<f32>(0.0), vec2<f32>(1.0));
 }
@@ -443,7 +465,7 @@ fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
     
     let h0 = 0.5;  // Base step size
     let rh = 2.0 * Mbh;  // Event horizon radius
-    let escape_radius = max(1.2 * params.robs, rout + 10.0 * Mbh);
+    let escape_radius = max(1.2 * params.robs, matter_support_rout + 10.0 * Mbh);
     var rmin = x[1];
     
     var sample: Sample;
@@ -508,7 +530,7 @@ fn trace_rays(@builtin(global_invocation_id) global_id: vec3<u32>) {
             let phit = x_prev[3] + f * (x[3] - x_prev[3]);
             
             // Check if hit is within disk bounds
-            if (rhit >= rin && rhit <= rout &&
+            if (rhit >= rin && rhit <= matter_support_rout &&
                 sample.disk_layer_count < max_disk_layers) {
                 // Interpolate velocity at hit point
                 let vh = v_prev + f * (v - v_prev);

@@ -5,12 +5,74 @@ import {
   BLACKHOLE_WASM_INIT_PARAMETER_TYPES,
   blackholeWasmInitArguments,
   codepointsToFrame,
+  destroyRendererAfter,
   formatRendererStatus,
+  resolveBlackholeKeyboardAction,
   resolveSliderPointerIndex,
   resolveBlackholeOptions,
   sampleCenter,
   scheduleLiveFrame,
 } from "../../src/art/blackhole_runtime.mjs";
+
+test("simulation keyboard shortcuts follow platform conventions", () => {
+  assert.equal(
+    resolveBlackholeKeyboardAction({ key: "z", metaKey: true }),
+    "undo",
+  );
+  assert.equal(
+    resolveBlackholeKeyboardAction({ key: "Z", ctrlKey: true }),
+    "undo",
+  );
+  assert.equal(
+    resolveBlackholeKeyboardAction({ key: "z", metaKey: true, shiftKey: true }),
+    "redo",
+  );
+  assert.equal(
+    resolveBlackholeKeyboardAction({ key: "Y", ctrlKey: true }),
+    "redo",
+  );
+  assert.equal(resolveBlackholeKeyboardAction({ key: "p" }), "toggle-playback");
+  assert.equal(resolveBlackholeKeyboardAction({ key: "b" }), "focus-brush");
+  assert.equal(
+    resolveBlackholeKeyboardAction({ key: " ", code: "Space" }),
+    null,
+    "Space remains available for ordinary page scrolling",
+  );
+  assert.equal(resolveBlackholeKeyboardAction({ key: "r" }), "restart");
+  assert.equal(resolveBlackholeKeyboardAction({ key: "C" }), "clear");
+
+  assert.equal(
+    resolveBlackholeKeyboardAction({ key: "r", ctrlKey: true }),
+    null,
+    "Ctrl/Command-R remains available for browser reload",
+  );
+  assert.equal(resolveBlackholeKeyboardAction({ key: "p", repeat: true }), null);
+  assert.equal(
+    resolveBlackholeKeyboardAction({ key: "p", editable: true }),
+    null,
+    "typing in a form control must not trigger a page shortcut",
+  );
+});
+
+test("an in-flight GPU frame settles before its buffers are destroyed", async () => {
+  let finishFrame;
+  const frame = new Promise((resolve) => {
+    finishFrame = resolve;
+  });
+  let destroyed = false;
+  const renderer = {
+    destroy() {
+      destroyed = true;
+    },
+  };
+
+  const disposal = destroyRendererAfter(renderer, frame);
+  await Promise.resolve();
+  assert.equal(destroyed, false);
+  finishFrame();
+  await disposal;
+  assert.equal(destroyed, true);
+});
 
 test("WASM initialization has one shared scene-parameter contract", () => {
   const ringProfile = {

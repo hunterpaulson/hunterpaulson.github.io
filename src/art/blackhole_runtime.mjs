@@ -11,6 +11,49 @@ export const BLACKHOLE_WASM_INIT_PARAMETER_TYPES = Object.freeze(
   Array.from({ length: 13 }, () => "number"),
 );
 
+export function resolveBlackholeKeyboardAction({
+  key = "",
+  metaKey = false,
+  ctrlKey = false,
+  shiftKey = false,
+  altKey = false,
+  repeat = false,
+  editable = false,
+} = {}) {
+  if (repeat || altKey || editable) {
+    return null;
+  }
+
+  const normalizedKey = key.toLowerCase();
+  const primaryModifier = metaKey || ctrlKey;
+  if (primaryModifier) {
+    if (normalizedKey === "z") {
+      return shiftKey ? "redo" : "undo";
+    }
+    if (ctrlKey && !metaKey && normalizedKey === "y" && !shiftKey) {
+      return "redo";
+    }
+    return null;
+  }
+
+  if (shiftKey) {
+    return null;
+  }
+  if (normalizedKey === "p") {
+    return "toggle-playback";
+  }
+  if (normalizedKey === "r") {
+    return "restart";
+  }
+  if (normalizedKey === "c") {
+    return "clear";
+  }
+  if (normalizedKey === "b") {
+    return "focus-brush";
+  }
+  return null;
+}
+
 export function resolveSliderPointerIndex({
   clientY,
   sliderTop,
@@ -177,4 +220,12 @@ export function scheduleLiveFrame(callback, {
   }
 
   return { kind: "timeout", id: setTimeout(callback, 0) };
+}
+
+export async function destroyRendererAfter(renderer, inFlightFrame) {
+  try {
+    await inFlightFrame;
+  } catch (_error) {
+  }
+  renderer.destroy();
 }

@@ -5,6 +5,100 @@
   font-feature-settings: "liga" 0, "calt" 0;
 }
 
+.blackhole-sim-controls {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1ch;
+  margin: var(--line-height) 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.blackhole-sim-controls > * {
+  flex: 0 0 auto;
+}
+
+.blackhole-sim-controls button:disabled {
+  color: var(--text-color-alt);
+  cursor: default;
+}
+
+.blackhole-play-toggle {
+  box-sizing: border-box;
+  text-align: left;
+  width: 7ch;
+}
+
+.blackhole-sim-controls button:active {
+  transform: none;
+}
+
+.blackhole-shortcut-key {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.blackhole-drawing-actions-start {
+  margin-left: auto;
+}
+
+.blackhole-brush-size {
+  align-items: center;
+  border: var(--border-thickness) solid var(--text-color);
+  box-sizing: border-box;
+  display: inline-flex;
+  gap: 1ch;
+  height: calc(var(--line-height) * 2);
+  padding:
+    calc(var(--line-height) / 2 - var(--border-thickness))
+    calc(1ch - var(--border-thickness));
+  text-transform: uppercase;
+  width: auto;
+}
+
+.blackhole-brush-size input {
+  appearance: auto;
+  background: transparent;
+  border: 0;
+  height: auto;
+  line-height: inherit;
+  padding: 0;
+  text-align: center;
+  width: 4ch;
+}
+
+.blackhole-brush-size:focus-within {
+  --border-thickness: 3px;
+  border-color: var(--accent-primary);
+}
+
+.blackhole-drawing-controls {
+  max-width: 100%;
+}
+
+.blackhole-matter-pad {
+  border: var(--border-thickness) solid var(--text-color);
+  box-sizing: border-box;
+  cursor: crosshair;
+  font-family: "Blackhole JetBrains Mono", monospace;
+  font-size: min(1rem, calc((100vw - 2rem) / 52));
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-variant-ligatures: none;
+  line-height: 1.2em;
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.blackhole-matter-pad:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
 #farming-field {
   overflow: hidden;
   white-space: pre;

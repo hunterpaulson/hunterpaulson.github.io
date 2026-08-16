@@ -11,11 +11,18 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef M_SQRT2
+#define M_SQRT2 1.41421356237309504880
+#endif
+
 static const double Mbh = 1.0;
 static inline double A(double r) { return 1.0 - 2.0 * Mbh / r; }
 
 static const double rin = 6.0;
+// The seed and radial appearance end here. The larger support circle only
+// admits matter drawn into the corners of the square editor.
 static const double rout = 40.0;
+static const double matter_support_rout = 40.0 * M_SQRT2;
 static const double emiss_p = 2.0;
 
 static inline size_t bh_pixel_index(const BHSceneParams *params, int x, int y) {
@@ -49,6 +56,9 @@ void bh_init_scene_params(BHSceneParams *params) {
   params->ring_edge = 0.04;
   params->ring_floor = 0.0;
   params->ring_irregularity = 0.65;
+  params->matter_field = NULL;
+  params->matter_width = 0;
+  params->matter_height = 0;
   bh_update_derived(params);
 }
 
@@ -200,6 +210,82 @@ static inline double readable_orbital_phase(double radius, double phi,
   return phi + phase * angular_speed;
 }
 
+static double spiral_matter_density(double radius, double phi) {
+  const double radial_position = (radius - rin) / (rout - rin);
+  const double inner_emphasis = 1.0 - radial_position;
+  const double inner_area = inner_emphasis * inner_emphasis;
+  const double ridge_width = 0.36 + 0.48 * inner_area;
+  const double wake_width = 0.95 + 0.30 * inner_emphasis;
+  const double angle = wrap_angle(phi + 7.5 * radial_position - 0.45);
+  const double ridge = angular_lobe(angle, ridge_width);
+  const double wake = 0.48 * angular_lobe(angle - 0.62, wake_width);
+  return fmax(ridge, wake);
+}
+
+void bh_seed_spiral_matter(float *field, int width, int height) {
+  if (!field || width < 1 || height < 1) {
+    return;
+  }
+  for (int y = 0; y < height; y++) {
+    const double disk_y = 1.0 - 2.0 * ((y + 0.5) / height);
+    for (int x = 0; x < width; x++) {
+      const double disk_x = 2.0 * ((x + 0.5) / width) - 1.0;
+      const double radius = hypot(disk_x, disk_y) * rout;
+      const size_t index = (size_t)y * width + x;
+      if (radius < rin || radius > rout) {
+        field[index] = 0.0f;
+        continue;
+      }
+      field[index] = (float)spiral_matter_density(
+          radius, atan2(disk_y, disk_x) + M_PI / 2.0);
+    }
+  }
+}
+
+double bh_matter_density(const BHSceneParams *params, double r, double phi,
+                         double phase) {
+  const double radius = fmax(rin, fmin(matter_support_rout, r));
+  const double source_phi = readable_orbital_phase(radius, phi, phase);
+  const double projected_phi = source_phi - M_PI / 2.0;
+  const double editor_scale = radius / rout;
+  const double normalized_x =
+      0.5 + 0.5 * editor_scale * cos(projected_phi);
+  const double normalized_y =
+      0.5 - 0.5 * editor_scale * sin(projected_phi);
+  if (normalized_x < 0.0 || normalized_x > 1.0 || normalized_y < 0.0 ||
+      normalized_y > 1.0) {
+    return 0.0;
+  }
+  if (!params || !params->matter_field || params->matter_width < 1 ||
+      params->matter_height < 1) {
+    if (radius > rout) {
+      return 0.0;
+    }
+    return spiral_matter_density(radius, projected_phi + M_PI / 2.0);
+  }
+
+  const double grid_x = fmax(
+      0.0, fmin((double)params->matter_width - 1.0,
+                normalized_x * params->matter_width - 0.5));
+  const double grid_y = fmax(
+      0.0, fmin((double)params->matter_height - 1.0,
+                normalized_y * params->matter_height - 0.5));
+  const int x0 = (int)floor(grid_x);
+  const int y0 = (int)floor(grid_y);
+  const int x1 = x0 + 1 < params->matter_width ? x0 + 1 : x0;
+  const int y1 = y0 + 1 < params->matter_height ? y0 + 1 : y0;
+  const double tx = grid_x - x0;
+  const double ty = grid_y - y0;
+  const float *field = params->matter_field;
+  const double top =
+      field[(size_t)y0 * params->matter_width + x0] * (1.0 - tx) +
+      field[(size_t)y0 * params->matter_width + x1] * tx;
+  const double bottom =
+      field[(size_t)y1 * params->matter_width + x0] * (1.0 - tx) +
+      field[(size_t)y1 * params->matter_width + x1] * tx;
+  return fmax(0.0, fmin(1.0, top * (1.0 - ty) + bottom * ty));
+}
+
 BHDiskAppearance bh_disk_appearance(const BHSceneParams *params, double base,
                                     double norm_scale, double r, double phi,
                                     double phase) {
@@ -211,25 +297,17 @@ BHDiskAppearance bh_disk_appearance(const BHSceneParams *params, double base,
     return appearance;
   }
   const double toned = pow(normalized, gamma_c);
-  const double radius = fmax(rin, fmin(rout, r));
-  const double radial_position = (radius - rin) / (rout - rin);
+  const double radius = fmax(rin, fmin(matter_support_rout, r));
+  const double ring_radius = fmin(rout, radius);
   const double radial_opacity =
-      fmax(0.0, fmin(1.0, bh_ring_emissivity(params, radius, phi)));
-
-  const double readable_phi = readable_orbital_phase(radius, phi, phase);
-  const double inner_emphasis = 1.0 - radial_position;
-  const double inner_area = inner_emphasis * inner_emphasis;
-  const double ridge_width = 0.36 + 0.48 * inner_area;
-  const double wake_width = 0.95 + 0.30 * inner_emphasis;
-  const double angle =
-      wrap_angle(readable_phi + 7.5 * radial_position - 0.45);
-  const double ridge = angular_lobe(angle, ridge_width);
-  const double wake = 0.48 * angular_lobe(angle - 0.62, wake_width);
-  const double spiral = fmax(ridge, wake);
+      fmax(0.0, fmin(1.0, bh_ring_emissivity(params, ring_radius, phi)));
+  const double radial_position = (ring_radius - rin) / (rout - rin);
+  const double matter_density = bh_matter_density(params, radius, phi, phase);
   const double highlight = 0.90 - 0.15 * radial_position;
   appearance.emission =
-      (float)(spiral * (0.72 * toned + highlight * (1.0 - toned)));
-  appearance.opacity = (float)(radial_opacity * spiral);
+      (float)(matter_density *
+              (0.72 * toned + highlight * (1.0 - toned)));
+  appearance.opacity = (float)(radial_opacity * matter_density);
 
   appearance.emission = fmaxf(0.0f, fminf(1.0f, appearance.emission));
   appearance.opacity = fmaxf(0.0f, fminf(1.0f, appearance.opacity));
@@ -368,7 +446,8 @@ static BHSample trace_sample(const BHSceneParams *params, int sample_x,
     v_prev[i] = v[i];
   }
   const double h0 = 0.5, rh = 2.0 * Mbh;
-  const double escape_radius = fmax(1.2 * params->robs, rout + 10.0 * Mbh);
+  const double escape_radius =
+      fmax(1.2 * params->robs, matter_support_rout + 10.0 * Mbh);
   double rmin = x[1];
   for (int step = 0; step < 5000; ++step) {
     double h = h0;
@@ -398,7 +477,7 @@ static BHSample trace_sample(const BHSceneParams *params, int sample_x,
       double f = (M_PI / 2.0 - th_prev) / (x[2] - th_prev + 1e-15);
       double rhit = x_prev[1] + f * (x[1] - x_prev[1]);
       double phit = x_prev[3] + f * (x[3] - x_prev[3]);
-      if (rhit >= rin && rhit <= rout &&
+      if (rhit >= rin && rhit <= matter_support_rout &&
           sample.disk_layer_count < BH_MAX_DISK_LAYERS) {
         double vh[4];
         for (int i = 0; i < 4; i++) {

@@ -165,6 +165,36 @@ test("prepareMarkdownPage expands includes before adding social metadata", async
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
+test("prepareMarkdownPage derives a citation from frontmatter and canonical metadata", async () => {
+  const tempRoot = await makeTempSite();
+  const sourcePath = path.join(tempRoot, "content", "blog", "post", "index.md");
+
+  await fs.writeFile(sourcePath, [
+    "---",
+    "title: A _Detailed_ Post",
+    "author: Hunter Paulson",
+    "status: published",
+    "date: 2026-08-27",
+    "citation-key: paulson2026detailedpost",
+    "---",
+    "",
+    "# A _Detailed_ Post",
+  ].join("\n"));
+
+  const prepared = await prepareMarkdownPage(sourcePath, {
+    rootDirectory: tempRoot,
+    siteUrl: "https://example.com",
+  });
+  const parsed = parseFrontMatter(prepared);
+
+  assert.equal(parsed.data["citation-title"], "A Detailed Post");
+  assert.equal(parsed.data["citation-month"], "August");
+  assert.equal(parsed.data["citation-year"], "2026");
+  assert.equal(parsed.data["citation-url"], "https://example.com/blog/post/");
+
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
 test("readImageMetadata returns null for missing images", () => {
   assert.equal(readImageMetadata("/assets/does-not-exist.gif", "/tmp/nope"), null);
 });

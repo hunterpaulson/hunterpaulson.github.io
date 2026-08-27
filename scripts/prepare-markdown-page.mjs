@@ -2,13 +2,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { buildPageCitationMetadata } from "./page-citation.mjs";
 import { expandMarkdownIncludes } from "./expand-markdown-includes.mjs";
 import { buildPageMetadata, injectPageMetadata } from "./page-metadata.mjs";
 
 export async function prepareMarkdownPage(inputPath, options = {}) {
   const expanded = await expandMarkdownIncludes(inputPath);
   const metadata = buildPageMetadata(inputPath, expanded, options);
-  return injectPageMetadata(expanded, metadata);
+  const withPageMetadata = injectPageMetadata(expanded, metadata);
+  const citationMetadata = buildPageCitationMetadata(withPageMetadata);
+  return injectPageMetadata(withPageMetadata, citationMetadata);
 }
 
 async function main() {

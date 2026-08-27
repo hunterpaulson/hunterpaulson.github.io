@@ -105,6 +105,16 @@ $body$
 $for(include-after)$
 $include-after$
 $endfor$
+$if(citation-key)$
+<hr />
+<pre class="bibtex" data-filename="BibTeX"><code>@article{$citation-key$,
+  title   = &quot;{$citation-title$}&quot;,
+  author  = &quot;$citation-author$&quot;,
+  year    = &quot;$citation-year$&quot;,
+  month   = &quot;$citation-month$&quot;,
+  url     = &quot;$citation-url$&quot;
+}</code></pre>
+$endif$
 <hr />
 <footer class="site-footer">
   <div class="footer-controls">

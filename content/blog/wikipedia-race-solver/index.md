@@ -2,6 +2,8 @@
 title: how to build the fastest wikipedia race solver on the internet
 status: published
 date: 2026-04-30
+author: Hunter Paulson
+citation-key: paulson2026wikipediaracesolver
 description: bidirectional breadth-first search on a memory-mapped binary compressed sparse row (CSR).
 social-image: /assets/blog/wikipedia-race-solver/social/bidirectional-bfs.gif
 social-image-alt: Animated monospace graph showing bidirectional breadth-first search.

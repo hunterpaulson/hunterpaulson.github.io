@@ -2,6 +2,8 @@
 title: LLM API providers are charging you _twice_ for output tokens
 status: published
 date: 2026-07-04
+author: Hunter Paulson
+citation-key: paulson2026cachewriteoutputtokens
 description: once during generation and then again during cache write for the following request
 social-image: /assets/blog/cache-write-output-tokens/social/cache-write-kv-current-pair-with-legend.png
 social-image-alt: KV cache diagram showing current APIs retaining input token KVs while generated output token KVs are not retained across requests.
@@ -19,6 +21,11 @@ social-image-width: 848
 social-title: "LLM API providers are charging you twice for output tokens | hunter paulson"
 twitter-card: "summary_large_image"
 article-published-time: "2026-07-04"
+citation-author: "Hunter Paulson"
+citation-month: "July"
+citation-title: "LLM API providers are charging you twice for output tokens"
+citation-url: "https://hunterpaulson.dev/blog/cache-write-output-tokens/"
+citation-year: "2026"
 ---
 
 # LLM API providers are charging you _twice_ for output tokens

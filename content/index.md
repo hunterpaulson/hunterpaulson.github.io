@@ -8,7 +8,7 @@ toc: false
 
 hi I am hunter paulson. it's a pleasure to share the light cone with you.
 
-I am currently working as a senior ml engineer at PayPal, where I created and lead the development of our internal general agent harness and underlying infra.
+I am currently working as a senior ml engineer at PayPal, where I created and lead the development of our internal cloud agent harness and underlying infra.
 
 I like to build cool things with cool people so feel free to [reach out](/contact).
 

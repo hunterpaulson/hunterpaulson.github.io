@@ -28,17 +28,17 @@ I built this to learn local llm inference and also so I could practice typing pr
 
 # work experience 
 
-## PayPal - Machine Learning Engineer
+## PayPal - Senior Machine Learning Engineer
 
-led the creation of PayPal's central agent harness 'Pal'. allowing any team to build MCP servers and create their own agents / workflows in a self-serve manner.
+creator and head of PayPal's internal cloud agent harness 'Pal' and underlying infrastructure.
 
-designed the algorithm and built the infrastructure to identify the root-cause component of every customer-perceived failure in real time. data was used to identify and triage issues, reclaiming $40M in revenue. Equivalent to ~1% growth of branded checkout in 2025.
+designed the algorithm and built the infrastructure to identify the root-cause component of every HTTP 4xx and 5xx in real time. data was used to identify and triage issues in the payment flow, reclaiming $40M in revenue. equivalent to ~1% growth of branded checkout in 2025.
 
-building and maintaining real-time metrics pipelines for _every_ http response and server log across all PayPal brands. the single, structured, source of truth for all site reliability metrics.
+helped build real-time metrics pipelines for _every_ http response and server log across all PayPal brands. the single, structured, source of truth for all site reliability metrics.
 
 wrote transpiler from python to bigquery sql.
 
-automated data lineage documentation by parsing and creating graph from every sql query ran in the company daily.
+automated data lineage documentation by parsing and graphing every OLAP sql query ran in the company daily.
 
 ## Boeing - ML Research Assistant
 

@@ -3,11 +3,16 @@ title: computer scientist
 status: published
 lang: en
 description: Hunter Paulson's personal website for writing, art, projects, and experiments in computer science.
+toc: false
 ---
 
-hello guild navigator, welcome to my light cone.
+hi I am hunter paulson. it's a pleasure to share the light cone with you.
 
-if you have made it here, feel free to take a look around and reach out.
+I am currently working as a senior ml engineer at PayPal, where I created and lead the development of our internal general agent harness and underlying infra.
+
+I like to build cool things with cool people so feel free to [reach out](/contact).
+
+or, cross the event horizon and check out some of the [things I have built](/projects/)...
 
 <pre id="bh" aria-label="blackhole ascii">loading...</pre>
 <pre id="bh-status" aria-label="renderer status" style="text-align:right;margin:0"></pre>

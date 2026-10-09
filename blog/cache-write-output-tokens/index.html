@@ -68,7 +68,7 @@
 <p>LLM APIs allow their users to request that KVs computed for input tokens be retained so that they can be reused on future requests with the same prompt prefix. This is aptly called <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">prompt</a> <a href="https://developers.openai.com/api/docs/guides/prompt-caching">caching</a>.</p>
 <p>This worked fine for chatbots (<a href="#prompt-caching-was-built-for-chatbots-not-agents">see appendix</a>), but is no longer sufficient for agents. The core of every agent, the <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop">agent loop</a>, always<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> reuses the output from the previous result on the following API request. Because the output from the previous request was not cached we must pay to write it to the cache on the next request.</p>
 <p>Let’s walk through a minimal example of what this looks like from the perspective of someone using Anthropic’s <a href="https://platform.claude.com/docs/en/about-claude/models/introducing-claude-fable-5-and-claude-mythos-5">Fable 5</a> through the API. This looks identical for OpenAI and Gemini APIs just with different pricing.</p>
-<figure id="cache-write-context-legend-current" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-context-legend-current" class="llm-context-diagram" aria-label="cache context diagram legend">
 <figcaption>
 legend
 </figcaption>
@@ -76,7 +76,7 @@ legend
 <p><span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>written to cache;</span> <span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span> <span><span class="llm-context-key llm-context-key--new"></span>new this step;</span></p>
 </div>
 </figure>
-<figure id="cache-write-context-current-request-1" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-context-current-request-1" class="llm-context-diagram" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -84,11 +84,11 @@ legend
 request 1
 </div>
 <div class="llm-context-stack">
-<div class="llm-context-message llm-context-message--system cache-write is-new">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--system cache-write">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--user cache-write is-new">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--user cache-write">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -98,16 +98,16 @@ result 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--tool-call is-new">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--tool-call">
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -117,7 +117,7 @@ result 1
 initial request <em>only retains input tokens</em> in the prompt cache even though all messages will be in prefix of next request
 </figcaption>
 </figure>
-<figure id="cache-write-context-current-request-2" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
+<figure id="cache-write-context-current-request-2" class="llm-context-diagram" aria-label="second tool calling request and result">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -126,19 +126,19 @@ request 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant cache-write is-new is-danger">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant cache-write is-danger">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--tool-call cache-write is-new is-danger">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--tool-call cache-write is-danger">
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--tool-result cache-write is-new">
-<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--tool-result cache-write">
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -148,22 +148,22 @@ result 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-write">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write">
-<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">It's <em>hot</em> in Phoenix right now</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">It's <em>hot</em> in Phoenix right now</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -495,7 +495,7 @@ now only the KVs for the <em>tool result</em> are computed during prefill since 
 <p>Notice how there is no longer any overlap between prefill and decode across requests.</p>
 <h2 id="how-this-looks-from-the-api-user-perspective">how this looks from the API user perspective</h2>
 <p>If API providers retain output tokens in the prompt prefix cache then users only have to pay <strong>cache read</strong> price for every subsequent request that contains them.</p>
-<figure id="cache-write-context-legend-retained" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-context-legend-retained" class="llm-context-diagram" aria-label="cache context diagram legend">
 <figcaption>
 legend
 </figcaption>
@@ -503,7 +503,7 @@ legend
 <p><span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write &amp; new this step;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>written to cache;</span> <span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span></p>
 </div>
 </figure>
-<figure id="cache-write-context-retained-request-1" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-context-retained-request-1" class="llm-context-diagram" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -511,11 +511,11 @@ legend
 request 1
 </div>
 <div class="llm-context-stack">
-<div class="llm-context-message llm-context-message--system cache-write is-new">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--system cache-write">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--user cache-write is-new">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--user cache-write">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -525,16 +525,16 @@ result 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant cache-write is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant cache-write">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--tool-call cache-write is-new">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--tool-call cache-write">
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -544,7 +544,7 @@ result 1
 Now assistant message and tool call are retained in prompt prefix cache
 </figcaption>
 </figure>
-<figure id="cache-write-context-retained-request-2" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
+<figure id="cache-write-context-retained-request-2" class="llm-context-diagram" aria-label="second tool calling request and result">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -553,19 +553,19 @@ request 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-read is-benefit">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-read is-benefit">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--tool-result cache-write is-new">
-<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--tool-result cache-write">
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -575,22 +575,22 @@ result 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You report the weather</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">what is the weather in Phoenix?</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-read">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">I’ll use my get_weather tool to get the weather in Phoenix</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-call cache-read">
-<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">tool call(s)</span> <span class="llm-context-message-body">&lt;tool name=get_weather&gt;</span> <span class="llm-context-message-body">&lt;param name=city&gt;Phoenix&lt;/param&gt;</span> <span class="llm-context-message-body">&lt;/tool&gt;</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--tool-result cache-write">
-<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">tool result(s)</span> <span class="llm-context-message-body">hot</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant cache-write is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">It's <em>hot</em> in Phoenix right now</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant cache-write">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">It's <em>hot</em> in Phoenix right now</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -716,7 +716,7 @@ $53.50 / $62.50 = 0.856 =&gt; 14.4% savings</code></pre>
 <p>I don’t believe that prompt caching APIs are purposely built to charge you twice for the current most common usage pattern (append-only agentic inference). The issue is that <em>common usage patterns have shifted significantly</em> since the APIs were first designed.</p>
 <h2 id="prompt-caching-was-built-for-chatbots-not-agents">prompt caching was built for chatbots, not agents<a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a></h2>
 <p>prompt caching APIs were initially designed for chat applications (e.g ChatGPT) where it allowed users of the API to reuse the cache for the system message across chats for all users.</p>
-<figure id="cache-write-chatbot-legend-single-turn" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-chatbot-legend-single-turn" class="llm-context-diagram" aria-label="cache context diagram legend">
 <figcaption>
 legend
 </figcaption>
@@ -725,7 +725,7 @@ legend
 </div>
 </figure>
 <h3 id="chat-1">Chat 1:</h3>
-<figure id="cache-write-chatbot-single-turn" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-chatbot-single-turn" class="llm-context-diagram" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -733,11 +733,11 @@ legend
 request 1
 </div>
 <div class="llm-context-stack">
-<div class="llm-context-message llm-context-message--system cache-write is-new">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--system cache-write">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--user is-new">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-cost">$10.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--user">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-meta">$10.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -747,13 +747,13 @@ result 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -765,7 +765,7 @@ neither user or assistant message is retained in the prompt
 </figure>
 <h3 id="chat-2">Chat 2:</h3>
 <p>could be the same user or a different user</p>
-<figure id="cache-write-chatbot-shared-prefix" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-chatbot-shared-prefix" class="llm-context-diagram" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -774,10 +774,10 @@ request 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--user is-new">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-cost">$10.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--user">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-meta">$10.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -787,13 +787,13 @@ result 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-cost">$10.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-meta">$10.00 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">9.9 is greater than 9.11</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">9.9 is greater than 9.11</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -805,7 +805,7 @@ another chat can reuse the cached prompt prefix (e.g. the shared system message
 </figure>
 <h3 id="multi-turn-conversations-what-if-the-user-asks-a-follow-up-question">multi-turn conversations: what if the user asks a follow up question?</h3>
 <p>prompt caching works alright for this as well. but tbh we could have seen this issue back then. both SGLang and vLLM did.</p>
-<figure id="cache-write-agent-loop-legend" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="cache context diagram legend">
+<figure id="cache-write-agent-loop-legend" class="llm-context-diagram" aria-label="cache context diagram legend">
 <figcaption>
 legend
 </figcaption>
@@ -813,7 +813,7 @@ legend
 <p><span><span class="llm-context-key llm-context-key--cache-write llm-context-key--new"></span>cache write;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>written to cache;</span> <span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span> <span><span class="llm-context-key llm-context-key--new"></span>new this step;</span></p>
 </div>
 </figure>
-<figure id="cache-write-agent-loop-request-1" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="standard tool calling context sequence">
+<figure id="cache-write-agent-loop-request-1" class="llm-context-diagram" aria-label="standard tool calling context sequence">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -821,11 +821,11 @@ legend
 request 1
 </div>
 <div class="llm-context-stack">
-<div class="llm-context-message llm-context-message--system cache-write is-new">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--system cache-write">
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--user cache-write is-new">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--user cache-write">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -835,13 +835,13 @@ result 1
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-write">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -849,7 +849,7 @@ result 1
 </div>
 <!-- <figcaption>initial request _only retains input tokens_ in the prompt cache even though all messages will be prefix of next request</figcaption> -->
 </figure>
-<figure id="cache-write-agent-loop-request-2" class="llm-context-diagram llm-context-diagram--token-costs" aria-label="second tool calling request and result">
+<figure id="cache-write-agent-loop-request-2" class="llm-context-diagram" aria-label="second tool calling request and result">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -858,16 +858,16 @@ request 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant cache-write is-new is-danger">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant cache-write is-danger">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--user cache-write is-new">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<div class="llm-context-message llm-context-message--user cache-write">
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 </div>
 </section>
@@ -877,19 +877,19 @@ result 2
 </div>
 <div class="llm-context-stack">
 <div class="llm-context-message llm-context-message--system cache-read">
-<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">system message and tool definitions</span> <span class="llm-context-message-body">You are a helpful assistant.</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-read">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-cost">$1.00 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">How many r’s are in “strawberry”?</span> <span class="llm-context-message-meta">$1.00 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--assistant cache-write">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">There are 3 r’s in “strawberry”</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
 <div class="llm-context-message llm-context-message--user cache-write">
-<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-cost">$12.50 / 1M</span></p>
+<p><span class="llm-context-message-label">user message</span> <span class="llm-context-message-body">Which is greater, 9.9 or 9.11?</span> <span class="llm-context-message-meta">$12.50 / 1M</span></p>
 </div>
-<div class="llm-context-message llm-context-message--assistant is-new">
-<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">9.9 is greater than 9.11</span> <span class="llm-context-message-cost">$50.00 / 1M</span></p>
+<div class="llm-context-message llm-context-message--assistant">
+<p><span class="llm-context-message-label">assistant message</span> <span class="llm-context-message-body">9.9 is greater than 9.11</span> <span class="llm-context-message-meta">$50.00 / 1M</span></p>
 </div>
 </div>
 </section>

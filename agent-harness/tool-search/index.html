@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+  <link rel="canonical" href="https://hunterpaulson.dev/agent-harness/tool-search/" />
+  <meta name="author" content="Hunter Paulson" />
+  <meta name="description" content="how tools work in all modern harnesses" />
+  <meta property="og:site_name" content="hunter paulson" />
+  <meta property="og:title" content="hunter paulson | tool search" />
+  <meta property="og:description" content="how tools work in all modern harnesses" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://hunterpaulson.dev/agent-harness/tool-search/" />
+  <meta property="og:image" content="https://hunterpaulson.dev/assets/social/home-blackhole.gif" />
+  <meta property="og:image:type" content="image/gif" />
+  <meta property="og:image:width" content="769" />
+  <meta property="og:image:height" content="769" />
+  <meta property="og:image:alt" content="ASCII black hole animation from Hunter Paulson’s personal website." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="hunter paulson | tool search" />
+  <meta name="twitter:description" content="how tools work in all modern harnesses" />
+  <meta name="twitter:image" content="https://hunterpaulson.dev/assets/social/home-blackhole.gif" />
+  <meta name="twitter:image:alt" content="ASCII black hole animation from Hunter Paulson’s personal website." />
+  <title>hunter paulson | tool search</title>
+  <link rel="stylesheet" href="/src/reset.css" />
+  <link rel="stylesheet" href="/src/index.css" />
+</head>
+<body>
+<table class="header">
+  <tr>
+    <td colspan="6" class="width-auto">
+      <h1 class="title"><a href="/" class="site-title">hunter paulson</a></h1>
+      <span class="post-title">tool search</span>
+    </td>
+  </tr>
+  <tr>
+    <td class="width-min"><a href="/blog/">blog</a></td>
+    <td class="width-min"><a href="/art/">art</a></td>
+    <td class="width-min"><a href="/projects/">projects</a></td>
+    <td class="width-auto" colspan="2"></td>
+    <td class="width-min"><a href="/contact">contact</a></td>
+  </tr>
+</table>
+<nav id="TOC" role="doc-toc">
+<h2 id="toc-title">Contents</h2>
+<ul class="incremental">
+<li><a href="#how-tool-use-works" id="toc-how-tool-use-works">how tool use works</a></li>
+<li><a href="#all-tools-are-part-of-every-request" id="toc-all-tools-are-part-of-every-request"><em>all</em> tools are part of <em>every</em> request</a></li>
+<li><a href="#solution-disclose-tools-progressively" id="toc-solution-disclose-tools-progressively">solution: disclose tools progressively</a></li>
+<li><a href="#can-reuse-the-cache-across-sessions" id="toc-can-reuse-the-cache-across-sessions">can reuse the cache across sessions</a></li>
+<li><a href="#problem-search-can-return-lots-of-results" id="toc-problem-search-can-return-lots-of-results">problem: search can return lots of results</a></li>
+<li><a href="#solution-give-exact-names-in-system-prompt-and-have-model-load-by-exact-name" id="toc-solution-give-exact-names-in-system-prompt-and-have-model-load-by-exact-name">solution: give exact names in system prompt and have model load by exact name</a></li>
+<li><a href="#is-tool-search-is-all-you-need" id="toc-is-tool-search-is-all-you-need">is tool search is all you need?</a></li>
+</ul>
+</nav>
+<!-- target audience: people using agents since people building agents will understand too and they use agents to build agents so they are a subset not disjoint.
+
+TODO:
+- try right justifying user messages (like texting)
+- maybe also tool results
+
+format tool schema
+- json?, xml? ts functions!
+- standard name format
+
+put multiple tool defs or calls or results within a larger tool section spans (delete/move div)
+
+should we put tool calls inside assistant messages?
+ -->
+<h1 id="how-tool-use-works">how tool use works</h1>
+<p>say you want your agent to be able to provide up-to-date infromation without hallucinating. then you need to give them a way to search the web.</p>
+<p>we do this by giving the model the schema of our web search function: e.g <code>search(query)</code>.</p>
+<p>we then add that to the top level <code>tools</code> array and call the llm api.</p>
+<p>depending on your question the llm will then generate a tool call block with the parameters of our function filled in.</p>
+<h2 id="request-1">request 1</h2>
+<pre class="typescript"><code>// define the schema of your tools
+const tools = [{
+  name: &quot;web__search&quot;,
+  description: &quot;Search the web&quot;,
+  input_schema: {
+    properties: { query: { type: &quot;string&quot; } },
+  },
+}];
+
+const system = &quot;You report the weather&quot;;
+
+const messages = [{
+  role: &quot;user&quot;,
+  content: &quot;What is the weather in Phoenix?&quot;,
+}];
+
+const response1 = await client.messages.create({
+  tools,
+  system,
+  messages,
+});
+
+// response1.content
+[
+  { type: &quot;text&quot;, text: &quot;I&#39;ll check the weather in Phoenix.&quot; },
+  {
+    type: &quot;tool_use&quot;,
+    id: &quot;toolu_123&quot;,
+    name: &quot;web__search&quot;,
+    input: { query: &quot;Current weather in Phoenix, AZ&quot; },
+  },
+]</code></pre>
+<figure id="tool-use-exchange-1" class="llm-context-diagram" aria-label="first tool-use request and response">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+request 1
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tools">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system">
+<span class="llm-context-message-body">You report the weather</span>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<span class="llm-context-message-body">What is the weather in Phoenix?</span>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+response 1
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">I'll check the weather in Phoenix.</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+input:
+  query: Current weather in Phoenix, AZ</pre>
+</div>
+</div>
+</section>
+</div>
+</div>
+</figure>
+<p>we then pass the parameters the llm filled out to our function and send the result back to the model. don’t forget to append the the assistant message and tool call to the messages array.</p>
+<p>the llm then can use the result to answer your question.</p>
+<h2 id="request-2">request 2</h2>
+<pre class="typescript"><code>messages.push({ role: &quot;assistant&quot;, content: response1.content });
+
+const toolUse = response1.content.find((block) =&gt; block.type === &quot;tool_use&quot;);
+messages.push({
+  role: &quot;user&quot;,
+  content: [{
+    type: &quot;tool_result&quot;,
+    tool_use_id: toolUse.id,
+    content: await executeTool(toolUse.name, toolUse.input),
+  }],
+});
+
+const response2 = await client.messages.create({
+  tools,
+  system,
+  messages,
+});
+
+// response2.content
+[{ type: &quot;text&quot;, text: &quot;It&#39;s hot and dry in Phoenix right now.&quot; }]</code></pre>
+<figure id="tool-use-exchange-2" class="llm-context-diagram" aria-label="second tool-use request and response">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+request 2
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--omitted is-muted">
+<span class="llm-context-message-body">same prefix: request 1 + response 1 …</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">temperature: 99°F
+humidity: 15%</pre>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+response 2
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">It's <em>hot and dry</em> in Phoenix right now.</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+</figure>
+<h1 id="all-tools-are-part-of-every-request"><em>all</em> tools are part of <em>every</em> request</h1>
+<p>all tools an agent <em>may</em> need to answer your question need to be in the prompt before your query.</p>
+<p>this means that you pay for every tool in every session even if the model does not need or use it to complete your ask.</p>
+<p>cost of each request grows linearly with the number of capabilities you want your agent to have. even if you are willing to pay the cost, context is finite so you will eventually run out of space in the context window for the model to actually call tools and complete the task.</p>
+<p>here is how much of the context window is already used at the start of every Claude Code session.</p>
+<pre><code>❯ /context
+  ⎿  Context Usage
+     ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁   Opus 5.5
+     ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛁ ⛀   claude-opus-5-5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   37.2k/200k tokens (19%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 3.9k tokens (1.9%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 29.8k tokens (14.9%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 1.3k tokens (0.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 2k tokens (1.0%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Messages: 141 tokens (0.1%)
+                               ⛶ Free space: 162.8k (81.4%)</code></pre>
+<!-- TODO: `/context` with mcp connected naively to show so many tools -->
+<p>say you want to add the ability for claude to manage jira tickets and read confluence pages. then you need to add all those tools to every request. what if you also want your agent to be able to interact with slack. you’ve gotta add all those tools too.</p>
+<p>even tho most messages in most sessions won’t need either of those capabilities you still pay for the tokens they take up in every request.</p>
+<figure id="tool-calling-with-unused-tools" class="llm-context-diagram llm-context-diagram--focus" aria-label="messages in an LLM context window">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<!-- <div class="llm-context-panel-title">context message sequence</div> -->
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-definition is-danger">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: jira__search
+description: Search Jira issues
+input_schema:
+  properties:
+    query: { type: string }</pre>
+<p><span class="llm-context-message-meta is-danger">unused</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-definition is-danger">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__search
+description: Search Slack messages
+input_schema:
+  properties:
+    query: { type: string }</pre>
+<p><span class="llm-context-message-meta is-danger">unused</span></p>
+</div>
+<div class="llm-context-message llm-context-message--system">
+<span class="llm-context-message-body">You search public and company knowledge</span>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Let me fetch the weather for Phoenix, AZ</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+input:
+  query: Current weather in Phoenix, AZ</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">temperature: 99°F
+humidity: 15%</pre>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">It's <em>hot and dry</em> in Phoenix right now</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>
+every available tool is part of the request, even when they used by the model for that session
+</figcaption>
+</figure>
+<p>worst of all, additional tools doesn’t only increase cost. It decreases performance both in terms of accuracy and latency.</p>
+<!-- TODO: add citation for context rot paper -->
+<h2 id="most-tasks-wont-need-all-tools">most tasks won’t need <em>all</em> tools</h2>
+<p>if adding tools increases cost and decreases performance why don’t we just give the model only the tools it need to complete the current task?</p>
+<p>this would require us to be able to accurately predict the tools needed for a task given only the prompt. If you underestimate, or miss any, then it will be impossible for the model to fully complete the task. If you overestimate, or add too many, then we are back where we started paying for tools that were not necessary.</p>
+<p>is there an alternative?</p>
+<p>lets reframe the problem, since if a problem is framed correctly the solution becomes obvious <!-- what is the original quote here ^ --></p>
+<p>problem: <strong>we pay for tools we don’t need</strong></p>
+<p>so we need to find a way to <em>only pay for a tool when we are sure the llm is going to use it</em></p>
+<h2 id="naive-adding-invalidates-kv-cache">naive adding invalidates kv cache</h2>
+<p>first idea would be to just add tools to context when they are needed</p>
+<p>Here since the second session references slack so we add the slack tools to the payload</p>
+<pre class="typescript"><code>const tools = [
+  // ... existing tools
+  {
+    name: &quot;slack__thread_history&quot;,
+    description: &quot;Read a Slack thread&quot;,
+    input_schema: {
+      properties: {
+        channel_id: { type: &quot;string&quot; },
+        thread_ts: { type: &quot;string&quot; },
+      },
+    },
+  },
+  // additional slack tools
+];
+
+const system = &quot;You search public and company knowledge&quot;;
+
+await client.messages.create({
+  tools,
+  system,
+  messages: [{
+    role: &quot;user&quot;,
+    content: &quot;Summarize this Slack thread: acme.slack.com/C123456/123456.7890&quot;,
+  }],
+});</code></pre>
+<p>its common to cache the system prompt and tools so they can be used across sessions. however, because <em>tools come at the beginning of the context window</em>, changing the tools (adding or removing) invalidates the prompt prefix/kv cache for both the tools and system. so you to pay for a cache write every time you change the <code>tools</code> array.</p>
+<figure id="adding-tool-invalidates-cache" class="llm-context-diagram llm-context-diagram--focus" aria-label="standard tool calling context sequence">
+<div class="llm-context-legend" aria-label="cache legend">
+<div class="llm-context-legend-title">
+legend
+</div>
+<p>
+<span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>cache write;</span> <span><span class="llm-context-key llm-context-key--recomputed"></span>recomputed;</span>
+</p>
+</div>
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--pair">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+session 1
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition is-important cache-write">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system is-important cache-write">
+<p><span class="llm-context-message-body">You search public and company knowledge</span></p>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<p><span class="llm-context-message-body">what is the weather in Phoenix?</span></p>
+</div>
+<div class="llm-context-message">
+<p><span class="llm-context-message-body">…</span></p>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<p><span class="llm-context-message-body">It's <em>hot and dry</em> in Phoenix right now</span></p>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+session 2
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition cache-write is-recomputed">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-definition cache-write is-danger">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+description: Read a Slack thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts: { type: string }</pre>
+<p><span class="llm-context-message-meta is-danger">invalidates prefix cache</span></p>
+</div>
+<div class="llm-context-message llm-context-message--system cache-write is-recomputed">
+<p><span class="llm-context-message-body">You search public and company knowledge</span></p>
+</div>
+<div class="llm-context-message llm-context-message--user is-important">
+<p><span class="llm-context-message-body">What is the summary of this slack thread: acme.slack.com/C123456/123456.7890</span></p>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<p><span class="llm-context-message-body">I’ll use my Slack tools to read the thread</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+input:
+  channel_id: C123456
+  thread_ts: 123456.7890</pre>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>
+changing the tool definitions means that you can no longer reuse the prompt prefix cache acorss sessions and must pay for cache write when tools change
+</figcaption>
+</figure>
+<!-- TODO: add source: ant 'what invalidates the prompt cache' -->
+<p>this works quickly becomes prohibitively expensive in both $ and latency. so we need a way to add tools so that the prefix is the same as the previous request so we can reuse the kv cache</p>
+<h1 id="solution-disclose-tools-progressively">solution: disclose tools progressively</h1>
+<!-- how can we append tools to the context window without them invalidating the prompt prefix cache -->
+<p>turns out we can with a simple tool that returns other tools.</p>
+<figure id="tool-search-progressive-disclosure" class="llm-context-diagram llm-context-diagram--focus" aria-label="messages in an LLM context window">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<!-- <div class="llm-context-panel-title">context message sequence</div> -->
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system">
+<span class="llm-context-message-body">You search public and company knowledge</span>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Let me check if I have a tool that can get the weather</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: web|weather</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<div class="llm-context-message llm-context-message--tool-definition is-benefit">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<p><span class="llm-context-message-meta is-benefit">tool definition in tool result</span></p>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Now I can get the weather for Phoenix, AZ</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+input:
+  query: Current weather in Phoenix, AZ</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">temperature: 99°F
+humidity: 15%</pre>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">It's <em>hot and dry</em> in Phoenix right now</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>
+every available tool is part of the request, even when they used by the model for that session
+</figcaption>
+</figure>
+<p>here is how this looks in code</p>
+<pre class="typescript"><code>const tools = [
+  {
+    name: &quot;tools__search&quot;,
+    description: &quot;Search available tools&quot;,
+    input_schema: {
+      properties: { query: { type: &quot;string&quot; } },
+    },
+  },
+  {
+    name: &quot;slack__thread_history&quot;,
+    description: &quot;Read a Slack thread&quot;,
+    input_schema: {
+      properties: {
+        channel_id: { type: &quot;string&quot; },
+        thread_ts: { type: &quot;string&quot; },
+      },
+    },
+    defer_loading: true, // omit from the prompt prefix
+  },
+  // additional slack tools
+];
+
+await client.messages.create({
+  tools,
+  system,
+  messages: [{
+    role: &quot;user&quot;,
+    content: &quot;Summarize this Slack thread: acme.slack.com/C123456/123456.7890&quot;,
+  }],
+});
+
+const toolSearchResult = {
+  type: &quot;tool_result&quot;,
+  tool_use_id: &quot;toolu_123&quot;,
+  content: [
+    { type: &quot;tool_reference&quot;, tool_name: &quot;slack__thread_history&quot; },
+  ],
+};</code></pre>
+<p>we still add the tools to the top level tools array. but this time we set <code>defer_loading: true</code> so that when the inference server converts our request into the chat template it doesn’t generate the tokens for those tools.</p>
+<p>it only generates them later when it sees <code>tool_reference</code> blocks in the tool result.</p>
+<h1 id="can-reuse-the-cache-across-sessions">can reuse the cache across sessions</h1>
+<p>since the <code>TOOLS</code> and <code>SYSTEM</code> blocks are identical we can now reuse the cache across sessions.</p>
+<figure id="tool-search-cache-reuse" class="llm-context-diagram llm-context-diagram--focus" aria-label="standard tool calling context sequence">
+<div class="llm-context-legend" aria-label="cache legend">
+<div class="llm-context-legend-title">
+legend
+</div>
+<p>
+<span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>cache write;</span>
+</p>
+</div>
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--pair">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+session 1
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition cache-write is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system cache-write is-important">
+<span class="llm-context-message-body">You search public and company knowledge</span>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Let me check if I have a tool that can get the weather</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: web|weather</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<div class="llm-context-message llm-context-message--tool-definition">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Now I can get the weather for Phoenix, AZ</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+input:
+  query: Current weather in Phoenix, AZ</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">temperature: 99°F
+humidity: 15%</pre>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">It's <em>hot and dry</em> in Phoenix right now</span>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+session 2
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition cache-read">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system cache-read">
+<span class="llm-context-message-body">You search public and company knowledge</span>
+</div>
+<div class="llm-context-message llm-context-message--user is-important">
+<span class="llm-context-message-body">please summarize this slack thread: acme.slack.com/C123456/123456.7890</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<span class="llm-context-message-body">Let me check if I have a tool that read slack threads</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: slack|thread</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result is-important">
+<div class="llm-context-message llm-context-message--tool-definition is-benefit is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+description: Read a Slack thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts: { type: string }</pre>
+</div>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<span class="llm-context-message-body">Now I can read the thread</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+input:
+  channel_id: C123456
+  thread_ts: 123456.7890</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">- author: Alice
+  text: Can you review the proposal?
+- author: Bob
+  text: I&apos;ll get back to you tomorrow.</pre>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<span class="llm-context-message-body">Bob will get back to you tomorrow</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>
+loading tools progressively allows us to reuse the prompt prefix cache across sessions
+</figcaption>
+</figure>
+<h1 id="problem-search-can-return-lots-of-results">problem: search can return lots of results</h1>
+<p>the astute readers will have realized that fuzzy search is not guaranteed to return the right tool every time. it may return zero tools or it may return more than necessary. which means we are paying for tools that we aren’t using again.</p>
+<figure id="tool-search-many-results" class="llm-context-diagram llm-context-diagram--focus" aria-label="messages in an LLM context window">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<!-- <div class="llm-context-panel-title">context message sequence</div> -->
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system">
+<span class="llm-context-message-body">You search public and company knowledge</span>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<span class="llm-context-message-body">please summarize this slack thread: acme.slack.com/C123456/123456.7890</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Let me check if I have a tool that read slack threads</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: <em>slack</em></pre>
+<p><span class="llm-context-message-meta is-danger">overly broad query</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-result is-important">
+<div class="llm-context-message llm-context-message--tool-definition">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+description: Read a Slack thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-definition is-danger">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__channel_history
+description: Read a Slack channel
+input_schema:
+  properties:
+    channel_id: { type: string }</pre>
+<p><span class="llm-context-message-meta is-danger">unused</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-definition is-danger">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__send_message
+description: Send a message to a Slack channel or thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts?: { type: string }</pre>
+<p><span class="llm-context-message-meta is-danger">unused</span></p>
+</div>
+<div class="llm-context-message llm-context-message--tool-definition is-danger">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__add_reaction
+description: Add a reaction to a Slack message
+input_schema:
+  properties:
+    channel_id: { type: string }
+    message_ts: { type: string }</pre>
+<p><span class="llm-context-message-meta is-danger">unused</span></p>
+</div>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Now I can read the thread</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+input:
+  channel_id: C123456
+  thread_ts: 123456.7890</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">- author: Alice
+  text: Can you review the proposal?
+- author: Bob
+  text: I&apos;ll get back to you tomorrow.</pre>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Bob will get back to you tomorrow</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>
+bad search queries or results can cause you to pay for tools that arent used
+</figcaption>
+</figure>
+<!-- TODO lets look at the definition of progressive disclosure
+
+and learn from [skills](need to make blog for this) -->
+<h1 id="solution-give-exact-names-in-system-prompt-and-have-model-load-by-exact-name">solution: give exact names in system prompt and have model load by exact name</h1>
+<p>if we write the name of the tool (and optionally a short description) the model can use that exact name to load the specific tool it needs, when it needs it.</p>
+<figure id="tool-search-exact-load" class="llm-context-diagram llm-context-diagram--focus" aria-label="messages in an LLM context window">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<!-- <div class="llm-context-panel-title">context message sequence</div> -->
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__load
+description: <em>Load one tool by exact name</em>
+input_schema:
+  properties:
+    name: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">You search public and company knowledge.
+
+You can load the following tools:
+- slack__thread_history
+- slack__channel_history
+- slack__send_message
+- slack__add_reaction
+
+</pre>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<span class="llm-context-message-body">please summarize this slack thread: acme.slack.com/C123456/123456.7890</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Let me check if I have a tool that read slack threads</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__load
+input:
+  name: <em>slack__thread_history</em></pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<div class="llm-context-message llm-context-message--tool-definition">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+description: Read a Slack thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts: { type: string }</pre>
+</div>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Now I can read the thread</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+input:
+  channel_id: C123456
+  thread_ts: 123456.7890</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">- author: Alice
+  text: Can you review the proposal?
+- author: Bob
+  text: I&apos;ll get back to you tomorrow.</pre>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">Bob will get back to you tomorrow</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>
+bad search queries or results can cause you to pay for tools that arent used
+</figcaption>
+</figure>
+<h1 id="is-tool-search-is-all-you-need">is tool search is all you need?</h1>
+<p>in theory the only tool the model needs all the time is the tool search tool.</p>
+<p>however, tool search has a non-negligible cost: every time the model needs a tool for the first time requires a full round trip.</p>
+<p>if you don’t invalidate the kv cache this costs only on the order of the cache write input price for the size of your tool schema in tokens. however the main cost is latency, since it now takes two model requests to call the tool.</p>
+<figure id="tool-search-skill-loading" class="llm-context-diagram llm-context-diagram--focus" aria-label="loading a skill through tool search takes three model requests">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+model request 1 · discover read tool
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">Available skills:
+- code-review
+  path: /skills/code-review/SKILL.md</pre>
+</div>
+<div class="llm-context-message llm-context-message--user">
+<span class="llm-context-message-body">Review pr #67 for me</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: read file</pre>
+<p><span class="llm-context-message-meta is-danger">discover common tool</span></p>
+</div>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+model request 2 · read skill
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-result is-important">
+<div class="llm-context-message llm-context-message--tool-definition is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: filesystem__read_file
+description: Read a file
+input_schema:
+  properties:
+    path: { type: string }</pre>
+</div>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: filesystem__read_file
+input:
+  path: /skills/code-review/SKILL.md</pre>
+<p><span class="llm-context-message-meta is-danger">load skill</span></p>
+</div>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">
+model request 3 · start task
+</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-result is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap"># code review
+
+1. Inspect the diff
+2. Run relevant tests
+3. Report findings by severity</pre>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-benefit">
+<p><span class="llm-context-message-body">Now I can start the review</span> <span class="llm-context-message-meta is-benefit">task starts here</span></p>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>
+when read file is deferred, loading one skill takes two full model requests before work begins
+</figcaption>
+</figure>
+<p>this is why <em>all</em> harnesses have a small set of ‘always on’ tools that are in every session and can can be used at all times.</p>
+<p>TODO: show this set for claude, codex, pi, opencode, etc (needs harness anatomy page)</p>
+<!-- # appendix
+
+## this assumes tools don't change, get added, or removed
+
+lmk if you want a post on how to add and remove tools without invalidating the kv cache
+
+super nerd stuff
+
+changing a tool's schema invalidates kv cache _both_ for direct and deferred tools that _were loaded_ in the context. since tool references only reference by name when ant replaces that ref with actual schema tokens are different and you get an invalidation
+
+## innovations
+
+allowing tool schemas to be anywhere in context (not in tool section)
+
+hard parts: llm apis are stateless. clients like claude code need to maintain state -->
+<hr />
+<footer class="site-footer">
+  <div class="footer-controls">
+    <label class="debug-toggle-label"><input type="checkbox" class="debug-toggle" /> debug mode</label>
+    <label class="theme-toggle-label"><input type="checkbox" class="theme-toggle" checked /> dark mode</label>
+  </div>
+  <span class="footer-attribution">built with <a href="https://owickstrom.github.io/the-monospace-web/">the monospace web</a></span>
+</footer>
+  <div class="debug-grid"></div>
+  <link rel="stylesheet" href="/src/prism-theme.css" />
+  <script>window.Prism = window.Prism || {}; Prism.manual = true;</script>
+  <script src="/src/prism.js"></script>
+  <script src="/src/prism-clike.min.js"></script>
+  <script src="/src/prism-markup.min.js"></script>
+  <script src="/src/prism-python.min.js"></script>
+  <script src="/src/prism-javascript.min.js"></script>
+  <script src="/src/prism-typescript.min.js"></script>
+  <script src="/src/index.js"></script>
+</body>
+</html>

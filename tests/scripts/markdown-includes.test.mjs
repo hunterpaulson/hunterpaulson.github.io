@@ -30,6 +30,26 @@ test("expandMarkdownIncludes replaces include markers with file contents", async
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
+test("expandMarkdownIncludes recursively expands nested Markdown partials", async () => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "markdown-includes-nested-test-"));
+  const sourcePath = path.join(tempRoot, "source.md");
+  const partialDirectory = path.join(tempRoot, "partials");
+  const wrapperPath = path.join(partialDirectory, "wrapper.md");
+  const stepPath = path.join(partialDirectory, "step.md");
+
+  await fs.mkdir(partialDirectory, { recursive: true });
+  await fs.writeFile(sourcePath, '{{ include "./partials/wrapper.md" }}\n');
+  await fs.writeFile(wrapperPath, '{{ include "./step.md" }}\n');
+  await fs.writeFile(stepPath, "## nested step\n\n```json\n{}\n```\n");
+
+  assert.equal(
+    await expandMarkdownIncludes(sourcePath),
+    "## nested step\n\n```json\n{}\n```",
+  );
+
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
 test("expandMarkdownIncludes rejects include cycles", async () => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "markdown-includes-cycle-test-"));
   const firstPath = path.join(tempRoot, "first.md");

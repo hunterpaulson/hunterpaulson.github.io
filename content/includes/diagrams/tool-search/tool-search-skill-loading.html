@@ -1,0 +1,60 @@
+<figure id="tool-search-skill-loading" class="llm-context-diagram llm-context-diagram--focus" aria-label="loading a skill through tool search takes three model requests">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">model request 1 · discover read tool</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre></div>
+<div class="llm-context-message llm-context-message--system"><pre class="llm-context-message-body" data-whitespace="pre-wrap">Available skills:
+- code-review
+  path: /skills/code-review/SKILL.md</pre></div>
+<div class="llm-context-message llm-context-message--user"><span class="llm-context-message-body">Review pr #67 for me</span></div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<div class="llm-context-message llm-context-message--tool-call is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: read file</pre>
+<span class="llm-context-message-meta is-danger">discover common tool</span>
+</div>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">model request 2 · read skill</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-result is-important">
+<div class="llm-context-message llm-context-message--tool-definition is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: filesystem__read_file
+description: Read a file
+input_schema:
+  properties:
+    path: { type: string }</pre></div>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<div class="llm-context-message llm-context-message--tool-call is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: filesystem__read_file
+input:
+  path: /skills/code-review/SKILL.md</pre>
+<span class="llm-context-message-meta is-danger">load skill</span>
+</div>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">model request 3 · start task</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-result is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap"># code review
+
+1. Inspect the diff
+2. Run relevant tests
+3. Report findings by severity</pre></div>
+<div class="llm-context-message llm-context-message--assistant is-benefit"><span class="llm-context-message-body">Now I can start the review</span>
+<span class="llm-context-message-meta is-benefit">task starts here</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>when read file is deferred, loading one skill takes two full model requests before work begins</figcaption>
+</figure>

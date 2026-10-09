@@ -1,5 +1,6 @@
 .llm-context-diagram {
   --llm-context-panel-width: 30ch;
+  --llm-context-grid-gap: 2ch;
   --llm-context-cache-bar-width: 0.75ch;
   --llm-role-system: var(--text-color);
   --llm-role-developer: #b197fc;
@@ -34,6 +35,14 @@
   flex-wrap: wrap;
   gap: calc(var(--line-height) / 2) 2ch;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.llm-context-legend-title {
+  flex-basis: 100%;
+  color: var(--text-color-alt);
+  font-style: italic;
 }
 
 .llm-context-key {
@@ -95,6 +104,16 @@
   color: var(--llm-role-benefit);
 }
 
+.llm-context-key--omitted {
+  color: var(--text-color-alt);
+  border-style: dashed;
+}
+
+.llm-context-key--recomputed {
+  color: var(--text-color);
+  box-shadow: inset var(--llm-context-cache-bar-width) 0 0 var(--llm-role-risk);
+}
+
 .llm-context-scroll {
   width: calc(round(down, 100%, 1ch));
   max-width: 100%;
@@ -108,7 +127,7 @@
 .llm-context-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--llm-context-panel-width)), 1fr));
-  gap: 2ch;
+  gap: var(--llm-context-grid-gap);
 }
 
 .llm-context-grid--pair {
@@ -136,8 +155,15 @@
 }
 
 .llm-context-grid--single {
-  grid-template-columns: minmax(var(--llm-context-panel-width), var(--llm-context-panel-width));
-  min-width: var(--llm-context-panel-width);
+  grid-template-columns: minmax(0, 1fr);
+  width: min(100%, 56ch);
+  margin-inline: auto;
+  min-width: 0;
+}
+
+.llm-context-grid--triple {
+  grid-template-columns: repeat(3, minmax(var(--llm-context-panel-width), 1fr));
+  min-width: calc((var(--llm-context-panel-width) * 3) + 4ch);
 }
 
 .llm-context-panel {
@@ -163,136 +189,95 @@
 }
 
 .llm-context-message {
+  --llm-context-message-border-color: var(--text-color);
+  --llm-context-message-left-accent: inset 0 0 0 transparent;
+  --llm-context-message-right-accent: inset 0 0 0 transparent;
+  --llm-context-message-left-padding: 0ch;
+  --llm-context-message-right-padding: 0ch;
   position: relative;
   display: grid;
   gap: calc(var(--line-height) / 3);
   min-height: calc(var(--line-height) * 2);
+  color: var(--text-color);
   padding: calc(var(--line-height) / 2) 1ch;
-  border: var(--border-thickness) solid var(--llm-role-system);
+  border: var(--border-thickness) solid var(--llm-context-message-border-color);
+  box-shadow:
+    var(--llm-context-message-left-accent),
+    var(--llm-context-message-right-accent);
+  padding-left: calc(1ch + var(--llm-context-message-left-padding));
+  padding-right: calc(1ch + var(--llm-context-message-right-padding));
   overflow-wrap: anywhere;
+}
+
+.llm-context-message:is(.llm-context-message--risk, .is-danger) {
+  --llm-context-message-border-color: var(--llm-role-risk);
+}
+
+.llm-context-message.is-benefit {
+  --llm-context-message-border-color: var(--llm-role-benefit);
 }
 
 .llm-context-message-label {
   color: var(--text-color-alt);
 }
 
+.llm-context-message:not(:has(> .llm-context-message-label))::before {
+  color: var(--text-color-alt);
+  font-weight: var(--font-weight-bold);
+  grid-column: 1 / -1;
+  text-transform: uppercase;
+}
+
+.llm-context-message--system:not(:has(> .llm-context-message-label))::before {
+  content: "SYSTEM  <#>";
+}
+
+.llm-context-message--developer:not(:has(> .llm-context-message-label))::before {
+  content: "DEVELOPER  <#>";
+}
+
+.llm-context-message--tools:not(:has(> .llm-context-message-label))::before {
+  content: "TOOLS  {#}";
+}
+
+.llm-context-message--tool-definition:not(:has(> .llm-context-message-label))::before {
+  content: "TOOL DEF  {#}";
+}
+
+.llm-context-message--user:not(:has(> .llm-context-message-label))::before {
+  content: "USER  (^_^)";
+}
+
+.llm-context-message--assistant:not(:has(> .llm-context-message-label))::before {
+  content: "ASSISTANT  [o_o]";
+}
+
+.llm-context-message--tool-call:not(:has(> .llm-context-message-label))::before {
+  content: "TOOL CALL  →{}";
+}
+
+.llm-context-message--tool-result:not(:has(> .llm-context-message-label))::before {
+  content: "TOOL RESULT  ←{}";
+}
+
 .llm-context-message-body {
+  margin: 0;
+  font: inherit;
   font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
 }
 
-.llm-context-message--system {
-  border-color: var(--llm-role-system);
+.llm-context-message-body[data-whitespace="pre-wrap"],
+.llm-context-message-body--preformatted {
+  white-space: pre-wrap;
+  tab-size: 2;
 }
 
-.llm-context-message--developer {
-  border-color: var(--llm-role-developer);
-  background: color-mix(in srgb, var(--llm-role-developer) 10%, transparent);
+.llm-context-message > :is(.llm-context-message-label, .llm-context-message-body) {
+  justify-self: var(--llm-context-span-justify, start);
 }
 
-.llm-context-message--tools {
-  border-color: var(--llm-role-tools);
-  background: color-mix(in srgb, var(--llm-role-tools) 10%, transparent);
-}
-
-.llm-context-message--user {
-  border-color: var(--llm-role-user);
-  background: color-mix(in srgb, var(--llm-role-user) 8%, transparent);
-}
-
-.llm-context-message--assistant {
-  border-color: var(--llm-role-assistant);
-  background: color-mix(in srgb, var(--llm-role-assistant) 10%, transparent);
-}
-
-.llm-context-message--tool-call {
-  border-color: var(--llm-role-tool-call);
-  background: color-mix(in srgb, var(--llm-role-tool-call) 10%, transparent);
-}
-
-.llm-context-message--tool-result {
-  border-color: var(--llm-role-tool-result);
-  background: color-mix(in srgb, var(--llm-role-tool-result) 10%, transparent);
-}
-
-.llm-context-message--risk {
-  border-color: var(--llm-role-risk);
-  background: color-mix(in srgb, var(--llm-role-risk) 10%, transparent);
-}
-
-.llm-context-message--muted {
-  border-color: var(--text-color-alt);
-  color: var(--text-color-alt);
-}
-
-.llm-context-message.is-danger .llm-context-message-cost {
-  color: var(--llm-role-risk);
-}
-
-.llm-context-message.is-benefit .llm-context-message-cost {
-  color: var(--llm-role-benefit);
-}
-
-.llm-context-diagram--token-costs .llm-context-key:not(
-  .llm-context-key--cache-read,
-  .llm-context-key--cache-write,
-  .llm-context-key--new,
-  .llm-context-key--danger,
-  .llm-context-key--benefit
-) {
-  color: var(--text-color-alt);
-}
-
-.llm-context-diagram--token-costs {
-  --llm-context-cache-read: #56b4e9;
-  --llm-context-cache-write: #e69f00;
-  --llm-context-cache-read-muted: color-mix(in srgb, var(--llm-context-cache-read) 48%, var(--background-color) 52%);
-  --llm-context-cache-write-muted: color-mix(in srgb, var(--llm-context-cache-write) 48%, var(--background-color) 52%);
-  --llm-context-new: var(--text-color);
-  --llm-context-muted-label: color-mix(in srgb, var(--text-color) 42%, var(--background-color) 58%);
-  --llm-context-muted-body: color-mix(in srgb, var(--text-color) 62%, var(--background-color) 38%);
-  --llm-context-active-label: color-mix(in srgb, var(--text-color) 78%, var(--background-color) 22%);
-  --llm-context-active-body: var(--text-color);
-}
-
-.llm-context-diagram--token-costs :is(
-  .llm-context-key--cache-read,
-  .llm-context-key--cache-write
-) {
-  color: var(--llm-context-muted-body);
-}
-
-.llm-context-diagram--token-costs .llm-context-key--cache-read {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read-muted);
-}
-
-.llm-context-diagram--token-costs .llm-context-key--cache-write {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write-muted);
-}
-
-.llm-context-diagram--token-costs .llm-context-key--new {
-  color: var(--llm-context-new);
-}
-
-.llm-context-diagram--token-costs .llm-context-key--danger {
-  color: var(--llm-role-risk);
-}
-
-.llm-context-diagram--token-costs
-  .llm-context-key--benefit {
-  color: var(--llm-role-benefit);
-}
-
-.llm-context-diagram--token-costs .llm-context-key--cache-write.llm-context-key--new {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write);
-}
-
-.llm-context-diagram--token-costs .llm-context-message {
-  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
-  border-color: var(--text-color-alt);
-  background: transparent;
-}
-
-.llm-context-diagram--token-costs .llm-context-message > p {
+.llm-context-message > p {
   display: grid;
   align-content: space-between;
   gap: calc(var(--line-height) / 3);
@@ -300,68 +285,18 @@
   margin: 0;
 }
 
-.llm-context-diagram--token-costs
-  .llm-context-message
-  .llm-context-message-label {
-  color: var(--llm-context-muted-label);
-}
-
-.llm-context-diagram--token-costs
-  .llm-context-message
-  :is(.llm-context-message-body, .llm-context-message-cost) {
-  color: var(--llm-context-muted-body);
-}
-
 .llm-context-message.cache-read {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read);
-  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+  --llm-context-message-right-accent: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0
+    var(--llm-context-cache-read);
+  --llm-context-message-right-padding: var(--llm-context-cache-bar-width);
 }
 
 .llm-context-message.cache-write {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write);
-  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
+  --llm-context-message-right-accent: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0
+    var(--llm-context-cache-write);
+  --llm-context-message-right-padding: var(--llm-context-cache-bar-width);
 }
 
-.llm-context-diagram--token-costs .llm-context-message.cache-read {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read-muted);
-}
-
-.llm-context-diagram--token-costs .llm-context-message.cache-write {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write-muted);
-}
-
-.llm-context-diagram--token-costs .llm-context-message.is-new {
-  border-color: var(--llm-context-new);
-}
-
-.llm-context-diagram--token-costs
-  .llm-context-message.is-new
-  .llm-context-message-label {
-  color: var(--llm-context-active-label);
-}
-
-.llm-context-diagram--token-costs
-  .llm-context-message.is-new
-  :is(.llm-context-message-body, .llm-context-message-cost) {
-  color: var(--llm-context-active-body);
-}
-
-.llm-context-diagram--token-costs
-  .llm-context-message.is-danger
-  .llm-context-message-cost {
-  color: var(--llm-role-risk);
-}
-
-.llm-context-diagram--token-costs
-  .llm-context-message.is-benefit
-  .llm-context-message-cost {
-  color: var(--llm-role-benefit);
-}
-
-.llm-context-diagram--token-costs .llm-context-message.is-new.cache-read {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-read);
-  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
-}
 
 .llm-context-animation {
   --llm-context-panel-width: 44ch;
@@ -393,43 +328,74 @@
   align-self: end;
 }
 
-.llm-context-diagram--token-costs .llm-context-message.is-new.cache-write {
-  box-shadow: inset calc(-1 * var(--llm-context-cache-bar-width)) 0 0 var(--llm-context-cache-write);
-  padding-right: calc(1ch + var(--llm-context-cache-bar-width));
-}
-
-.llm-context-message-cost {
-  justify-self: end;
+.llm-context-message .llm-context-message-meta {
+  justify-self: var(--llm-context-span-justify, end);
   align-self: end;
-  color: var(--text-color);
+  color: var(--llm-context-span-color, var(--text-color));
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
 }
 
-.llm-context-diagram--token-costs .llm-context-message--omitted {
-  place-items: center;
-  min-height: var(--line-height);
-  padding-top: 0;
-  padding-bottom: 0;
+.llm-context-message .llm-context-message-meta.is-danger {
+  --llm-context-span-color: var(--llm-role-risk);
+}
+
+.llm-context-message .llm-context-message-meta.is-benefit {
+  --llm-context-span-color: var(--llm-role-benefit);
+}
+
+:is(
+  .llm-context-message.is-muted,
+  .llm-context-diagram--focus .llm-context-message:not(.is-important, .is-danger, .is-benefit)
+) {
+  --llm-context-message-border-color: var(--llm-role-muted);
+  color: var(--llm-role-muted);
+}
+
+:is(
+  .llm-context-message.is-muted,
+  .llm-context-diagram--focus .llm-context-message:not(.is-important, .is-danger, .is-benefit)
+)::before {
+  color: inherit;
+}
+
+:is(
+  .llm-context-message.is-muted,
+  .llm-context-diagram--focus .llm-context-message:not(.is-important, .is-danger, .is-benefit)
+) > :is(.llm-context-message-label, .llm-context-message-body) {
+  color: inherit;
+}
+
+:is(
+  .llm-context-message.is-muted,
+  .llm-context-diagram--focus .llm-context-message:not(.is-important, .is-danger, .is-benefit)
+) > .llm-context-message-meta {
+  --llm-context-span-color: var(--llm-role-muted);
+}
+
+.llm-context-message > [data-justify="start"] {
+  justify-self: start;
+}
+
+.llm-context-message > [data-justify="center"] {
+  justify-self: center;
+}
+
+.llm-context-message > [data-justify="end"] {
+  justify-self: end;
+}
+
+.llm-context-message > [data-justify="stretch"] {
+  justify-self: stretch;
+}
+
+.llm-context-message--omitted {
   border-style: dashed;
-  text-align: center;
 }
 
-.llm-context-diagram--token-costs .llm-context-message--omitted p {
-  margin: 0;
-}
-
-.llm-context-message.is-inserted {
-  box-shadow: inset 0.75ch 0 0 var(--llm-role-risk);
-  padding-left: 2ch;
-}
-
-.llm-context-message.is-inserted.cache-write {
-  box-shadow:
-    inset 0.75ch 0 0 var(--llm-role-risk),
-    inset -0.75ch 0 0 var(--llm-context-cache-write);
-  padding-left: 2ch;
-  padding-right: 2ch;
+.llm-context-message:is(.is-inserted, .is-recomputed) {
+  --llm-context-message-left-accent: inset 0.75ch 0 0 var(--llm-role-risk);
+  --llm-context-message-left-padding: 1ch;
 }
 
 .llm-context-callout {

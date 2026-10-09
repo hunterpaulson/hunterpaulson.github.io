@@ -34,14 +34,15 @@ function parseTocDepth(rawValue) {
 
 const inputPath = process.argv[2];
 if (!inputPath) {
-  console.error("usage: pandoc-toc-flag.mjs <markdown-file>");
+  console.error("usage: pandoc-toc-flag.mjs <markdown-file> [--default-toc]");
   process.exit(2);
 }
 
 const markdown = fs.readFileSync(inputPath, "utf8");
 const frontMatter = parseFrontMatter(markdown).data;
+const defaultToc = process.argv.slice(3).includes("--default-toc");
 
-if (parseBooleanValue(frontMatter.toc, false)) {
+if (parseBooleanValue(frontMatter.toc, defaultToc)) {
   const args = ["--toc"];
   const tocDepth = parseTocDepth(frontMatter["toc-depth"]);
   if (tocDepth) {

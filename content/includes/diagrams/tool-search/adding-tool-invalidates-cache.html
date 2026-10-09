@@ -1,0 +1,73 @@
+<figure id="adding-tool-invalidates-cache" class="llm-context-diagram llm-context-diagram--focus" aria-label="standard tool calling context sequence">
+<div class="llm-context-legend" aria-label="cache legend">
+<div class="llm-context-legend-title">legend</div>
+<p><span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>cache write;</span> <span><span class="llm-context-key llm-context-key--recomputed"></span>recomputed;</span></p>
+</div>
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--pair">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">session 1</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition is-important cache-write">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--system is-important cache-write">
+
+<span class="llm-context-message-body">You search public and company knowledge</span>
+</div>
+<div class="llm-context-message llm-context-message--user">
+
+<span class="llm-context-message-body">what is the weather in Phoenix?</span>
+</div>
+<div class="llm-context-message">
+<span class="llm-context-message-body">...</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant">
+<span class="llm-context-message-body">It&apos;s <em>hot and dry</em> in Phoenix right now</span>
+</div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">session 2</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition cache-write is-recomputed">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-definition cache-write is-danger">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+description: Read a Slack thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts: { type: string }</pre>
+<span class="llm-context-message-meta is-danger">invalidates prefix cache</span>
+</div>
+<div class="llm-context-message llm-context-message--system cache-write is-recomputed">
+<span class="llm-context-message-body">You search public and company knowledge</span>
+</div>
+<div class="llm-context-message llm-context-message--user is-important">
+<span class="llm-context-message-body">What is the summary of this slack thread: acme.slack.com/C123456/123456.7890</span>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important">
+<span class="llm-context-message-body">I'll use my Slack tools to read the thread</span>
+</div>
+<div class="llm-context-message llm-context-message--tool-call is-important">
+<pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+input:
+  channel_id: C123456
+  thread_ts: 123456.7890</pre>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>changing the tool definitions means that you can no longer reuse the prompt prefix cache acorss sessions and must pay for cache write when tools change</figcaption>
+</figure>

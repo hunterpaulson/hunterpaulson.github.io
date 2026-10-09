@@ -1,0 +1,77 @@
+<figure id="tool-search-cache-reuse" class="llm-context-diagram llm-context-diagram--focus" aria-label="standard tool calling context sequence">
+<div class="llm-context-legend" aria-label="cache legend">
+<div class="llm-context-legend-title">legend</div>
+<p><span><span class="llm-context-key llm-context-key--cache-read"></span>cache read;</span> <span><span class="llm-context-key llm-context-key--cache-write"></span>cache write;</span></p>
+</div>
+<div class="llm-context-scroll llm-context-scroll--nowrap">
+<div class="llm-context-grid llm-context-grid--pair">
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">session 1</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition cache-write is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre></div>
+<div class="llm-context-message llm-context-message--system cache-write is-important"><span class="llm-context-message-body">You search public and company knowledge</span></div>
+<div class="llm-context-message llm-context-message--user"><span class="llm-context-message-body">what is the weather in Phoenix?</span></div>
+<div class="llm-context-message llm-context-message--assistant"><span class="llm-context-message-body">Let me check if I have a tool that can get the weather</span></div>
+<div class="llm-context-message llm-context-message--tool-call"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: web|weather</pre></div>
+<div class="llm-context-message llm-context-message--tool-result">
+<div class="llm-context-message llm-context-message--tool-definition"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+description: Search the web
+input_schema:
+  properties:
+    query: { type: string }</pre></div>
+</div>
+<div class="llm-context-message llm-context-message--assistant"><span class="llm-context-message-body">Now I can get the weather for Phoenix, AZ</span></div>
+<div class="llm-context-message llm-context-message--tool-call"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: web__search
+input:
+  query: Current weather in Phoenix, AZ</pre></div>
+<div class="llm-context-message llm-context-message--tool-result"><pre class="llm-context-message-body" data-whitespace="pre-wrap">temperature: 99°F
+humidity: 15%</pre></div>
+<div class="llm-context-message llm-context-message--assistant"><span class="llm-context-message-body">It&apos;s <em>hot and dry</em> in Phoenix right now</span></div>
+</div>
+</section>
+<section class="llm-context-panel">
+<div class="llm-context-panel-title">session 2</div>
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition cache-read"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+description: Search available tools
+input_schema:
+  properties:
+    query: { type: string }</pre></div>
+<div class="llm-context-message llm-context-message--system cache-read"><span class="llm-context-message-body">You search public and company knowledge</span></div>
+<div class="llm-context-message llm-context-message--user is-important"><span class="llm-context-message-body">please summarize this slack thread: acme.slack.com/C123456/123456.7890</span></div>
+<div class="llm-context-message llm-context-message--assistant is-important"><span class="llm-context-message-body">Let me check if I have a tool that read slack threads</span></div>
+<div class="llm-context-message llm-context-message--tool-call is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__search
+input:
+  query: slack|thread</pre>
+</div>
+<div class="llm-context-message llm-context-message--tool-result is-important">
+<div class="llm-context-message llm-context-message--tool-definition is-benefit is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+description: Read a Slack thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts: { type: string }</pre></div>
+</div>
+<div class="llm-context-message llm-context-message--assistant is-important"><span class="llm-context-message-body">Now I can read the thread</span></div>
+<div class="llm-context-message llm-context-message--tool-call is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+input:
+  channel_id: C123456
+  thread_ts: 123456.7890</pre></div>
+<div class="llm-context-message llm-context-message--tool-result is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">- author: Alice
+  text: Can you review the proposal?
+- author: Bob
+  text: I&apos;ll get back to you tomorrow.</pre></div>
+<div class="llm-context-message llm-context-message--assistant is-important"><span class="llm-context-message-body">Bob will get back to you tomorrow</span></div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>loading tools progressively allows us to reuse the prompt prefix cache across sessions</figcaption>
+</figure>

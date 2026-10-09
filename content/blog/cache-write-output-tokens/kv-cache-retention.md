@@ -67,7 +67,7 @@ User: [Text response, cache=True]
 
 ## multi turn
 
-<figure class="llm-context-diagram llm-context-diagram--token-costs" aria-label="later tool calling request and result">
+<figure class="llm-context-diagram" aria-label="later tool calling request and result">
 <div class="llm-context-scroll llm-context-scroll--nowrap">
 <div class="llm-context-grid llm-context-grid--pair">
 <section class="llm-context-panel">
@@ -91,7 +91,7 @@ User: [Text response, cache=True]
 <div class="llm-context-message llm-context-message--tool-call cache-write">
 <span class="llm-context-message-label">tool call(s)</span>
 </div>
-<div class="llm-context-message llm-context-message--tool-result cache-write is-new">
+<div class="llm-context-message llm-context-message--tool-result cache-write">
 <span class="llm-context-message-label">tool result(s)</span>
 </div>
 </div>
@@ -120,7 +120,7 @@ User: [Text response, cache=True]
 <div class="llm-context-message llm-context-message--tool-result cache-write">
 <span class="llm-context-message-label">tool result(s)</span>
 </div>
-<div class="llm-context-message llm-context-message--assistant is-new">
+<div class="llm-context-message llm-context-message--assistant">
 <span class="llm-context-message-label">assistant message</span>
 </div>
 </div>

@@ -1,0 +1,49 @@
+<figure id="tool-search-exact-load" class="llm-context-diagram llm-context-diagram--focus" aria-label="messages in an LLM context window">
+<div class="llm-context-scroll">
+<div class="llm-context-grid llm-context-grid--single">
+<section class="llm-context-panel">
+<!-- <div class="llm-context-panel-title">context message sequence</div> -->
+<div class="llm-context-stack">
+<div class="llm-context-message llm-context-message--tool-definition is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__load
+description: <em>Load one tool by exact name</em>
+input_schema:
+  properties:
+    name: { type: string }</pre></div>
+<div class="llm-context-message llm-context-message--system is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">You search public and company knowledge.
+
+You can load the following tools:
+- slack__thread_history
+- slack__channel_history
+- slack__send_message
+- slack__add_reaction
+
+</pre></div>
+<div class="llm-context-message llm-context-message--user"><span class="llm-context-message-body">please summarize this slack thread: acme.slack.com/C123456/123456.7890</span></div>
+<div class="llm-context-message llm-context-message--assistant"><span class="llm-context-message-body">Let me check if I have a tool that read slack threads</span></div>
+<div class="llm-context-message llm-context-message--tool-call is-important"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: tools__load
+input:
+  name: <em>slack__thread_history</em></pre></div>
+<div class="llm-context-message llm-context-message--tool-result">
+<div class="llm-context-message llm-context-message--tool-definition"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+description: Read a Slack thread
+input_schema:
+  properties:
+    channel_id: { type: string }
+    thread_ts: { type: string }</pre></div>
+</div>
+<div class="llm-context-message llm-context-message--assistant"><span class="llm-context-message-body">Now I can read the thread</span></div>
+<div class="llm-context-message llm-context-message--tool-call"><pre class="llm-context-message-body" data-whitespace="pre-wrap">name: slack__thread_history
+input:
+  channel_id: C123456
+  thread_ts: 123456.7890</pre></div>
+<div class="llm-context-message llm-context-message--tool-result"><pre class="llm-context-message-body" data-whitespace="pre-wrap">- author: Alice
+  text: Can you review the proposal?
+- author: Bob
+  text: I&apos;ll get back to you tomorrow.</pre></div>
+<div class="llm-context-message llm-context-message--assistant"><span class="llm-context-message-body">Bob will get back to you tomorrow</span></div>
+</div>
+</section>
+</div>
+</div>
+<figcaption>bad search queries or results can cause you to pay for tools that arent used</figcaption>
+</figure>
